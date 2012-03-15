@@ -1,5 +1,78 @@
 package net.easymodo.asagi;
 
-public class Mysql extends Local {
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.util.Map;
 
+// Not thread-safe
+public class Mysql extends Local {
+    private final String dbName;
+    private final String dbHost;
+    private final String dbUsername;
+    private final String dbPassword;
+    private final String table;
+    private final String extraArgs = "rewriteBatchedStatements=true";
+    
+    private Connection conn = null;
+    private PreparedStatement insertStmt = null;
+
+    public Mysql(String path, Map<String,String> info) throws SQLException {
+        super(path, info);
+        this.dbName = info.get("database");
+        this.dbHost = info.get("host");
+        this.dbUsername = info.get("name");
+        this.dbPassword = info.get("password");
+        this.table = info.get("table");
+      
+        String connStr = String.format("jdbc:mysql://%s/%s?user=%s&password=%s&%s",
+                this.dbHost, this.dbName, this.dbUsername, this.dbPassword, this.extraArgs);
+                
+        conn = DriverManager.getConnection(connStr);
+        
+        String query = "INSERT INTO " + this.table + " VALUES " +
+            "(NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)" +
+            "ON DUPLICATE KEY UPDATE comment = VALUES(comment), deleted = VALUES(deleted)," +
+            "media = COALESCE(VALUES(media), media), sticky = (VALUES(sticky) || sticky)";
+  
+        insertStmt = conn.prepareStatement(query);
+    }
+    
+    public void insert(Topic topic) throws SQLException {
+        // TODO: Need to handle the batch insert more carefully
+        // (transaction mode, check return, etc etc)
+        
+        for(Post post : topic.getPosts()) {
+            int c = 1;
+            insertStmt.setInt(c++, post.getId());
+            insertStmt.setInt(c++, post.getNum());
+            insertStmt.setInt(c++, post.getSubnum());
+            insertStmt.setInt(c++, post.getParent());
+            insertStmt.setInt(c++, post.getDate());
+            insertStmt.setString(c++, post.getPreview());
+            insertStmt.setInt(c++, post.getPreviewW());
+            insertStmt.setInt(c++, post.getPreviewH());
+            insertStmt.setString(c++,post.getMedia());
+            insertStmt.setInt(c++, post.getMediaW());
+            insertStmt.setInt(c++, post.getMediaH());
+            insertStmt.setInt(c++, post.getMediaSize());
+            insertStmt.setString(c++, post.getMediaHash());
+            insertStmt.setString(c++, post.getMediaFilename());
+            insertStmt.setBoolean(c++, post.isSpoiler());
+            insertStmt.setBoolean(c++, post.isDeleted());
+            insertStmt.setString(c++, (post.getCapcode() != null) ? post.getCapcode() : "N");
+            insertStmt.setString(c++, post.getEmail());
+            insertStmt.setString(c++, post.getName());
+            insertStmt.setString(c++, post.getTrip());
+            insertStmt.setString(c++, post.getTitle());
+            insertStmt.setString(c++, post.getComment());
+            insertStmt.setString(c++, post.getDelpass());
+            insertStmt.setBoolean(c++, post.isSticky());
+            insertStmt.addBatch();
+        }
+            
+        insertStmt.executeBatch();
+    }
 }
+ 
