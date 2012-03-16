@@ -6,6 +6,7 @@ import java.util.List;
 public class Page {
     private int num;
     private List<Topic> threads;
+    private String lastMod;
     
     public Page(int num) {
         this.num = num;
@@ -30,5 +31,13 @@ public class Page {
     
     public void addThread(Topic thread) {
       threads.add(thread);
+    }
+    
+    public void setLastMod(String lastMod) {
+        this.lastMod = lastMod;
+    }
+
+    public String getLastMod() {
+        return lastMod;
     }
 }

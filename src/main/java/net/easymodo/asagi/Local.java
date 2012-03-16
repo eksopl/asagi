@@ -20,13 +20,13 @@ public class Local extends Board {
     }
     
     @Override
-    public Page getPage(int pageNum, int lastMod) {
+    public Page getPage(int pageNum, String lastMod) {
         // TODO Unimplemented
         return null;
     }
     
     @Override
-    public Topic getThread(int threadNum, int lastMod) {
+    public Topic getThread(int threadNum, String lastMod) {
         // TODO Unimplemented
         return null;
     }  
@@ -109,7 +109,6 @@ public class Local extends Board {
         
         return 1;
     }
-    
     
     public int insertMedia(Post h, Board source) throws ContentGetException {
         String[] mediaDirs = makeDirs(h.getParent() == 0 ? h.getNum() : h.getParent());

@@ -7,6 +7,9 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
+import org.apache.http.util.EntityUtils;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
@@ -247,7 +250,7 @@ public class Yotsuba extends WWW {
             return null;
         
         byte[] data = this.wget(this.boardLinks.get("previewLink") + "/thumb/"
-                + h.getPreview() + "?" + System.currentTimeMillis());
+                + h.getPreview() + "?" + System.currentTimeMillis()).getContent();
         
         return data;
     }
@@ -257,7 +260,7 @@ public class Yotsuba extends WWW {
         if(h.getLink() == null)
             return null;
         
-        byte[] data = this.wget(h.getLink() + "?" + System.currentTimeMillis());
+        byte[] data = this.wget(h.getLink() + "?" + System.currentTimeMillis()).getContent();
         
         return data;
     }
@@ -298,16 +301,6 @@ public class Yotsuba extends WWW {
         thread.addPost(op);
         
         return thread;
-        
-        /*
-        System.out.println(
-                String.format("link = %s\nmedia_filename = %s\nspoiler = %s\nfilesize = %s\nwidth = %s\n"+
-                        "height = %s\nfilename = %s\ntwidth = %s\ntheight = %s\nmd5base64 = %s\n"+
-                        "num = %s\ntitle = %s\nemail = %s\nname = %s\ntrip = %s\ncapcode = %s\ndate = %s\n"+
-                        "sticky = %s\ncomment = %s\nomitted = %s\nuid = %s\n",
-                    link, media_filename, spoiler, filesize, width, height, filename, twidth, theight,
-                    md5base64, num, title, email, name, trip, capcode, date, sticky, comment, omitted, uid));
-        */    
     }
     
     public Post parsePost(String text, int parent) {
@@ -338,20 +331,9 @@ public class Yotsuba extends WWW {
         boolean sticky = false;
        
         Post post = this.newYotsubaPost(link, media_filename, spoiler, filesize, width, height, filename, twidth, 
-                theight, md5base64, num, title, email, name, trip, capcode, date, sticky, comment, omitted, 0);
+                theight, md5base64, num, title, email, name, trip, capcode, date, sticky, comment, omitted, parent);
         
         return post;
-        
-        /*
-        System.out.println(
-            String.format("link = %s\nmedia_filename = %s\nspoiler = %s\nfilesize = %s\nwidth = %s\n"+
-                    "height = %s\nfilename = %s\ntwidth = %s\ntheight = %s\nmd5base64 = %s\n"+
-                    "num = %s\ntitle = %s\nemail = %s\nname = %s\ntrip = %s\ncapcode = %s\ndate = %s\n"+
-                    "sticky = %s\ncomment = %s\nomitted = %s\nuid = %s\n",
-                link, media_filename, spoiler, filesize, width, height, filename, twidth, theight,
-                md5base64, num, title, email, name, trip, capcode, date, sticky, comment, omitted, uid));
-        }
-        */
     }
     
     public String linkPage(int pageNum) {
@@ -370,16 +352,34 @@ public class Yotsuba extends WWW {
         }
     }
     
-    @Override
-    public Page getPage(int pageNum, int lastMod) throws ContentGetException {
+    private String[] wgetText(String link, String lastMod) throws ContentGetException {
         // Throws ContentGetException on failure
-        byte[] res = this.wget(this.linkPage(pageNum), "", lastMod);
+        HttpContent httpContent = this.wget(link, "", lastMod);
+        HttpResponse httpResponse = httpContent.getHttpResponse();
+        
+        Header[] newLastModHead = httpResponse.getHeaders("Last-Modified");
+        String newLastMod = null;
+        if(newLastModHead.length > 0)
+            newLastMod = newLastModHead[0].getValue();
 
         String pageText = null;
+        String entityEncoding = EntityUtils.getContentCharSet(httpResponse.getEntity());
         try {
-            pageText = new String(res, "UTF-8");
-        } catch(UnsupportedEncodingException e) { }
-                
+            pageText = new String(httpContent.getContent(), 
+                    (entityEncoding != null) ? entityEncoding : "UTF-8");
+        } catch(UnsupportedEncodingException e) {
+            throw new ContentGetException("Unsupported encoding in HTTP response");
+        }
+        
+        return new String[] {pageText, newLastMod};
+    }
+    
+    @Override
+    public Page getPage(int pageNum, String lastMod) throws ContentGetException {
+        String[] wgetReply = this.wgetText(this.linkPage(pageNum), lastMod);
+        String pageText = wgetReply[0];
+        String newLastMod = wgetReply[1];
+
         Page p = new Page(pageNum);
         Topic t = null;
         
@@ -397,17 +397,15 @@ public class Yotsuba extends WWW {
             }
         }
         
+        p.setLastMod(newLastMod);
         return p;
     }
     
     @Override
-    public Topic getThread(int threadNum, int lastMod) throws ContentGetException {
-        byte[] res = this.wget(this.linkThread(threadNum), "", lastMod);
-        
-        String threadText = null;
-        try {
-            threadText = new String(res, "UTF-8");
-        } catch(UnsupportedEncodingException e) { } 
+    public Topic getThread(int threadNum, String lastMod) throws ContentGetException {
+        String[] wgetReply = this.wgetText(this.linkThread(threadNum), lastMod);
+        String threadText = wgetReply[0];
+        String newLastMod = wgetReply[1];
         
         Topic t = null;
         
@@ -432,6 +430,8 @@ public class Yotsuba extends WWW {
                 }
             }
         }
+        
+        t.setLastMod(newLastMod);
         return t;
     }
     

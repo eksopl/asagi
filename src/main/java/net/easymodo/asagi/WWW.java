@@ -30,24 +30,24 @@ public abstract class WWW extends Board {
         httpClient = new ContentEncodingHttpClient();
     }
     
-    public byte[] wget(String link) throws HttpGetException {
+    public HttpContent wget(String link) throws HttpGetException {
         return this.wget(link, "");
     }
 
-    public byte[] wget(String link, String referer) throws HttpGetException {
-        return wget(link, referer, 0);
+    public HttpContent wget(String link, String referer) throws HttpGetException {
+        return wget(link, referer, "");
     }
     
-    public synchronized byte[] wget(String link, String referer, int lastMod) throws HttpGetException {
+    public synchronized HttpContent wget(String link, String referer, String lastMod) throws HttpGetException {
         HttpGet req = new HttpGet(link);
         req.setHeader("Referer", referer);
+        if(lastMod != null) req.setHeader("If-Modified-Since", lastMod);
 
         int statusCode = 0;
         int maxTries = 3;
         HttpEntity entity;
         HttpResponse res;
         
-        // TODO: if-mod-since support
         try {
             do {
                 res = httpClient.execute(req);
@@ -68,13 +68,14 @@ public abstract class WWW extends Board {
         // It figures that I only find out about this method after I'm done
         // writing low level InputStream reading code, with a large comment
         // rambling about how much HttpClient sucks compared to LWP.
-        byte[] text;
+        byte[] content;
         try {
-            text = EntityUtils.toByteArray(entity);
+            content = EntityUtils.toByteArray(entity);
         } catch(IOException e) {
             throw new HttpGetException(e);
         }
-        return text;
+        
+        return new HttpContent(content, res);
     }
     
     public String doClean(String text) {

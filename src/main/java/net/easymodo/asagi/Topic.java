@@ -2,13 +2,16 @@ package net.easymodo.asagi;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Topic {
     private int num;
     private int omposts;
     private int omimages;
-    private long lastMod;
+    private String lastMod;
     private List<Post> posts;
+    private long lastHit;
+    public final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     
     public Topic(int num, int omposts, int omimages) {
         this.num = num;
@@ -61,11 +64,19 @@ public class Topic {
         return null;
     }
 
-    public void setLastMod(long lastMod) {
+    public void setLastMod(String lastMod) {
         this.lastMod = lastMod;
     }
 
-    public long getLastMod() {
+    public String getLastMod() {
         return lastMod;
+    }
+    
+    public void setLastHit(long lastHit) {
+        this.lastHit = lastHit;
+    }
+
+    public long getLastHit() {
+        return lastHit;
     }
 }
