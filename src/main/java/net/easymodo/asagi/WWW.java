@@ -1,6 +1,8 @@
 package net.easymodo.asagi;
 
 import java.io.IOException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -76,17 +78,25 @@ public abstract class WWW extends Board {
     }
     
     public String doClean(String text) {
-        /* s/&\#(\d+);/chr $1/gxse; */
+        // Replaces &#dddd; HTML entities with the proper Unicode character
+        Matcher htmlEscapeMatcher = Pattern.compile("&\\#(\\d+);").matcher(text);
+        StringBuffer textSb = new StringBuffer();
+        while(htmlEscapeMatcher.find()) {
+            String escape = (char) Integer.parseInt(htmlEscapeMatcher.group(1)) + "";
+            htmlEscapeMatcher.appendReplacement(textSb, escape);
+        }
+        htmlEscapeMatcher.appendTail(textSb);
+        text = textSb.toString();
         
+        // Replaces some other HTML entities
         text = text.replaceAll("&gt;", ">");
         text = text.replaceAll("&lt;", "<");
         text = text.replaceAll("&quot;", "\"");
         text = text.replaceAll("&amp;", "&");
         
-        /*
-        s!\s*$!!gs;
-        s!^\s*!!gs;
-        */
+        // Trims whitespace at the beginning and end of lines
+        text = text.replaceAll("\\s*$", "");
+        text = text.replaceAll("^\\s*$", "");
         
         return text;
     }

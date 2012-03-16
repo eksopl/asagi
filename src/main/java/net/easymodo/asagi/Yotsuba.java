@@ -120,7 +120,7 @@ public class Yotsuba extends WWW {
         text = text.replaceAll("<span class=\"spoiler\"[^>]*>(.*?)</spoiler>(</span>)?", "$1");
         // Non-public tags
         text = text.replaceAll("\\[(banned|moot)\\]", "[$1:lit]");
-        // Dunno, lol
+        // Comment too long, etc
         text = text.replaceAll("<span class=\"abbr\">.*?</span>", "");
         // Banned text
         text = text.replaceAll("<b style=\"color:red;\">(.*?)</b>", "[banned]$1[/banned]");
@@ -136,8 +136,8 @@ public class Yotsuba extends WWW {
         text = text.replaceAll("<span class=\"spoiler\"[^>]*>", "[spoiler]");
         // Spoilers (end)
         text = text.replaceAll("</span>", "[/spoiler]");
-        // Newlines -- TODO: needs x flag
-        text = text.replaceAll("<br \\s* /?>", "\n");
+        // Newlines
+        text = text.replaceAll("<br\\s*/?>", "\n");
 
         return this.cleanSimple(text);
     }
@@ -179,9 +179,11 @@ public class Yotsuba extends WWW {
         return (int) (v * sizeMultipliers.get(m));
     }
     
-    public Post newYotsubaPost(String link, String mediaFilename, boolean spoiler, String filesize, int width, int height, 
-            String filename, int twidth, int theight, String md5base64, int num, String title, String email, String name, 
-            String trip, String capcode, String date, boolean sticky, String comment, boolean omitted, int parent) 
+    public Post newYotsubaPost(String link, String mediaFilename, boolean spoiler,
+            String filesize, int width, int height, String filename, int twidth,
+            int theight, String md5base64, int num, String title, String email,
+            String name, String trip, String capcode, String date, boolean sticky,
+            String comment, boolean omitted, int parent) 
     {
         String type = "";
         String media = null;
@@ -244,7 +246,8 @@ public class Yotsuba extends WWW {
         if(h.getPreview() == null)
             return null;
         
-        byte[] data = this.wget(this.boardLinks.get("previewLink") + "/thumb/" + h.getPreview() + "?" + System.currentTimeMillis());
+        byte[] data = this.wget(this.boardLinks.get("previewLink") + "/thumb/"
+                + h.getPreview() + "?" + System.currentTimeMillis());
         
         return data;
     }
