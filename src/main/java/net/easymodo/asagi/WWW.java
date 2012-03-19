@@ -9,7 +9,10 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.conn.ClientConnectionManager;
 import org.apache.http.impl.client.ContentEncodingHttpClient;
+import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
+import org.apache.http.params.HttpParams;
 import org.apache.http.util.EntityUtils;
 
 /*
@@ -24,10 +27,21 @@ import org.apache.http.util.EntityUtils;
  * Uses Apache HttpComponents to provide the same functionality as Perl's LWP. 
  */
 public abstract class WWW extends Board {
-    private HttpClient httpClient;
+    private static HttpClient httpClient;
+    static {
+        HttpClient hc = new ContentEncodingHttpClient();
+        ClientConnectionManager ccm = hc.getConnectionManager();
+        HttpParams params = hc.getParams();
+        
+        ThreadSafeClientConnManager tsccm 
+            = new ThreadSafeClientConnManager(ccm.getSchemeRegistry());
+        tsccm.setDefaultMaxPerRoute(8);
+        tsccm.setMaxTotal(50);
+        httpClient = new ContentEncodingHttpClient(tsccm, params);
+    }
 
     public WWW() {
-        httpClient = new ContentEncodingHttpClient();
+    //    httpClient = new ContentEncodingHttpClient();
     }
     
     public HttpContent wget(String link) throws HttpGetException {

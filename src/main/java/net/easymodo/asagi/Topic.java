@@ -6,18 +6,21 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Topic {
     private int num;
-    private int omposts;
-    private int omimages;
+    private int omPosts;
+    private int omImages;
     private String lastMod;
     private List<Post> posts;
     private long lastHit;
+    private boolean busy;
     public final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     
-    public Topic(int num, int omposts, int omimages) {
+    public Topic(int num, int omPosts, int omImages) {
         this.num = num;
-        this.omposts = omposts;
-        this.omimages = omimages;
+        this.omPosts = omPosts;
+        this.omImages = omImages;
         this.posts = new ArrayList<Post>();
+        this.lastHit = 0;
+        this.busy = false;
     }
 
     public int getNum() {
@@ -28,20 +31,20 @@ public class Topic {
         this.num = num;
     }
 
-    public int getOmposts() {
-        return omposts;
+    public int getOmPosts() {
+        return omPosts;
     }
 
-    public void setOmposts(int omposts) {
-        this.omposts = omposts;
+    public void setOmPosts(int omPosts) {
+        this.omPosts = omPosts;
     }
 
-    public int getOmimages() {
-        return omimages;
+    public int getOmImages() {
+        return omImages;
     }
 
-    public void setOmimages(int omimages) {
-        this.omimages = omimages;
+    public void setOmImages(int omImages) {
+        this.omImages = omImages;
     }
 
     public List<Post> getPosts() {
@@ -78,5 +81,13 @@ public class Topic {
 
     public long getLastHit() {
         return lastHit;
+    }
+
+    public void setBusy(boolean busy) {
+        this.busy = busy;
+    }
+
+    public boolean isBusy() {
+        return busy;
     }
 }
