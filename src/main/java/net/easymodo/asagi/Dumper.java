@@ -1,33 +1,48 @@
 package net.easymodo.asagi;
 
+import java.io.File;
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import net.easymodo.asagi.settings.*;
+
+import com.google.common.base.Charsets;
+import com.google.common.io.Files;
+import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
+
 public class Dumper {
+    private final String boardName;
     private final Local localBoard;
+    private final Board sourceBoard;
     private final ConcurrentHashMap<Integer,Topic> topics;
     private final BlockingQueue<Post> mediaPreviewUpdates;
     private final BlockingQueue<Post> mediaUpdates;
     private final BlockingQueue<Topic> topicUpdates;
     private final BlockingQueue<Integer> newTopics;
     
-    private final int debugLevel = 100;
-    
+    private final int debugLevel = TALK;
+    private final int PAGE_LIMBO = 13;
+
     public static final int ERROR = 1;
     public static final int WARN  = 2;
     public static final int TALK  = 3;
-
-    public Dumper(Local localBoard) {
+    public static final int INFO  = 4;
+    
+    private static final String SETTINGS_FILE = "./asagi.json";
+    
+    public Dumper(String boardName, Local localBoard, Board sourceBoard) {
+        this.boardName = boardName;
         this.localBoard = localBoard;
+        this.sourceBoard = sourceBoard;
         this.topics = new ConcurrentHashMap<Integer,Topic>();
         this.mediaPreviewUpdates = new LinkedBlockingQueue<Post>();
         this.mediaUpdates = new LinkedBlockingQueue<Post>();
@@ -37,11 +52,12 @@ public class Dumper {
     
     public void debug(int level, String ... args){
         String output = "[" +
+                        boardName + " " +
                         topics.size() + " " +
                         newTopics.size() + " " +
                         topicUpdates.size() + " " +
                         mediaUpdates.size() + " " +
-                        mediaPreviewUpdates.size() + " " +
+                        mediaPreviewUpdates.size() +
                         "] ";
                 
         for(String arg : args)
@@ -91,8 +107,8 @@ public class Dumper {
                 post.setDeleted(true);
                 newTopic.addPost(post);
                 debug(TALK, post.getNum() + " (post): deleted");
-                debug(TALK, post.getNum() + " oldPosts.size():" + oldPosts.size());
-                debug(TALK, post.getNum() + " newTopic.getOmPosts(): " + newTopic.getOmPosts());
+                debug(INFO, post.getNum() + " oldPosts.size(): " + oldPosts.size());
+                debug(INFO, post.getNum() + " newTopic.getOmPosts(): " + newTopic.getOmPosts());
             }
             if(i == 0) i = newTopic.getOmPosts();
         }
@@ -101,13 +117,7 @@ public class Dumper {
     }
    
     
-    public class ThumbFetcher implements Runnable {
-        private Board sourceBoard;
-        
-        public ThumbFetcher(Board sourceBoard) {
-            this.sourceBoard = sourceBoard;
-        }
-        
+    public class ThumbFetcher implements Runnable {        
         @Override
         public void run() {
             while(true) {
@@ -129,12 +139,6 @@ public class Dumper {
     }
     
     public class MediaFetcher implements Runnable {
-        private Board sourceBoard;
-        
-        public MediaFetcher(Board sourceBoard) {
-            this.sourceBoard = sourceBoard;
-        }
-        
         @Override
         public void run() {
             while(true) {
@@ -189,12 +193,10 @@ public class Dumper {
         private final List<Integer> pageNos;
         private final long wait;
         private String[] pagesLastMods;
-        private Board sourceBoard;
         
-        PageScanner(Board sourceBoard, List<Integer> pageNos, long wait) {
+        PageScanner(long wait, List<Integer> pageNos) {
+            this.wait = wait * 1000;
             this.pageNos = pageNos;
-            this.wait = wait;
-            this.sourceBoard = sourceBoard;
             this.pagesLastMods = new String[Collections.max(pageNos) + 1];
         }
         
@@ -244,6 +246,9 @@ public class Dumper {
                         
                         // Try to get the write lock for this topic.
                         fullTopic.lock.writeLock().lock();
+                        
+                        // Update the last page where we saw this topic
+                        fullTopic.setLastPage(pageNo);
 
                         int oldPosts = 0;
                         int newPosts = 0;
@@ -251,7 +256,7 @@ public class Dumper {
                         
                         // We check for any posts that got deleted
                         // We have the write lock, so TopicFetchers can suck it.
-                        if(markDeleted(fullTopic, newTopic)) mustRefresh = true;
+                        if(markDeleted(fullTopic, newTopic)) { mustRefresh = true; newPosts++; }
                         
                         for(Post newPost : newTopic.getPosts()) {
                             // Get the same post from the previous encountered thread
@@ -304,13 +309,7 @@ public class Dumper {
         }
     }
     
-    public class TopicFetcher implements Runnable {
-        private Board sourceBoard;
-        
-        public TopicFetcher(Board sourceBoard) {
-            this.sourceBoard = sourceBoard;
-        }
-        
+    public class TopicFetcher implements Runnable {        
         @Override
         public void run() {
             while(true) {
@@ -348,15 +347,24 @@ public class Dumper {
                        debug(TALK, newTopic + ": wasn't modified");
                        continue;
                    } else if(e.getHttpStatus() == 404) {
-                       // TODO: 404 here
-                       
-                       debug(TALK, newTopic + ": deleted");
-                       
-                       // Goodbye, old topic.
-                       oldTopic.lock.writeLock().lock();
-                       topics.remove(newTopic);
-                       oldTopic.lock.writeLock().unlock();
-                       oldTopic = null;
+                       if(oldTopic != null) {  
+                           oldTopic.lock.writeLock().lock();
+                           
+                           // If we found the topic before the page limbo
+                           // threshold, then it was forcefully deleted
+                           if(oldTopic.getLastPage() < PAGE_LIMBO) {
+                               Post op = null;
+                               if((op = oldTopic.getPosts().get(0)) != null) {
+                                   op.setDeleted(true);
+                               }
+                               updateTopic(oldTopic);
+                               debug(TALK, newTopic + ": deleted");
+                           }
+                           // Goodbye, old topic.
+                           topics.remove(newTopic);
+                           oldTopic.lock.writeLock().unlock();
+                           oldTopic = null;
+                       }
                        continue;
                    } else {
                        // We got some funky error
@@ -431,83 +439,111 @@ public class Dumper {
                     topic.lock.writeLock().unlock();
                 }
                 try {
-                    Thread.sleep(2000);
+                    Thread.sleep(1000);
                 } catch(InterruptedException e) { }
             }
         }
     }
 
     
-    public static void main(String[] args) {
-        // TODO: Finish main method
-        // Settings parsing, proper thread launching, etc.
+    private static void spawnBoard(String boardName, Settings settings) throws SQLException{
+        BoardSettings defSet = settings.getSettings().get("default");
+        BoardSettings bSet = settings.getSettings().get(boardName);
         
-        // String boardName = args[1];
+        if(bSet.getDatabase() == null)
+            bSet.setDatabase(defSet.getDatabase());
+        if(bSet.getHost() == null)
+            bSet.setHost(defSet.getHost());
+        if(bSet.getUsername() == null)
+            bSet.setUsername(defSet.getUsername());
+        if(bSet.getPassword() == null)
+            bSet.setPassword(defSet.getPassword());
+        if(bSet.getPath() == null)
+            bSet.setPath(defSet.getPath() + "/" + boardName + "/");
+        if(bSet.getThumbThreads() == null)
+            bSet.setThumbThreads(defSet.getThumbThreads());
+        if(bSet.getMediaThreads() == null)
+            bSet.setMediaThreads(defSet.getMediaThreads());
+        if(bSet.getNewThreadsThreads() == null)
+            bSet.setNewThreadsThreads(defSet.getNewThreadsThreads());
+        if(bSet.getThreadRefreshRate() == null)
+            bSet.setThreadRefreshRate(defSet.getThreadRefreshRate());
+        if(bSet.getPageSettings() == null)
+            bSet.setPageSettings(defSet.getPageSettings());
         
-        Map<String, String> settings = new HashMap<String, String>();
-        settings.put("database", "archive");
-        settings.put("host", "localhost");
-        settings.put("name", "root");
-        settings.put("password", "1234");
-        settings.put("table", "jpjp");
-        settings.put("fullMedia", "true");
-        String path = "/Users/eksi/asagi/jp/";
-        String boardName = "jp";
-        List<int[]> pages = new ArrayList<int[]>();
-        int[] pages1 = {30*1000, 0, 1, 2};
-        int[] pages2 = {30*1000, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
-        pages.add(pages1);
-        pages.add(pages2);
+        if(bSet.getTable() == null)
+            bSet.setTable(boardName);
         
-        int thumbThreads = 5;
-        int mediaThreads = 5;
-        int newThreadsThreads = 5;
-        int threadRefreshRate = 1;
+        if(bSet.getMediaThreads() == 0)
+            bSet.setFullMedia(false);
+         else
+             bSet.setFullMedia(true);
+
+        Yotsuba sourceBoard = new Yotsuba(boardName);
+        Mysql sqlLocalBoard = new Mysql(bSet.getPath(), bSet);
         
-        Local localBoard = new Local(path, settings);
-        Mysql sqlBoard = null;
-        try {
-            sqlBoard = new Mysql(path, settings);
-        } catch(SQLException e) {
-            e.printStackTrace();
-        }
+        Dumper dumper = new Dumper(boardName, sqlLocalBoard, sourceBoard);
         
-        Dumper dumper = new Dumper(localBoard);
-        
-        for(int i = 0; i < thumbThreads ; i++) {
-            Thread thumbFetcher = new Thread(dumper.new ThumbFetcher(new Yotsuba(boardName)));
-            thumbFetcher.setName("Thumb fetcher #" + i);
+        for(int i = 0; i < bSet.getThumbThreads() ; i++) {
+            Thread thumbFetcher = new Thread(dumper.new ThumbFetcher());
+            thumbFetcher.setName("Thumb fetcher #" + i + " - " + boardName);
             thumbFetcher.start();
         }
         
-        for(int i = 0; i < mediaThreads ; i++) {
-            Thread mediaFetcher = new Thread(dumper.new MediaFetcher(new Yotsuba(boardName)));
-            mediaFetcher.setName("Media fetcher #" + i);
+        for(int i = 0; i < bSet.getMediaThreads() ; i++) {
+            Thread mediaFetcher = new Thread(dumper.new MediaFetcher());
+            mediaFetcher.setName(" Media fetcher #" + i + " - " + boardName);
             mediaFetcher.start();
         }
         
-        for(int i = 0; i < newThreadsThreads ; i++) {
-            Thread topicFetcher = new Thread(dumper.new TopicFetcher(new Yotsuba(boardName)));
-            topicFetcher.setName("Topic fetcher #" + i);
+        for(int i = 0; i < bSet.getNewThreadsThreads() ; i++) {
+            Thread topicFetcher = new Thread(dumper.new TopicFetcher());
+            topicFetcher.setName("Topic fetcher #" + i + " - " + boardName);
             topicFetcher.start();
         }
     
-        for(int[] page : pages) {
-            List<Integer> pageNos = new ArrayList<Integer>();
-            for(int i = 1; i < page.length; i++) {
-                pageNos.add(page[i]);
-            }
-            Thread pageScanner = new Thread(dumper.new PageScanner(new Yotsuba(boardName), pageNos, page[0]));
-            pageScanner.setName("Page scanner " + page[1]);
+        for(PageSettings pageSet : bSet.getPageSettings()) {            
+            Thread pageScanner = new Thread(dumper.new PageScanner(pageSet.getDelay(), pageSet.getPages()));
+            pageScanner.setName("Page scanner " + pageSet.getPages().get(0) + " - " + boardName);
             pageScanner.start();
         }
         
-        Thread topicInserter = new Thread(dumper.new TopicInserter(sqlBoard));
-        topicInserter.setName("Topic inserter");
+        Thread topicInserter = new Thread(dumper.new TopicInserter(sqlLocalBoard));
+        topicInserter.setName("Topic inserter" + " - " + boardName);
         topicInserter.start();
         
-        Thread topicRebuilder = new Thread(dumper.new TopicRebuilder(threadRefreshRate));
-        topicRebuilder.setName("Topic rebuilder");
+        Thread topicRebuilder = new Thread(dumper.new TopicRebuilder(bSet.getThreadRefreshRate()));
+        topicRebuilder.setName("Topic rebuilder" + " - " + boardName);
         topicRebuilder.start();
+    }
+    
+    public static void main(String[] args) {        
+        Settings fullSettings;
+        String settingsJson;
+        Gson gson = new Gson();
+        
+        try {
+            settingsJson = Files.toString(new File(SETTINGS_FILE), Charsets.UTF_8);
+        } catch(IOException e) {
+            System.out.println("ERROR: Can't find settings file ("+ SETTINGS_FILE + ")");
+            return;
+        }
+        
+        try {
+            fullSettings = gson.fromJson(settingsJson, Settings.class);
+        } catch(JsonSyntaxException e) {
+            System.out.println("ERROR: Settings file is malformed!");
+            return;
+        }
+        
+        for(String boardName : fullSettings.getSettings().keySet()) {
+            if(boardName.equals("default")) continue;
+            try {
+                spawnBoard(boardName, fullSettings);
+            } catch(SQLException e) {
+                System.out.println("ERROR: Error creating database connection for /" + boardName + "/:");
+                System.out.println("  " + e.getMessage());
+            }
+        }
     }
 }

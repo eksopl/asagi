@@ -33,15 +33,10 @@ public abstract class WWW extends Board {
         ClientConnectionManager ccm = hc.getConnectionManager();
         HttpParams params = hc.getParams();
         
-        ThreadSafeClientConnManager tsccm 
-            = new ThreadSafeClientConnManager(ccm.getSchemeRegistry());
+        ThreadSafeClientConnManager tsccm = new ThreadSafeClientConnManager(ccm.getSchemeRegistry());
         tsccm.setDefaultMaxPerRoute(8);
         tsccm.setMaxTotal(50);
         httpClient = new ContentEncodingHttpClient(tsccm, params);
-    }
-
-    public WWW() {
-    //    httpClient = new ContentEncodingHttpClient();
     }
     
     public HttpContent wget(String link) throws HttpGetException {
@@ -52,7 +47,7 @@ public abstract class WWW extends Board {
         return wget(link, referer, "");
     }
     
-    public synchronized HttpContent wget(String link, String referer, String lastMod) throws HttpGetException {
+    public HttpContent wget(String link, String referer, String lastMod) throws HttpGetException {
         HttpGet req = new HttpGet(link);
         req.setHeader("Referer", referer);
         if(lastMod != null) req.setHeader("If-Modified-Since", lastMod);

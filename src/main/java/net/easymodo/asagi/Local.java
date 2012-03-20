@@ -6,17 +6,18 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import net.easymodo.asagi.settings.BoardSettings;
 
 public class Local extends Board {
     private final String path;
     private final boolean fullMedia;
     
-    public Local(String path, Map<String,String> info) {
+    public Local(String path, BoardSettings info) {
         this.path = path;
-        this.fullMedia = Boolean.parseBoolean(info.get("fullMedia"));
+        this.fullMedia = info.getFullMedia();
     }
     
     @Override

@@ -4,7 +4,8 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.util.Map;
+
+import net.easymodo.asagi.settings.BoardSettings;
 
 // Not thread-safe
 public class Mysql extends Local {
@@ -18,13 +19,13 @@ public class Mysql extends Local {
     private Connection conn = null;
     private PreparedStatement insertStmt = null;
 
-    public Mysql(String path, Map<String,String> info) throws SQLException {
+    public Mysql(String path, BoardSettings info) throws SQLException {
         super(path, info);
-        this.dbName = info.get("database");
-        this.dbHost = info.get("host");
-        this.dbUsername = info.get("name");
-        this.dbPassword = info.get("password");
-        this.table = info.get("table");
+        this.dbName = info.getDatabase();
+        this.dbHost = info.getHost();
+        this.dbUsername = info.getUsername();
+        this.dbPassword = info.getPassword();
+        this.table = info.getTable();
       
         String connStr = String.format("jdbc:mysql://%s/%s?user=%s&password=%s&%s",
                 this.dbHost, this.dbName, this.dbUsername, this.dbPassword, this.extraArgs);
@@ -39,7 +40,7 @@ public class Mysql extends Local {
         insertStmt = conn.prepareStatement(query);
     }
     
-    public void insert(Topic topic) throws SQLException {
+    public synchronized void insert(Topic topic) throws SQLException {
         // TODO: Need to handle the batch insert more carefully
         // (transaction mode, check return, etc etc)
         

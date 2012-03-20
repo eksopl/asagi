@@ -10,6 +10,7 @@ public class Topic {
     private int omImages;
     private String lastMod;
     private List<Post> posts;
+    private int lastPage;
     private long lastHit;
     private boolean busy;
     public final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
@@ -19,6 +20,7 @@ public class Topic {
         this.omPosts = omPosts;
         this.omImages = omImages;
         this.posts = new ArrayList<Post>();
+        this.lastPage = 0;
         this.lastHit = 0;
         this.busy = false;
     }
@@ -89,5 +91,13 @@ public class Topic {
 
     public boolean isBusy() {
         return busy;
+    }
+
+    public int getLastPage() {
+        return lastPage;
+    }
+
+    public void setLastPage(int lastPage) {
+        this.lastPage = lastPage;
     }
 }
