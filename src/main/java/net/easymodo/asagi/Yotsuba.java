@@ -7,12 +7,17 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.annotation.concurrent.ThreadSafe;
+
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.util.EntityUtils;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
+import net.easymodo.asagi.exception.*;
+
+@ThreadSafe
 public class Yotsuba extends WWW {
     private static final Map<String, Integer> sizeMultipliers;
     private static final Pattern threadParsePattern;

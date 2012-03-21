@@ -1,15 +1,15 @@
-package net.easymodo.asagi;
+package net.easymodo.asagi.exception;
 
 public class HttpGetException extends ContentGetException {
-    private static final long serialVersionUID = 3389302394457094498L;
+    private static final long serialVersionUID = -5103283207373620298L;
     private final int httpStatus;
     
-    HttpGetException(Throwable e) {
+    public HttpGetException(Throwable e) {
         super(e);
         this.httpStatus = 0;
     }
     
-    HttpGetException(String s, int httpStatus) {
+    public HttpGetException(String s, int httpStatus) {
         super("HTTP error: " + s, null);
         this.httpStatus = httpStatus;
     }

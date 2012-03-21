@@ -1,5 +1,7 @@
 package net.easymodo.asagi;
 
+import net.easymodo.asagi.exception.*;
+
 public abstract class Board {
     public abstract byte[] getMediaPreview(Post h) throws ContentGetException;
     public abstract byte[] getMedia(Post h) throws ContentGetException;

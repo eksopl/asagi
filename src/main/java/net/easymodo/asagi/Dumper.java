@@ -13,6 +13,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import net.easymodo.asagi.settings.*;
+import net.easymodo.asagi.exception.*;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
@@ -460,6 +461,8 @@ public class Dumper {
             bSet.setPassword(defSet.getPassword());
         if(bSet.getPath() == null)
             bSet.setPath(defSet.getPath() + "/" + boardName + "/");
+        if(bSet.getWebserverGroup() == null)
+            bSet.setWebserverGroup(defSet.getWebserverGroup());
         if(bSet.getThumbThreads() == null)
             bSet.setThumbThreads(defSet.getThumbThreads());
         if(bSet.getMediaThreads() == null)

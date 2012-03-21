@@ -5,6 +5,7 @@
     "username": "root",
     "password": "1234",
     "path": "/Users/eksi/asagi/",
+    "webserverGroup": "_www",
     "thumbThreads": 5,
     "mediaThreads": 5,
     "newThreadsThreads": 5,

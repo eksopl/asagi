@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.annotation.concurrent.ThreadSafe;
+
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
@@ -15,7 +17,10 @@ import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
 import org.apache.http.params.HttpParams;
 import org.apache.http.util.EntityUtils;
 
-/*
+import net.easymodo.asagi.exception.*;
+
+
+/**
  * This class extends the abstract class Board.
  * It provides basic functionality to fetch things over HTTP.
  * Boards that work over WWW should extend from this class.
@@ -24,18 +29,20 @@ import org.apache.http.util.EntityUtils;
  * Equivalent to: Board::WWW
  * 
  * Implementation notes:
- * Uses Apache HttpComponents to provide the same functionality as Perl's LWP. 
- */
+ * Uses Apache HttpComponents to provide functionality similar to Perl's LWP.
+ **/
+@ThreadSafe
 public abstract class WWW extends Board {
     private static HttpClient httpClient;
+    
     static {
         HttpClient hc = new ContentEncodingHttpClient();
         ClientConnectionManager ccm = hc.getConnectionManager();
         HttpParams params = hc.getParams();
         
         ThreadSafeClientConnManager tsccm = new ThreadSafeClientConnManager(ccm.getSchemeRegistry());
-        tsccm.setDefaultMaxPerRoute(8);
-        tsccm.setMaxTotal(50);
+        tsccm.setDefaultMaxPerRoute(20);
+        tsccm.setMaxTotal(100);
         httpClient = new ContentEncodingHttpClient(tsccm, params);
     }
     
@@ -67,16 +74,22 @@ public abstract class WWW extends Board {
         } catch(IOException e) {
             throw new HttpGetException(e);
         }
+
+        entity = res.getEntity();
         
         if(statusCode != 200) {
+            try {
+                // Consume the rest of the HTTP response
+                // (closes underlying stream, etc)
+                EntityUtils.consume(entity);
+            } catch(IOException e) {
+                throw new HttpGetException(e);
+            }
             throw new HttpGetException(res.getStatusLine().getReasonPhrase(), statusCode);
         }
-        
-        entity = res.getEntity();
 
-        // It figures that I only find out about this method after I'm done
-        // writing low level InputStream reading code, with a large comment
-        // rambling about how much HttpClient sucks compared to LWP.
+        // Slurps everything out of the network and turns it into a byte array.
+        // Also closes the underlying stream after it's done.
         byte[] content;
         try {
             content = EntityUtils.toByteArray(entity);

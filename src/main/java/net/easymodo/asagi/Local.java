@@ -9,83 +9,127 @@ import java.io.OutputStream;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import net.easymodo.asagi.settings.BoardSettings;
+import javax.annotation.concurrent.ThreadSafe;
 
+import com.sun.jna.Native;
+
+import net.easymodo.asagi.settings.BoardSettings;
+import net.easymodo.asagi.exception.*;
+import net.easymodo.asagi.posix.*;
+
+@ThreadSafe
 public class Local extends Board {
     private final String path;
-    private final boolean fullMedia;
+    private final int webGroupId;
+    
+    private final static int DIR_THUMB = 1;
+    private final static int DIR_MEDIA = 1;
+    
+    private final static Posix posix;
+    
+    static {
+        posix = (Posix)Native.loadLibrary("c", Posix.class);
+    }
     
     public Local(String path, BoardSettings info) {
         this.path = path;
-        this.fullMedia = info.getFullMedia();
+        
+        // getgrnam is thread-safe on sensible OSes, but it's not thread safe
+        // on most ones.
+        // Performing the gid lookup in the constructor and calling chmod and
+        // chown from the C library (which are reentrant functions) keeps this
+        // class thread-safe.
+        
+        // TODO: OS checking and stuff
+        String webServerGroup = info.getWebserverGroup();
+        if(webServerGroup != null) {
+            Group group = posix.getgrnam(webServerGroup);
+            webGroupId = (int)group.getGid();
+        } else {
+            webGroupId = 0;
+        }
     }
     
     @Override
     public Page getPage(int pageNum, String lastMod) {
-        // TODO Unimplemented
-        return null;
+        // Unimplemented
+        throw new UnsupportedOperationException();
     }
     
     @Override
     public Topic getThread(int threadNum, String lastMod) {
-        // TODO Unimplemented
-        return null;
+        // Unimplemented
+        throw new UnsupportedOperationException();
     }  
     
     @Override
     public byte[] getMediaPreview(Post h) {
-     // TODO Unimplemented
-        return null;
+        // Unimplemented
+        throw new UnsupportedOperationException();
     }
     
     @Override
     public byte[] getMedia(Post h) {
-     // TODO Unimplemented
-        return null;
+        // Unimplemented
+        throw new UnsupportedOperationException();
     }
     
-    public String[] getSubdirs(String num) {
+    public String[] getSubdirs(int num) {
         String patString = "(\\d+?)(\\d{2})\\d{0,3}$";      
         Pattern pat = Pattern.compile(patString);
-        Matcher mat = pat.matcher(num);
+        Matcher mat = pat.matcher(Integer.toString(num));
         mat.find();
         String subdir = String.format("%04d", Integer.parseInt(mat.group(1)));
         String subdir2 = String.format("%02d", Integer.parseInt(mat.group(2)));
+        
         return new String[] {subdir, subdir2};
     }
     
-    public String[] getDirs(String num) {
+    public String getDir(int num, int dirType) {
         String[] subdirs = getSubdirs(num);
-        String thumbDir = String.format("%s/thumb/%s/%s", this.path, subdirs[0], subdirs[1]);
-        String mediaDir = String.format("%s/img/%s/%s", this.path, subdirs[0], subdirs[1]);
-
-        return new String[] {thumbDir, mediaDir};
-    }
-    
-    public String[] makeDirs(int num) {
-        return this.makeDirs(num, this.path);
-    }
-    
-    public String[] makeDirs(int num, String path) {
-        String[] subdirs = this.getSubdirs(new Integer(num).toString());
         
-        File thumbSubDirFile = new File(String.format("%s/thumb/%s", this.path, subdirs[0]));
-        File thumbSubDir2File =  new File(String.format("%s/thumb/%s/%s", this.path, subdirs[0], subdirs[1]));
-        thumbSubDir2File.mkdirs();
-        // TODO: chmod + chown
-        if(this.fullMedia) {
-            File imgSubDirFile = new File(String.format("%s/img/%s", this.path, subdirs[0]));
-            File imgSubDir2File =  new File(String.format("%s/img/%s/%s", this.path, subdirs[0], subdirs[1]));
-            imgSubDir2File.mkdirs();
-            // TODO: chmod + chown
+        if(dirType == DIR_THUMB) {
+            return String.format("%s/thumb/%s/%s", this.path, subdirs[0], subdirs[1]);
+        } else if(dirType == DIR_MEDIA) {
+            return String.format("%s/img/%s/%s", this.path, subdirs[0], subdirs[1]);
+        } else {
+            return null;
+        }
+    }
+    
+    public String makeDir(int num, int dirType) {
+        return this.makeDir(num, this.path, dirType);
+    }
+    
+    public String makeDir(int num, String path, int dirType) {
+        String[] subdirs = this.getSubdirs(num);
+        
+        String dir;
+        if(dirType == DIR_THUMB) {
+            dir = "thumb";
+        } else if(dirType == DIR_MEDIA) {
+            dir = "img";
+        } else {
+            return null;
         }
         
-        return this.getDirs(new Integer(num).toString());
+        String subDir = String.format("%s/%s/%s", this.path, dir, subdirs[0]);
+        String subDir2 = String.format("%s/%s/%s/%s", this.path, dir, subdirs[0], subdirs[1]);
+        File subDir2File =  new File(subDir2);
+        
+        // TODO: mkdir return check and exception
+        subDir2File.mkdirs();
+                
+        posix.chmod(subDir, 0775);
+        posix.chmod(subDir2, 0775);
+        posix.chown(subDir, -1, this.webGroupId);
+        posix.chown(subDir2, -1, this.webGroupId);
+        
+        return this.getDir(num, dirType);
     }
     
     public int insertMediaPreview(Post h, Board source) throws ContentGetException {
-        String[] mediaDirs = makeDirs(h.getParent() == 0 ? h.getNum() : h.getParent());
-        String thumbDir = mediaDirs[0];
+        String thumbDir = makeDir(h.getParent() == 0 ? h.getNum() : h.getParent(), DIR_THUMB);
         
         if(h.getPreview() == null) return 0;
         
@@ -99,12 +143,14 @@ public class Local extends Board {
             OutputStream outFile = new BufferedOutputStream(new FileOutputStream(thumbFile));
             outFile.write(data);
             outFile.close();
-            // TODO: chown and chmod that shit yo
+            
+            posix.chmod(thumbFile.getCanonicalPath(), 0664);
+            posix.chown(thumbFile.getCanonicalPath(), -1, this.webGroupId);
         } catch(FileNotFoundException e) {
-            // TODO Auto-generated catch block
+            // TODO Needs ContentStoreException
             e.printStackTrace();
         } catch(IOException e) {
-            // TODO Auto-generated catch block
+            // TODO Needs ContentStoreException
             e.printStackTrace();
         }
         
@@ -112,8 +158,7 @@ public class Local extends Board {
     }
     
     public int insertMedia(Post h, Board source) throws ContentGetException {
-        String[] mediaDirs = makeDirs(h.getParent() == 0 ? h.getNum() : h.getParent());
-        String mediaDir = mediaDirs[1];
+        String mediaDir = makeDir(h.getParent() == 0 ? h.getNum() : h.getParent(), DIR_MEDIA);
         
         if(h.getMediaFilename() == null) return 0;
         
@@ -128,12 +173,14 @@ public class Local extends Board {
             OutputStream outFile = new BufferedOutputStream(new FileOutputStream(mediaFile));
             outFile.write(data);
             outFile.close();
-            // TODO: chown and chmod that shit yo
+            
+            posix.chmod(mediaFile.getCanonicalPath(), 0664);
+            posix.chown(mediaFile.getCanonicalPath(), -1, this.webGroupId);
         } catch(FileNotFoundException e) {
-            // TODO Auto-generated catch block
+            // TODO Needs ContentStoreException
             e.printStackTrace();
         } catch(IOException e) {
-            // TODO Auto-generated catch block
+            // TODO Needs ContentStoreException
             e.printStackTrace();
         }
         

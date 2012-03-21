@@ -9,6 +9,7 @@ public class BoardSettings {
     private String password;
     private String table;
     private String path;
+    private String webserverGroup;
     private Boolean fullMedia;
     private Integer thumbThreads;
     private Integer mediaThreads;
@@ -87,5 +88,11 @@ public class BoardSettings {
     }
     public void setPageSettings(List<PageSettings> pageSettings) {
         this.pageSettings = pageSettings;
+    }
+    public String getWebserverGroup() {
+        return webserverGroup;
+    }
+    public void setWebserverGroup(String webserverGroup) {
+        this.webserverGroup = webserverGroup;
     }
 }
