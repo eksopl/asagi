@@ -1,11 +1,13 @@
 package net.easymodo.asagi;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.annotation.concurrent.ThreadSafe;
 
+import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
@@ -98,6 +100,28 @@ public abstract class WWW extends Board {
         }
         
         return new HttpContent(content, res);
+    }
+    
+    public String[] wgetText(String link, String lastMod) throws ContentGetException {
+        // Throws ContentGetException on failure
+        HttpContent httpContent = this.wget(link, "", lastMod);
+        HttpResponse httpResponse = httpContent.getHttpResponse();
+        
+        Header[] newLastModHead = httpResponse.getHeaders("Last-Modified");
+        String newLastMod = null;
+        if(newLastModHead.length > 0)
+            newLastMod = newLastModHead[0].getValue();
+
+        String pageText = null;
+        String entityEncoding = EntityUtils.getContentCharSet(httpResponse.getEntity());
+        try {
+            pageText = new String(httpContent.getContent(), 
+                    (entityEncoding != null) ? entityEncoding : "UTF-8");
+        } catch(UnsupportedEncodingException e) {
+            throw new ContentGetException("Unsupported encoding in HTTP response");
+        }
+        
+        return new String[] {pageText, newLastMod};
     }
     
     public String doClean(String text) {

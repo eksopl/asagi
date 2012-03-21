@@ -1,6 +1,5 @@
 package net.easymodo.asagi;
 
-import java.io.UnsupportedEncodingException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -9,9 +8,6 @@ import java.util.regex.Pattern;
 
 import javax.annotation.concurrent.ThreadSafe;
 
-import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.util.EntityUtils;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
@@ -155,9 +151,8 @@ public class Yotsuba extends WWW {
             Pattern.compile("(\\d+)/(\\d+)/(\\d+) \\(\\w+\\) (\\d+):(\\d+)(?:(\\d+))?", Pattern.COMMENTS);
         Matcher mat = pat.matcher(date);
         
-        // TODO: Throw an exception instead
         if(!mat.find())
-            return 0;
+            throw new IllegalArgumentException("Malformed date string");
         
         int mon = Integer.parseInt(mat.group(1));
         int mday = Integer.parseInt(mat.group(2));
@@ -177,9 +172,8 @@ public class Yotsuba extends WWW {
         Pattern pat = Pattern.compile("([\\.\\d]+) \\s (.*)", Pattern.COMMENTS);
         Matcher mat = pat.matcher(text);
         
-        // TODO: Throw an exception instead
         if(!mat.find())
-            return 0;
+            throw new IllegalArgumentException("Malformed filesize string");
         
         float v = Float.parseFloat(mat.group(1));
         String m = mat.group(2);
@@ -191,12 +185,11 @@ public class Yotsuba extends WWW {
             String filesize, int width, int height, String filename, int twidth,
             int theight, String md5base64, int num, String title, String email,
             String name, String trip, String capcode, String date, boolean sticky,
-            String comment, boolean omitted, int parent) 
+            String comment, boolean omitted, int parent) throws ContentParseException 
     {
         String type = "";
         String media = null;
         String preview = null;
-        int timestamp;
         String md5 = null;
         
         if(link != null) {
@@ -218,7 +211,14 @@ public class Yotsuba extends WWW {
             md5 = md5base64;
         }
         
-        timestamp = this.parseDate(date);
+        int timeStamp;
+        int mediaSize;
+        try {
+            timeStamp = this.parseDate(date);
+            mediaSize = this.parseFilesize(filesize);
+        } catch(IllegalArgumentException e) {
+            throw new ContentParseException("Could not create post " + num , e);
+        }
         
         Post post = new Post();
         post.setLink(link);
@@ -226,7 +226,7 @@ public class Yotsuba extends WWW {
         post.setMedia(media);
         post.setMediaHash(md5);
         post.setMediaFilename(mediaFilename);
-        post.setMediaSize(this.parseFilesize(filesize));
+        post.setMediaSize(mediaSize);
         post.setMediaW(width);
         post.setMediaH(height);
         post.setPreview(preview);
@@ -238,7 +238,7 @@ public class Yotsuba extends WWW {
         post.setEmail(email);
         post.setName(this.cleanSimple(name));
         post.setTrip(trip);
-        post.setDate(timestamp);
+        post.setDate(timeStamp);
         post.setComment(this.doClean(comment));
         post.setSpoiler(spoiler);
         post.setDeleted(false);
@@ -271,10 +271,12 @@ public class Yotsuba extends WWW {
     }
     
 
-    public Topic parseThread(String text) {
+    public Topic parseThread(String text) throws ContentParseException {
         Matcher mat = threadParsePattern.matcher(text);
         
-        mat.find();
+        if(!mat.find()) {
+            throw new ContentParseException("Could not parse thread (thread regex failed)");
+        }
         
         String link = mat.group(1);
         String mediaFilename = mat.group(2);
@@ -308,11 +310,12 @@ public class Yotsuba extends WWW {
         return thread;
     }
     
-    public Post parsePost(String text, int parent) {
+    public Post parsePost(String text, int parent) throws ContentParseException {
         Matcher mat = postParsePattern.matcher(text);
         
-        mat.find();
-        
+        if(!mat.find()) {
+            throw new ContentParseException("Could not parse post (post regex failed)");
+        }        
         int num = Integer.parseInt(mat.group(1));
         String title = mat.group(2);
         String email = mat.group(3);
@@ -357,30 +360,8 @@ public class Yotsuba extends WWW {
         }
     }
     
-    private String[] wgetText(String link, String lastMod) throws ContentGetException {
-        // Throws ContentGetException on failure
-        HttpContent httpContent = this.wget(link, "", lastMod);
-        HttpResponse httpResponse = httpContent.getHttpResponse();
-        
-        Header[] newLastModHead = httpResponse.getHeaders("Last-Modified");
-        String newLastMod = null;
-        if(newLastModHead.length > 0)
-            newLastMod = newLastModHead[0].getValue();
-
-        String pageText = null;
-        String entityEncoding = EntityUtils.getContentCharSet(httpResponse.getEntity());
-        try {
-            pageText = new String(httpContent.getContent(), 
-                    (entityEncoding != null) ? entityEncoding : "UTF-8");
-        } catch(UnsupportedEncodingException e) {
-            throw new ContentGetException("Unsupported encoding in HTTP response");
-        }
-        
-        return new String[] {pageText, newLastMod};
-    }
-    
     @Override
-    public Page getPage(int pageNum, String lastMod) throws ContentGetException {
+    public Page getPage(int pageNum, String lastMod) throws ContentGetException, ContentParseException {
         String[] wgetReply = this.wgetText(this.linkPage(pageNum), lastMod);
         String pageText = wgetReply[0];
         String newLastMod = wgetReply[1];
@@ -407,7 +388,7 @@ public class Yotsuba extends WWW {
     }
     
     @Override
-    public Topic getThread(int threadNum, String lastMod) throws ContentGetException {
+    public Topic getThread(int threadNum, String lastMod) throws ContentGetException, ContentParseException {
         String[] wgetReply = this.wgetText(this.linkThread(threadNum), lastMod);
         String threadText = wgetReply[0];
         String newLastMod = wgetReply[1];
@@ -423,15 +404,13 @@ public class Yotsuba extends WWW {
                 if(t == null) {
                     t = this.parseThread(text);
                 } else {
-                    System.out.println("two OPs in one thread");
-                    //TODO: two OPs in one thread
+                    throw new ContentParseException("Two OP posts in thread in " + threadNum);
                 }
             } else {
                 if(t != null) {
                     t.addPost(this.parsePost(text, t.getNum()));
                 } else {
-                    System.out.println("posts without thread");
-                    //TODO: posts without thread
+                    throw new ContentParseException("Thread without OP post in " + threadNum);
                 }
             }
         }

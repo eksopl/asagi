@@ -134,6 +134,9 @@ public class Dumper {
                     debug(ERROR, "Couldn't fetch preview of post " + 
                             mediaPrevPost.getNum() + ": " + e.getMessage());
                     continue;
+                } catch(ContentStoreException e) {
+                    debug(ERROR, "Couldn't save preview of post " + 
+                            mediaPrevPost.getNum() + ": " + e.getMessage());
                 }
             }
         }
@@ -153,6 +156,10 @@ public class Dumper {
                     localBoard.insertMedia(mediaPost, sourceBoard);
                 } catch(ContentGetException e) {
                     debug(ERROR, "Couldn't fetch media of post " + 
+                            mediaPost.getNum() + ": " + e.getMessage());
+                    continue;
+                } catch(ContentStoreException e) {
+                    debug(ERROR, "Couldn't save media of post " + 
                             mediaPost.getNum() + ": " + e.getMessage());
                     continue;
                 }
@@ -218,6 +225,15 @@ public class Dumper {
                         continue;
                     } catch(ContentGetException e) {
                         debug(WARN, pageNo + e.getMessage());
+                        continue;
+                    } catch(ContentParseException e) {
+                        debug(ERROR, pageNo + e.getMessage());
+                        continue;
+                    }
+                    
+                    if(page == null) {
+                        debug(WARN, (pageNo == 0 ? "front page" : "page " + pageNo)
+                                + "had no threads");
                         continue;
                     }
                     
@@ -376,9 +392,15 @@ public class Dumper {
                    // We got an even funkier, non-HTTP error
                    debug(WARN, newTopic + ": error: " + e.getMessage());
                    continue;
+               } catch(ContentParseException e) {
+                   debug(ERROR, newTopic + e.getMessage());
+                   continue;
                }
                
-               if(topic == null) { debug(WARN, newTopic + ": topic without posts?"); continue; }
+               if(topic == null) { 
+                   debug(WARN, newTopic + ": topic has no posts");
+                   continue; 
+               }
                
                topic.setLastHit(System.currentTimeMillis());
                

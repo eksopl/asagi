@@ -97,11 +97,11 @@ public class Local extends Board {
         }
     }
     
-    public String makeDir(int num, int dirType) {
+    public String makeDir(int num, int dirType) throws ContentStoreException {
         return this.makeDir(num, this.path, dirType);
     }
     
-    public String makeDir(int num, String path, int dirType) {
+    public String makeDir(int num, String path, int dirType) throws ContentStoreException {
         String[] subdirs = this.getSubdirs(num);
         
         String dir;
@@ -117,8 +117,9 @@ public class Local extends Board {
         String subDir2 = String.format("%s/%s/%s/%s", this.path, dir, subdirs[0], subdirs[1]);
         File subDir2File =  new File(subDir2);
         
-        // TODO: mkdir return check and exception
-        subDir2File.mkdirs();
+        if(!subDir2File.exists())
+            if(!subDir2File.mkdirs())
+                throw new ContentStoreException("Could not create dirs at path " + subDir2);
                 
         posix.chmod(subDir, 0775);
         posix.chmod(subDir2, 0775);
@@ -128,7 +129,7 @@ public class Local extends Board {
         return this.getDir(num, dirType);
     }
     
-    public int insertMediaPreview(Post h, Board source) throws ContentGetException {
+    public int insertMediaPreview(Post h, Board source) throws ContentGetException, ContentStoreException {
         String thumbDir = makeDir(h.getParent() == 0 ? h.getNum() : h.getParent(), DIR_THUMB);
         
         if(h.getPreview() == null) return 0;
@@ -147,17 +148,15 @@ public class Local extends Board {
             posix.chmod(thumbFile.getCanonicalPath(), 0664);
             posix.chown(thumbFile.getCanonicalPath(), -1, this.webGroupId);
         } catch(FileNotFoundException e) {
-            // TODO Needs ContentStoreException
-            e.printStackTrace();
+            throw new ContentStoreException(e);
         } catch(IOException e) {
-            // TODO Needs ContentStoreException
-            e.printStackTrace();
+            throw new ContentStoreException(e);
         }
         
         return 1;
     }
     
-    public int insertMedia(Post h, Board source) throws ContentGetException {
+    public int insertMedia(Post h, Board source) throws ContentGetException, ContentStoreException {
         String mediaDir = makeDir(h.getParent() == 0 ? h.getNum() : h.getParent(), DIR_MEDIA);
         
         if(h.getMediaFilename() == null) return 0;
@@ -177,11 +176,9 @@ public class Local extends Board {
             posix.chmod(mediaFile.getCanonicalPath(), 0664);
             posix.chown(mediaFile.getCanonicalPath(), -1, this.webGroupId);
         } catch(FileNotFoundException e) {
-            // TODO Needs ContentStoreException
-            e.printStackTrace();
+            throw new ContentStoreException(e);
         } catch(IOException e) {
-            // TODO Needs ContentStoreException
-            e.printStackTrace();
+            throw new ContentStoreException(e);
         }
         
         return 1;

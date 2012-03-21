@@ -14,15 +14,18 @@ public class Group extends Structure {
     public String getName() {
         return name;
     }
+    
     public String getPassword() {
         return password;
     }
+    
     public long getGid() {
         return gid;
     }
+    
     public String[] getMembers() {
         // Don't really care about this
         // Can be implemented later if it's ever needed
-        return null;
+        throw new UnsupportedOperationException();
    }
 }
