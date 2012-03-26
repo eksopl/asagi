@@ -24,13 +24,14 @@ import com.google.gson.JsonSyntaxException;
 
 public class Dumper {
     private final String boardName;
-    private final Local localBoard;
-    private final Board sourceBoard;
-    private final ConcurrentHashMap<Integer,Topic> topics;
-    private final BlockingQueue<Post> mediaPreviewUpdates;
-    private final BlockingQueue<Post> mediaUpdates;
-    private final BlockingQueue<Topic> topicUpdates;
-    private final BlockingQueue<Integer> newTopics;
+    protected final Local localBoard;
+    protected final Board sourceBoard;
+    protected final ConcurrentHashMap<Integer,Topic> topics;
+    protected final BlockingQueue<Post> mediaPreviewUpdates;
+    protected final BlockingQueue<Post> mediaUpdates;
+    protected final BlockingQueue<Topic> topicUpdates;
+    protected final BlockingQueue<Integer> newTopics;
+    private final boolean fullMedia;
     
     public static final int ERROR = 1;
     public static final int WARN  = 2;
@@ -39,10 +40,10 @@ public class Dumper {
     
     private static final String SETTINGS_FILE = "./asagi.json";
     
-    private final int debugLevel = TALK;
-    private final int pageLimbo = 13;
+    private final int debugLevel;
+    private final int pageLimbo;
     
-    public Dumper(String boardName, Local localBoard, Board sourceBoard) {
+    public Dumper(String boardName, Local localBoard, Board sourceBoard, boolean fullMedia) {
         this.boardName = boardName;
         this.localBoard = localBoard;
         this.sourceBoard = sourceBoard;
@@ -51,6 +52,9 @@ public class Dumper {
         this.mediaUpdates = new LinkedBlockingQueue<Post>();
         this.topicUpdates = new LinkedBlockingQueue<Topic>();
         this.newTopics = new LinkedBlockingQueue<Integer>();
+        this.fullMedia = fullMedia;
+        this.debugLevel = TALK;
+        this.pageLimbo = 13;
     }
     
     public void debug(int level, String ... args){
@@ -78,7 +82,7 @@ public class Dumper {
         for(Post post : posts) {
             try {
                 if(post.getPreview() != null) mediaPreviewUpdates.put(post);
-                if(post.getMediaFilename() != null) mediaUpdates.put(post);
+                if(post.getMediaFilename() != null && fullMedia) mediaUpdates.put(post);
             } catch(InterruptedException e) { }
         }
         
@@ -451,7 +455,6 @@ public class Dumper {
                    topic.setLastPage(oldTopic.getLastPage());
                    
                    // Goodbye, old topic.
-                   topics.remove(newTopic);
                    topics.put(newTopic, topic);
                    oldTopic.lock.writeLock().unlock();
                } else {
@@ -473,7 +476,7 @@ public class Dumper {
         private final long threadRefreshRate;
         
         public TopicRebuilder(int threadRefreshRate) {
-            this.threadRefreshRate = threadRefreshRate * 60 * 1000L;
+            this.threadRefreshRate = threadRefreshRate * 60L * 1000L;
         }
         
         
@@ -506,7 +509,7 @@ public class Dumper {
     }
 
     
-    private static void spawnBoard(String boardName, Settings settings) throws SQLException{
+    private static void spawnBoard(String boardName, Settings settings) throws BoardInitException {
         BoardSettings defSet = settings.getSettings().get("default");
         BoardSettings bSet = settings.getSettings().get(boardName);
         
@@ -536,15 +539,11 @@ public class Dumper {
         if(bSet.getTable() == null)
             bSet.setTable(boardName);
         
-        if(bSet.getMediaThreads() == 0)
-            bSet.setFullMedia(false);
-         else
-             bSet.setFullMedia(true);
-
         Yotsuba sourceBoard = new Yotsuba(boardName);
         Mysql sqlLocalBoard = new Mysql(bSet.getPath(), bSet);
-        
-        Dumper dumper = new Dumper(boardName, sqlLocalBoard, sourceBoard);
+        boolean fullMedia = (bSet.getMediaThreads() != 0);
+
+        Dumper dumper = new Dumper(boardName, sqlLocalBoard, sourceBoard, fullMedia);
         
         for(int i = 0; i < bSet.getThumbThreads() ; i++) {
             Thread thumbFetcher = new Thread(dumper.new ThumbFetcher());
@@ -603,7 +602,7 @@ public class Dumper {
             if(boardName.equals("default")) continue;
             try {
                 spawnBoard(boardName, fullSettings);
-            } catch(SQLException e) {
+            } catch(BoardInitException e) {
                 System.out.println("ERROR: Error creating database connection for /" + boardName + "/:");
                 System.out.println("  " + e.getMessage());
             }

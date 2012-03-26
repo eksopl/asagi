@@ -142,10 +142,15 @@ public class Local extends Board {
         
         byte[] data = source.getMediaPreview(h);
         
+        OutputStream outFile = null;
         try {
-            OutputStream outFile = new BufferedOutputStream(new FileOutputStream(thumbFile));
+            outFile = new BufferedOutputStream(new FileOutputStream(thumbFile));
+        } catch(FileNotFoundException e) {
+            throw new ContentStoreException(e);
+        }
+        
+        try{
             outFile.write(data);
-            outFile.close();
             
             posix.chmod(thumbFile.getCanonicalPath(), 0664);
             posix.chown(thumbFile.getCanonicalPath(), -1, this.webGroupId);
@@ -153,6 +158,12 @@ public class Local extends Board {
             throw new ContentStoreException(e);
         } catch(IOException e) {
             throw new ContentStoreException(e);
+        } finally {
+            try {
+                outFile.close();
+            } catch(IOException e) {
+                throw new ContentStoreException(e);
+            }
         }
         
         return 1;
@@ -170,10 +181,15 @@ public class Local extends Board {
         // Throws ContentGetException on failure
         byte[] data = source.getMedia(h);
         
+        OutputStream outFile = null;
         try {
-            OutputStream outFile = new BufferedOutputStream(new FileOutputStream(mediaFile));
+            outFile = new BufferedOutputStream(new FileOutputStream(mediaFile));
+        } catch(FileNotFoundException e) {
+            throw new ContentStoreException(e);
+        }
+        
+        try{
             outFile.write(data);
-            outFile.close();
             
             posix.chmod(mediaFile.getCanonicalPath(), 0664);
             posix.chown(mediaFile.getCanonicalPath(), -1, this.webGroupId);
@@ -181,6 +197,12 @@ public class Local extends Board {
             throw new ContentStoreException(e);
         } catch(IOException e) {
             throw new ContentStoreException(e);
+        } finally {
+            try {
+                outFile.close();
+            } catch(IOException e) {
+                throw new ContentStoreException(e);
+            }
         }
         
         return 1;

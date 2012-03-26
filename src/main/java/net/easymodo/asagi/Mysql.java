@@ -1,12 +1,19 @@
 package net.easymodo.asagi;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 import javax.annotation.concurrent.ThreadSafe;
 
+import com.google.common.base.Charsets;
+import com.google.common.io.Resources;
+
+import net.easymodo.asagi.exception.BoardInitException;
 import net.easymodo.asagi.settings.BoardSettings;
 
 @ThreadSafe
@@ -16,34 +23,112 @@ public class Mysql extends Local {
     private final String dbUsername;
     private final String dbPassword;
     private final String table;
-    private final String extraArgs = "rewriteBatchedStatements=true";
+    private final String charset;
+    private final String extraArgs;
     
     private Connection conn = null;
     private PreparedStatement insertStmt = null;
 
-    public Mysql(String path, BoardSettings info) throws SQLException {
+    public Mysql(String path, BoardSettings info) throws BoardInitException {
         super(path, info);
         this.dbName = info.getDatabase();
         this.dbHost = info.getHost();
         this.dbUsername = info.getUsername();
         this.dbPassword = info.getPassword();
         this.table = info.getTable();
+        this.charset = "utf8mb4";
+        this.extraArgs = "rewriteBatchedStatements=true&allowMultiQueries=true";
       
         String connStr = String.format("jdbc:mysql://%s/%s?user=%s&password=%s&%s",
                 this.dbHost, this.dbName, this.dbUsername, this.dbPassword, this.extraArgs);
+        
+        String insertQuery = String.format("INSERT INTO %s VALUES " +
+                "(NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)" +
+                "ON DUPLICATE KEY UPDATE comment = VALUES(comment), deleted = VALUES(deleted)," +
+                "media = COALESCE(VALUES(media), media), sticky = (VALUES(sticky) || sticky)", this.table);
                 
+        try {
         conn = DriverManager.getConnection(connStr);
         conn.setAutoCommit(false);
         
-        String query = "INSERT INTO " + this.table + " VALUES " +
-            "(NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)" +
-            "ON DUPLICATE KEY UPDATE comment = VALUES(comment), deleted = VALUES(deleted)," +
-            "media = COALESCE(VALUES(media), media), sticky = (VALUES(sticky) || sticky)";
-  
-        insertStmt = conn.prepareStatement(query);
+        this.createTables();
+        
+        insertStmt = conn.prepareStatement(insertQuery);
+        } catch (SQLException e) {
+            throw new BoardInitException(e);
+        }
     }
     
-    public synchronized void insert(Topic topic) throws SQLException{    
+    public synchronized void createTables() throws BoardInitException, SQLException {
+        // Create tables common to all boards
+        String commonSql;
+        try {
+            commonSql = Resources.toString(Resources.getResource("common.sql"), Charsets.UTF_8);
+        } catch(IOException e) {
+            throw new BoardInitException(e);
+        } catch(IllegalArgumentException e) {
+            throw new BoardInitException(e);
+        }
+        
+        Statement st = conn.createStatement();
+        try {
+            st.executeUpdate(commonSql);
+        } finally {
+            st.close();
+        }
+        
+        // Check if the table for this board has already been created
+        PreparedStatement pst = conn.prepareStatement("SHOW TABLES LIKE ?");
+        try {
+           pst.setString(1, this.table);
+           ResultSet res = pst.executeQuery();
+           
+           if(res.isBeforeFirst())
+               return;
+        } finally {
+            pst.close();
+        }            
+        
+        // Create all tables for this board
+        String boardSql;
+        try {
+            boardSql = Resources.toString(Resources.getResource("boards.sql"), Charsets.UTF_8);
+            boardSql = boardSql.replaceAll("%%BOARD%%", table);
+            boardSql = boardSql.replaceAll("%%CHARSET%%", charset);
+        } catch(IOException e) {
+            throw new BoardInitException(e);
+        } catch(IllegalArgumentException e) {
+            throw new BoardInitException(e);
+        }
+        
+        st = conn.createStatement();
+        try {
+            st.executeUpdate(boardSql);
+        } finally {
+            st.close();
+        }
+
+        // Create or replace triggers and procedures for this board
+        String triggersSql;
+        try {
+            triggersSql = Resources.toString(Resources.getResource("triggers.sql"), Charsets.UTF_8);
+            triggersSql = triggersSql.replaceAll("%%BOARD%%", table);
+            triggersSql = triggersSql.replaceAll("%%CHARSET%%", charset);
+        } catch(IOException e) {
+            throw new BoardInitException(e);
+        } catch(IllegalArgumentException e) {
+            throw new BoardInitException(e);
+        }
+        
+        st = conn.createStatement();
+        try {
+            st.executeUpdate(triggersSql);
+        } finally {
+            st.close();
+        }
+    }
+    
+    public synchronized void insert(Topic topic) throws SQLException {    
         try{
             for(Post post : topic.getPosts()) {
                 int c = 1;

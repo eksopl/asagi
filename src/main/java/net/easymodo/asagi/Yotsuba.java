@@ -120,6 +120,8 @@ public class Yotsuba extends WWW {
     }
     
     public String doClean(String text) {
+        if(text == null) return null;
+        
         // SOPA spoilers
         text = text.replaceAll("<span class=\"spoiler\"[^>]*>(.*?)</spoiler>(</span>)?", "$1");
         // Non-public tags
@@ -191,6 +193,10 @@ public class Yotsuba extends WWW {
         String media = null;
         String preview = null;
         String md5 = null;
+        
+        if(name.equals("")) name = null;
+        if(comment.equals("")) comment = null;
+        if(title.equals("")) title = null;
         
         if(link != null) {
             Pattern pat = Pattern.compile("/src/(\\d+)\\.(\\w+)");
