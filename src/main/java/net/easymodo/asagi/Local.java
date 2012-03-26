@@ -117,15 +117,17 @@ public class Local extends Board {
         String subDir2 = String.format("%s/%s/%s/%s", this.path, dir, subdirs[0], subdirs[1]);
         File subDir2File =  new File(subDir2);
         
-        if(!subDir2File.exists())
-            if(!subDir2File.mkdirs())
-                throw new ContentStoreException("Could not create dirs at path " + subDir2);
+        synchronized(this) {
+            if(!subDir2File.exists())
+                if(!subDir2File.mkdirs())
+                    throw new ContentStoreException("Could not create dirs at path " + subDir2);
+            
+            posix.chmod(subDir, 0775);
+            posix.chmod(subDir2, 0775);
+            posix.chown(subDir, -1, this.webGroupId);
+            posix.chown(subDir2, -1, this.webGroupId);
+        }
                 
-        posix.chmod(subDir, 0775);
-        posix.chmod(subDir2, 0775);
-        posix.chown(subDir, -1, this.webGroupId);
-        posix.chown(subDir2, -1, this.webGroupId);
-        
         return this.getDir(num, dirType);
     }
     

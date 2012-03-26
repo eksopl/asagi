@@ -12,6 +12,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import org.joda.time.DateTime;
+
 import net.easymodo.asagi.settings.*;
 import net.easymodo.asagi.exception.*;
 
@@ -30,15 +32,15 @@ public class Dumper {
     private final BlockingQueue<Topic> topicUpdates;
     private final BlockingQueue<Integer> newTopics;
     
-    private final int debugLevel = TALK;
-    private final int PAGE_LIMBO = 13;
-
     public static final int ERROR = 1;
     public static final int WARN  = 2;
     public static final int TALK  = 3;
     public static final int INFO  = 4;
     
     private static final String SETTINGS_FILE = "./asagi.json";
+    
+    private final int debugLevel = TALK;
+    private final int pageLimbo = 13;
     
     public Dumper(String boardName, Local localBoard, Board sourceBoard) {
         this.boardName = boardName;
@@ -84,7 +86,7 @@ public class Dumper {
     }
     
    
-    private boolean markDeleted(Topic oldTopic, Topic newTopic) {
+    private boolean findDeleted(Topic oldTopic, Topic newTopic, boolean markDeleted) {
         boolean changed = false;
         
         if(oldTopic == null) return changed;
@@ -104,12 +106,14 @@ public class Dumper {
         for(int i = 0; i < oldPosts.size(); i++) {
             Post post = oldPosts.get(i);
             if(!post.isDeleted() && newTopic.findPost(post.getNum()) == null) {
+                // We just found a possibly deleted post, but we haven't been
+                // instructed to actually mark deleted posts.
+                if(!markDeleted) return true;
+                
                 changed = true;
                 post.setDeleted(true);
                 newTopic.addPost(post);
                 debug(TALK, post.getNum() + " (post): deleted");
-                debug(INFO, post.getNum() + " oldPosts.size(): " + oldPosts.size());
-                debug(INFO, post.getNum() + " newTopic.getOmPosts(): " + newTopic.getOmPosts());
             }
             if(i == 0) i = newTopic.getOmPosts();
         }
@@ -211,10 +215,12 @@ public class Dumper {
         @Override
         public void run() {
             while(true) {
-                long now = System.currentTimeMillis();
+                long now = DateTime.now().getMillis();
                 for(int pageNo : pageNos) {
                     String lastMod = pagesLastMods[pageNo];
                     Page page;
+                    
+                    long startTime = DateTime.now().getMillis();
                     
                     try {
                         page = sourceBoard.content(Request.page(pageNo, lastMod));
@@ -264,6 +270,13 @@ public class Dumper {
                         // Try to get the write lock for this topic.
                         fullTopic.lock.writeLock().lock();
                         
+                        // Oh, forget it. A ThreadFetcher beat us to this one.
+                        // (Or another PageScanner)
+                        if(fullTopic.getLastHit() > startTime) { 
+                            fullTopic.lock.writeLock().unlock();
+                            continue; 
+                        }
+                        
                         // Update the last page where we saw this topic
                         fullTopic.setLastPage(pageNo);
 
@@ -273,7 +286,13 @@ public class Dumper {
                         
                         // We check for any posts that got deleted
                         // We have the write lock, so TopicFetchers can suck it.
-                        if(markDeleted(fullTopic, newTopic)) { mustRefresh = true; newPosts++; }
+                        if(findDeleted(fullTopic, newTopic, false)) {
+                            // Pages cannot be trusted to not have posts missing.
+                            // We need to force a refresh, it can't be helped.
+                            // See GH-11. Sigh.
+                            mustRefresh = true;
+                            newPosts++;
+                         }
                         
                         for(Post newPost : newTopic.getPosts()) {
                             // Get the same post from the previous encountered thread
@@ -294,7 +313,7 @@ public class Dumper {
                         }
                         
                         // Update the time we last hit this thread
-                        fullTopic.setLastHit(now);
+                        fullTopic.setLastHit(startTime);
                         
                         fullTopic.lock.writeLock().unlock();
                                                 
@@ -318,7 +337,7 @@ public class Dumper {
                     }
                 }
                 
-                long left = this.wait - (System.currentTimeMillis() - now);
+                long left = this.wait - (DateTime.now().getMillis() - now);
                 if(left > 0) {
                     try { Thread.sleep(left); } catch(InterruptedException e) { debug(TALK, "interrupted"); }
                 }
@@ -346,6 +365,8 @@ public class Dumper {
                    lastMod = oldTopic.getLastMod();
                    oldTopic.lock.readLock().unlock();
                }
+               
+               long startTime = DateTime.now().getMillis();
 
                // Let's go get our updated topic, from the topic page
                Topic topic;
@@ -357,26 +378,27 @@ public class Dumper {
                        // The old topic should always exist at this point.
                        if(oldTopic != null) {
                            oldTopic.lock.writeLock().lock();
-                           oldTopic.setLastHit(System.currentTimeMillis());
+                           oldTopic.setLastHit(DateTime.now().getMillis());
                            oldTopic.setBusy(false);
                            oldTopic.lock.writeLock().unlock();
                        }
                        debug(TALK, newTopic + ": wasn't modified");
                        continue;
                    } else if(e.getHttpStatus() == 404) {
-                       if(oldTopic != null) {  
+                       if(oldTopic != null) {
                            oldTopic.lock.writeLock().lock();
                            
                            // If we found the topic before the page limbo
                            // threshold, then it was forcefully deleted
-                           if(oldTopic.getLastPage() < PAGE_LIMBO) {
+                           if(oldTopic.getLastPage() < pageLimbo) {
                                Post op = null;
                                if((op = oldTopic.getPosts().get(0)) != null) {
                                    op.setDeleted(true);
                                }
                                updateTopic(oldTopic);
-                               debug(TALK, newTopic + ": deleted");
+                               debug(TALK, newTopic + ": deleted (last seen on page " + oldTopic.getLastPage() + ")");
                            }
+                           
                            // Goodbye, old topic.
                            topics.remove(newTopic);
                            oldTopic.lock.writeLock().unlock();
@@ -402,22 +424,36 @@ public class Dumper {
                    continue; 
                }
                
-               topic.setLastHit(System.currentTimeMillis());
+               topic.setLastHit(startTime);
                
                // We're about to make our rebuilt topic public
                topic.lock.readLock().lock();
                
                if(oldTopic != null) {
+                   oldTopic.lock.writeLock().lock();
+                   
+                   // Beaten to the punch
+                   if(oldTopic.getLastHit() > startTime) { 
+                       oldTopic.lock.writeLock().unlock();
+                       
+                       // Throw this away now.
+                       topic.lock.readLock().unlock();
+                       topic = null;
+                       continue;
+                   }
+                   
                    // Get the deleted posts from the old topic
                    // Also, mark them as such
-                   oldTopic.lock.writeLock().lock();
-                   markDeleted(oldTopic, topic);
+                   findDeleted(oldTopic, topic, true);
+                   
+                   // We don't really know at which page this thread is, so let
+                   // us keep the last page a PageScanner saw this thread at.
+                   topic.setLastPage(oldTopic.getLastPage());
                    
                    // Goodbye, old topic.
                    topics.remove(newTopic);
                    topics.put(newTopic, topic);
                    oldTopic.lock.writeLock().unlock();
-                   oldTopic = null;
                } else {
                    // Hello, new topic!
                    topics.put(newTopic, topic);
@@ -428,6 +464,7 @@ public class Dumper {
                topic.lock.readLock().unlock();
                
                debug(TALK, newTopic + ": " + (oldTopic != null ? "updated" : "new"));
+               oldTopic = null;
            }
         }
     }
@@ -436,7 +473,7 @@ public class Dumper {
         private final long threadRefreshRate;
         
         public TopicRebuilder(int threadRefreshRate) {
-            this.threadRefreshRate = threadRefreshRate * 60 * 1000;
+            this.threadRefreshRate = threadRefreshRate * 60 * 1000L;
         }
         
         
@@ -449,7 +486,7 @@ public class Dumper {
                     } catch(InterruptedException e) { }
                     if(topic.isBusy()) { topic.lock.writeLock().unlock(); continue; }
                     
-                    long deltaLastHit = System.currentTimeMillis() - topic.getLastHit();
+                    long deltaLastHit = DateTime.now().getMillis() - topic.getLastHit();
                     //debug(TALK, "deltaLastHit for " + topic.getNum() + ": " + deltaLastHit);
                     
                     if(deltaLastHit <= threadRefreshRate) { topic.lock.writeLock().unlock();  continue; }
@@ -553,6 +590,7 @@ public class Dumper {
             System.out.println("ERROR: Can't find settings file ("+ SETTINGS_FILE + ")");
             return;
         }
+        
         
         try {
             fullSettings = gson.fromJson(settingsJson, Settings.class);

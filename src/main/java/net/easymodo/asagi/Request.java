@@ -5,7 +5,7 @@ package net.easymodo.asagi;
  * Implements Board::Request classes
  */
 public class Request {    
-    public class Thread {
+    public static class Thread {
         private int threadNum;
         private String lastMod;
         
@@ -31,7 +31,7 @@ public class Request {
         }
     }
     
-    public class Page {
+    public static class Page {
         private int pageNum;
         private String lastMod;
         
@@ -62,18 +62,18 @@ public class Request {
     }
     
     public static Request.Thread thread(int threadNum) {
-        return new Request().new Thread(threadNum);
+        return new Thread(threadNum);
     }
     
     public static Request.Thread thread(int threadNum, String lastMod) {
-        return new Request().new Thread(threadNum, lastMod);
+        return new Thread(threadNum, lastMod);
     }
     
     public static Request.Page page(int pageNum) {
-        return new Request().new Page(pageNum);
+        return new Page(pageNum);
     }
     
     public static Request.Page page(int pageNum, String lastMod) {
-        return new Request().new Page(pageNum, lastMod);
+        return new Page(pageNum, lastMod);
     }
 }
