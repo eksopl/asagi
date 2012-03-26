@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.concurrent.ThreadSafe;
+import org.apache.http.annotation.ThreadSafe;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;

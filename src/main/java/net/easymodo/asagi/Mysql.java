@@ -8,7 +8,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-import javax.annotation.concurrent.ThreadSafe;
+import org.apache.http.annotation.ThreadSafe;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;

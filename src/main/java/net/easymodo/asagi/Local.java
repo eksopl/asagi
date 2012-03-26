@@ -9,7 +9,7 @@ import java.io.OutputStream;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.annotation.concurrent.ThreadSafe;
+import org.apache.http.annotation.ThreadSafe;
 
 import com.sun.jna.Native;
 
