@@ -125,10 +125,12 @@ public class Local extends Board {
                 if(!subDir2File.mkdirs())
                     throw new ContentStoreException("Could not create dirs at path " + subDir2);
             
-            posix.chmod(subDir, 0775);
-            posix.chmod(subDir2, 0775);
-            posix.chown(subDir, -1, this.webGroupId);
-            posix.chown(subDir2, -1, this.webGroupId);
+            if(this.webGroupId != 0) {
+                posix.chmod(subDir, 0775);
+                posix.chmod(subDir2, 0775);
+                posix.chown(subDir, -1, this.webGroupId);
+                posix.chown(subDir2, -1, this.webGroupId);
+            }
         }
                 
         return this.getDir(num, dirType);
@@ -155,8 +157,10 @@ public class Local extends Board {
         try{
             outFile.write(data);
             
-            posix.chmod(thumbFile.getCanonicalPath(), 0664);
-            posix.chown(thumbFile.getCanonicalPath(), -1, this.webGroupId);
+            if(this.webGroupId != 0) {
+                posix.chmod(thumbFile.getCanonicalPath(), 0664);
+                posix.chown(thumbFile.getCanonicalPath(), -1, this.webGroupId);
+            }
         } catch(FileNotFoundException e) {
             throw new ContentStoreException(e);
         } catch(IOException e) {
@@ -194,8 +198,10 @@ public class Local extends Board {
         try{
             outFile.write(data);
             
-            posix.chmod(mediaFile.getCanonicalPath(), 0664);
-            posix.chown(mediaFile.getCanonicalPath(), -1, this.webGroupId);
+            if(this.webGroupId != 0) {
+                posix.chmod(mediaFile.getCanonicalPath(), 0664);
+                posix.chown(mediaFile.getCanonicalPath(), -1, this.webGroupId);
+            }
         } catch(FileNotFoundException e) {
             throw new ContentStoreException(e);
         } catch(IOException e) {
