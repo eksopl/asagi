@@ -1,5 +1,6 @@
 package net.easymodo.asagi;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -10,6 +11,9 @@ import javax.annotation.concurrent.ThreadSafe;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+
+import com.google.common.base.Charsets;
+import com.google.common.io.Resources;
 
 import net.easymodo.asagi.exception.*;
 
@@ -28,84 +32,26 @@ public class Yotsuba extends WWW {
         sizeMuls.put("MB", 1024*1024);
         sizeMultipliers = Collections.unmodifiableMap(sizeMuls);
         
-        String threadParsePatternString =
-            "(?: <a \\s href=\"([^\"]*/src/(\\d+\\.\\w+))\"[^>]*>[^<]*</a> \\s*"+
-            "       \\- \\s* \\((Spoiler \\s Image, \\s)?([\\d\\sGMKB\\.]+)\\, \\s (\\d+)x(\\d+)(?:, \\s* <span \\s title=\"([^\"]*)\">[^<]*</span>)?\\) \\s*"+
-            "       </span> \\s* "+
-            "       (?:"+
-            "           <br>\\s*<a[^>]*><img \\s+ src=\\S* \\s+ border=\\S* \\s+ align=\\S* \\s+ (?:width=\"?(\\d+)\"? \\s height=\"?(\\d+)\"?)? [^>]*? md5=\"?([\\w\\d\\=\\+\\/]+)\"? [^>]*? ></a> \\s*"+
-            "           |"+
-            "           <a[^>]*><span \\s class=\"tn_thread\"[^>]*>Thumbnail \\s unavailable</span></a>"+
-            "       )"+
-            "       |"+
-            "       <img [^>]* alt=\"File \\s deleted\\.\" [^>]* > \\s*"+
-            "   )?"+
-            "   <a[^>]*></a> \\s*"+
-            "   <input \\s type=checkbox \\s name=\"(\\d+)\"[^>]*><span \\s class=\"filetitle\">(?>(.*?)</span>) \\s*"+
-            "   <span \\s class=\"postername\">(?:<span [^>]*>)?(?:<a \\s href=\"mailto:([^\"]*)\"[^>]*>)?([^<]*?)(?:</a>)?(?:</span>)?</span>"+
-            "   (?: \\s* <span \\s class=\"postertrip\">(?:<span [^>]*>)?([a-zA-Z0-9\\.\\+/\\!]+)(?:</a>)?(?:</span>)?</span>)?"+
-            "   (?: \\s* <span \\s class=\"commentpostername\"><span [^>]*>\\#\\# \\s (.?)[^<]*</span>(?:</a>)?</span>)?"+
-            "   (?: \\s* <span \\s class=\"posteruid\">\\(ID: \\s (?: <span [^>]*>(.)[^)]* | ([^)]*))\\)</span>)?"+
-            "   \\s* (?:<span \\s class=\"posttime\">)?([^>]*)(?:</span>)? \\s*"+
-            "   <span[^>]*> (?> .*?</a>.*?</a>) \\s* (?:<img [^>]* alt=\"(sticky)\">)? (?> .*?</span>) \\s* "+
-            "   <blockquote>(?>(.*?)(<span \\s class=\"abbr\">(?:.*?))?</blockquote>)"+
-            "   (?:<span \\s class=\"oldpost\">[^<]*</span><br> \\s*)?"+
-            "   (?:<span \\s class=\"omittedposts\">(\\d+).*?(\\d+)?.*?</span>)?";
+        String threadParsePatternString = null; 
+        String postParsePatternString = null;
+        String threadGetPatternString = null;
+        String postGetPatternString = null;
+        try {
+            threadParsePatternString = Resources.toString(Resources.getResource("Yotsuba/thread_parse.regex"), Charsets.UTF_8);
+            postParsePatternString = Resources.toString(Resources.getResource("Yotsuba/post_parse.regex"), Charsets.UTF_8);
+            threadGetPatternString = Resources.toString(Resources.getResource("Yotsuba/thread_get.regex"), Charsets.UTF_8);            
+            postGetPatternString = Resources.toString(Resources.getResource("Yotsuba/post_get.regex"), Charsets.UTF_8);                        
+        } catch(IOException e) {
+            System.err.println(e.getMessage());
+            System.exit(-1);
+        } catch(IllegalArgumentException e) {
+            System.err.println(e.getMessage());
+            System.exit(-1);
+        }
+        
         threadParsePattern = Pattern.compile(threadParsePatternString, Pattern.COMMENTS | Pattern.DOTALL);
-        
-        String postParsePatternString = 
-            "<td \\s id=\"(\\d+)\"[^>]*> \\s*" +
-            "<input[^>]*><span \\s class=\"replytitle\">(?>(.*?)</span>) \\s*"+
-            "<span \\s class=\"commentpostername\">(?:<a \\s href=\"mailto:([^\"]*)\"[^>]*>)?(?:<span [^>]*>)?([^<]*?)(?:</span>)?(?:</a>)?</span>"+
-            "(?: \\s* <span \\s class=\"postertrip\">(?:<span [^>]*>)?([a-zA-Z0-9\\.\\+/\\!]+)(?:</a>)?(?:</span>)?</span>)?"+
-            "(?: \\s* <span \\s class=\"commentpostername\"><span [^>]*>\\#\\# \\s (.?)[^<]*</span>(?:</a>)?</span>)?"+
-            "(?: \\s* <span \\s class=\"posteruid\">\\(ID: \\s (?: <span [^>]*>(.)[^)]* | ([^)]*))\\)</span>)?"+
-            "\\s* (?:<span \\s class=\"posttime\">)?([^<]*)(?:</span>)? \\s*"+
-            "(?>.*?</span>) \\s*"+
-            "(?: <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; \\s*"+
-            "    <span \\s class=\"filesize\">File [^>]*"+
-            "    <a \\s href=\"([^\"]*/src/(\\d+\\.\\w+))\"[^>]*>[^<]*</a> \\s*"+
-            "    \\- \\s* \\((Spoiler \\s Image,)?([\\d\\sGMKB\\.]+)\\, \\s (\\d+)x(\\d+)(?:, \\s* <span \\s title=\"([^\"]*)\">[^<]*</span>)?\\)"+
-            "    </span> \\s*"+
-            "    (?: <br>\\s*<a[^>]*><img \\s+ src=\\S* \\s+ border=\\S* \\s+ align=\\S* \\s+ "+
-            "        (?:width=(\\d+) \\s height=(\\d+))? [^>]*? md5=\"?([\\w\\d\\=\\+\\/]+)\"? [^>]*? ></a> \\s*"+
-            "        | <a[^>]*><span \\s class=\"tn_reply\"[^>]*>Thumbnail \\s unavailable</span></a> )"+
-            "    | <br> \\s* <img [^>]* alt=\"File \\s deleted\\.\" [^>]* > \\s* )?"+
-            "<blockquote>(?>(.*?)(<span \\s class=\"abbr\">(?:.*?))?</blockquote>)"+
-            "</td></tr></table>";
         postParsePattern = Pattern.compile(postParsePatternString, Pattern.COMMENTS | Pattern.DOTALL);
-        
-        String threadGetPatternString = 
-            "    ((?:" +
-            "        (?:" +
-            "            <span \\s class=\"filesize\">.*?" +
-            "            |" +
-            "            <img \\s src=\"[^\"]*\" \\s alt=\"File \\s deleted\\.\">.*?" +
-            "        )?" +
-            "        (<a \\s name=\"[^\"]*\"></a> \\s* <input [^>]*><span \\s class=\"filetitle\">)" +
-            "        (?>.*?</blockquote>)" +
-            "        (?:<span \\s class=\"oldpost\">[^<]*</span><br> \\s*)?" +
-            "        (?:<span \\s class=\"omittedposts\">[^<]*</span>)?)" +
-            "    |" +
-            "    (?:<table><tr><td \\s nowrap \\s class=\"doubledash\">(?>.*?</blockquote></td></tr></table>)))";
-            
         threadGetPattern = Pattern.compile(threadGetPatternString, Pattern.COMMENTS | Pattern.DOTALL);
-        
-        String postGetPatternString =
-            "    ((?:" +
-            "        (?:" +
-            "            <span \\s class=\"filesize\">.*?" +
-            "            |" +
-            "            <img \\s src=\"[^\"]*\" \\s alt=\"File \\s deleted\\.\">.*?" +
-            "        )?" +
-            "        (<a \\s name=\"[^\"]*\"></a> \\s* <input [^>]*><span \\s class=\"filetitle\">)" +
-            "        (?>.*?</blockquote>)" +
-            "        (?:<span \\s class=\"oldpost\">[^<]*</span><br> \\s*)?" +
-            "        (?:<span \\s class=\"omittedposts\">[^<]*</span>)?" +
-            "    )" +
-            "    |" +
-            "    (?:<table><tr><td \\s nowrap \\s class=\"doubledash\">(?>.*?</blockquote></td></tr></table>)))";
-            
         postGetPattern = Pattern.compile(postGetPatternString, Pattern.COMMENTS | Pattern.DOTALL);
     }
     

@@ -1,0 +1,19 @@
+<td \s id="(\d+)"[^>]*> \s*
+<input[^>]*><span \s class="replytitle">(?>(.*?)</span>) \s*
+<span \s class="commentpostername">(?:<a \s href="mailto:([^"]*)"[^>]*>)?(?:<span [^>]*>)?([^<]*?)(?:</span>)?(?:</a>)?</span>
+(?: \s* <span \s class="postertrip">(?:<span [^>]*>)?([a-zA-Z0-9\.\+/\!]+)(?:</a>)?(?:</span>)?</span>)?
+(?: \s* <span \s class="commentpostername"><span [^>]*>\#\# \s (.?)[^<]*</span>(?:</a>)?</span>)?
+(?: \s* <span \s class="posteruid">\(ID: \s (?: <span [^>]*>(.)[^)]* | ([^)]*))\)</span>)?
+\s* (?:<span \s class="posttime">)?([^<]*)(?:</span>)? \s*
+(?>.*?</span>) \s*
+(?: <br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; \s*
+    <span \s class="filesize">File [^>]*
+    <a \s href="([^"]*/src/(\d+\.\w+))"[^>]*>[^<]*</a> \s*
+    \- \s* \((Spoiler \s Image,)?([\d\sGMKB\.]+)\, \s (\d+)x(\d+)(?:, \s* <span \s title="([^"]*)">[^<]*</span>)?\)
+    </span> \s*
+    (?: <br>\s*<a[^>]*><img \s+ src=\S* \s+ border=\S* \s+ align=\S* \s+ 
+        (?:width=(\d+) \s height=(\d+))? [^>]*? md5="?([\w\d\=\+\/]+)"? [^>]*? ></a> \s*
+        | <a[^>]*><span \s class="tn_reply"[^>]*>Thumbnail \s unavailable</span></a> )
+    | <br> \s* <img [^>]* alt="File \s deleted\." [^>]* > \s* )?
+<blockquote>(?>(.*?)(<span \s class="abbr">(?:.*?))?</blockquote>)
+</td></tr></table>
