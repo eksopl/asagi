@@ -23,7 +23,7 @@ public class Local extends Board {
     private final int webGroupId;
     
     private final static int DIR_THUMB = 1;
-    private final static int DIR_MEDIA = 1;
+    private final static int DIR_MEDIA = 2;
     
     private final static Posix posix;
     
@@ -44,7 +44,10 @@ public class Local extends Board {
         String webServerGroup = info.getWebserverGroup();
         if(webServerGroup != null) {
             Group group = posix.getgrnam(webServerGroup);
-            webGroupId = (int)group.getGid();
+            if(group == null)
+                webGroupId = 0;
+            else
+                webGroupId = (int)group.getGid();
         } else {
             webGroupId = 0;
         }

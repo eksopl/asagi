@@ -379,22 +379,4 @@ public class Yotsuba extends WWW {
         boardInfo.put("html", "http://boards.4chan.org/" + boardName + "/");
         return Collections.unmodifiableMap(boardInfo);
     }
-    
-    /*
-    public static void main(String[] args) throws IOException {
-        Yotsuba yot = new Yotsuba("jp");
-        java.io.BufferedReader stdin = new java.io.BufferedReader(new java.io.InputStreamReader(System.in));
-        
-        String text = new String();
-        String newString = "";
-        while((newString = stdin.readLine()) != null) {
-            text += newString;
-        }
-        // System.out.println("your mom");
-        yot.parsePost(text, 0);
-        //yot.parseThread(text);
-    }
-    */
-
-
 }

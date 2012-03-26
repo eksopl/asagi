@@ -23,7 +23,7 @@ public class HttpContent {
         this.content = content;
     }
     
-    public  byte[] getContent() {
+    public byte[] getContent() {
         return content;
     }
 }
