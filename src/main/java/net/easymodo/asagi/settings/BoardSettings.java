@@ -3,6 +3,7 @@ package net.easymodo.asagi.settings;
 import java.util.List;
 
 public class BoardSettings {
+    private String engine;
     private String database;
     private String host;
     private String username;
@@ -17,6 +18,12 @@ public class BoardSettings {
     private Integer threadRefreshRate;
     private List<PageSettings> pageSettings;
     
+    public String getEngine() {
+        return engine;
+    }
+    public void setEngine(String engine) {
+        this.engine = engine;
+    }
     public String getDatabase() {
         return database;
     }

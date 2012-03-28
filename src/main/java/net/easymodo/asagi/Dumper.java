@@ -2,6 +2,8 @@ package net.easymodo.asagi;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -176,9 +178,9 @@ public class Dumper {
     }
     
     public class TopicInserter implements Runnable {
-        private Mysql sqlBoard;
+        private SQL sqlBoard;
         
-        public TopicInserter(Mysql sqlBoard) {
+        public TopicInserter(SQL sqlBoard) {
             this.sqlBoard = sqlBoard;
         }
         
@@ -513,6 +515,8 @@ public class Dumper {
         BoardSettings defSet = settings.getSettings().get("default");
         BoardSettings bSet = settings.getSettings().get(boardName);
         
+        if(bSet.getEngine() == null)
+            bSet.setEngine(defSet.getEngine());
         if(bSet.getDatabase() == null)
             bSet.setDatabase(defSet.getDatabase());
         if(bSet.getHost() == null)
@@ -539,11 +543,50 @@ public class Dumper {
         if(bSet.getTable() == null)
             bSet.setTable(boardName);
         
-        Yotsuba sourceBoard = new Yotsuba(boardName);
-        Mysql sqlLocalBoard = new Mysql(bSet.getPath(), bSet);
         boolean fullMedia = (bSet.getMediaThreads() != 0);
+        
+        Yotsuba sourceBoard = new Yotsuba(boardName);
 
-        Dumper dumper = new Dumper(boardName, sqlLocalBoard, sourceBoard, fullMedia);
+        // Get and init board engine class through reflection
+        String boardEngine = bSet.getEngine() == null ? "Mysql" : bSet.getEngine();
+        Class<?> sqlBoardClass;
+        Constructor<?> boardCnst;
+        Object localBoardObj;
+        try {
+            sqlBoardClass = Class.forName("net.easymodo.asagi." + boardEngine);
+            boardCnst = sqlBoardClass.getConstructor(String.class, BoardSettings.class);
+            localBoardObj = boardCnst.newInstance(bSet.getPath(), bSet);
+        } catch(ClassNotFoundException e) {
+            throw new BoardInitException("Could not find board engine for " + boardEngine);
+        } catch(NoSuchMethodException e) {
+            throw new BoardInitException("Error initializing board engine " + boardEngine);
+        } catch(InstantiationException e) {
+            throw new BoardInitException("Error initializing board engine " + boardEngine);
+        } catch(IllegalAccessException e) {
+            throw new BoardInitException("Error initializing board engine " + boardEngine);
+        } catch(InvocationTargetException e) {
+            if(e.getCause() instanceof BoardInitException)
+                throw (BoardInitException)e.getCause();
+            else if(e.getCause() instanceof RuntimeException)
+                throw (RuntimeException)e.getCause();
+            throw new BoardInitException("Error initializing board engine " + boardEngine);
+        }
+        
+        // Making sure we got a valid engine class and etc
+        Local boardLocal = null;
+        SQL boardSQL = null;
+        if(localBoardObj instanceof Local) {
+            boardLocal = (Local) localBoardObj;
+        }
+        if(localBoardObj instanceof SQL) {
+            boardSQL = (SQL)localBoardObj;
+        }
+        
+        if(boardLocal == null || boardSQL == null) {
+            throw new BoardInitException("Wrong engine specified for " + boardEngine);
+        }
+
+        Dumper dumper = new Dumper(boardName, boardLocal, sourceBoard, fullMedia);
         
         for(int i = 0; i < bSet.getThumbThreads() ; i++) {
             Thread thumbFetcher = new Thread(dumper.new ThumbFetcher());
@@ -569,7 +612,7 @@ public class Dumper {
             pageScanner.start();
         }
         
-        Thread topicInserter = new Thread(dumper.new TopicInserter(sqlLocalBoard));
+        Thread topicInserter = new Thread(dumper.new TopicInserter(boardSQL));
         topicInserter.setName("Topic inserter" + " - " + boardName);
         topicInserter.start();
         

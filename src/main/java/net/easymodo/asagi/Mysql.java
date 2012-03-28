@@ -17,7 +17,7 @@ import net.easymodo.asagi.exception.BoardInitException;
 import net.easymodo.asagi.settings.BoardSettings;
 
 @ThreadSafe
-public class Mysql extends Local {
+public class Mysql extends Local implements SQL {
     private final String dbName;
     private final String dbHost;
     private final String dbUsername;

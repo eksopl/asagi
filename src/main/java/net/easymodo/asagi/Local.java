@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 import org.apache.http.annotation.ThreadSafe;
 
 import com.sun.jna.Native;
+import com.sun.jna.Platform;
 
 import net.easymodo.asagi.settings.BoardSettings;
 import net.easymodo.asagi.exception.*;
