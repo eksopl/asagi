@@ -48,12 +48,12 @@ public class Mysql extends Local {
                 "media = COALESCE(VALUES(media), media), sticky = (VALUES(sticky) || sticky)", this.table);
                 
         try {
-        conn = DriverManager.getConnection(connStr);
-        conn.setAutoCommit(false);
+            conn = DriverManager.getConnection(connStr);
+            conn.setAutoCommit(false);
+            
+            this.createTables();
         
-        this.createTables();
-        
-        insertStmt = conn.prepareStatement(insertQuery);
+            insertStmt = conn.prepareStatement(insertQuery);
         } catch (SQLException e) {
             throw new BoardInitException(e);
         }

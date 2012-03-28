@@ -28,7 +28,11 @@ public class Local extends Board {
     private final static Posix posix;
     
     static {
-        posix = (Posix)Native.loadLibrary("c", Posix.class);
+        if(Platform.isWindows()) {
+          posix = null;
+        } else {
+          posix = (Posix)Native.loadLibrary("c", Posix.class);
+        } 
     }
     
     public Local(String path, BoardSettings info) {
@@ -39,10 +43,8 @@ public class Local extends Board {
         // Performing the gid lookup in the constructor and calling chmod and
         // chown from the C library (which are reentrant functions) keeps this
         // class thread-safe.
-        
-        // TODO: OS checking and stuff
         String webServerGroup = info.getWebserverGroup();
-        if(webServerGroup != null) {
+        if(webServerGroup != null && posix != null) {
             Group group = posix.getgrnam(webServerGroup);
             if(group == null)
                 webGroupId = 0;
