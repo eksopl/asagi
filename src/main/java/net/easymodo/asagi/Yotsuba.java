@@ -217,8 +217,9 @@ public class Yotsuba extends WWW {
         if(h.getLink() == null)
             return null;
         
-        byte[] data = this.wget(h.getLink() + "?" + System.currentTimeMillis()).getContent();
-        
+        byte[] data = this.wget(this.boardLinks.get("imgLink") + "/src/"
+                + h.getMediaFilename() + "?" + System.currentTimeMillis()).getContent();
+                
         return data;
     }
     
