@@ -45,7 +45,7 @@ public class Mysql extends Local implements SQL {
         String insertQuery = String.format("INSERT INTO %s VALUES " +
                 "(NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)" +
                 "ON DUPLICATE KEY UPDATE comment = VALUES(comment), deleted = VALUES(deleted)," +
-                "media = COALESCE(VALUES(media), media), sticky = (VALUES(sticky) || sticky)", this.table);
+                "media = COALESCE(VALUES(media), media), sticky = (VALUES(sticky) OR sticky)", this.table);
                 
         try {
             conn = DriverManager.getConnection(connStr);
@@ -60,23 +60,6 @@ public class Mysql extends Local implements SQL {
     }
     
     public synchronized void createTables() throws BoardInitException, SQLException {
-        // Create tables common to all boards
-        String commonSql;
-        try {
-            commonSql = Resources.toString(Resources.getResource("common.sql"), Charsets.UTF_8);
-        } catch(IOException e) {
-            throw new BoardInitException(e);
-        } catch(IllegalArgumentException e) {
-            throw new BoardInitException(e);
-        }
-        
-        Statement st = conn.createStatement();
-        try {
-            st.executeUpdate(commonSql);
-        } finally {
-            st.close();
-        }
-        
         // Check if the table for this board has already been created
         PreparedStatement pst = conn.prepareStatement("SHOW TABLES LIKE ?");
         try {
@@ -87,9 +70,19 @@ public class Mysql extends Local implements SQL {
                return;
         } finally {
             pst.close();
-        }            
+        }
         
-        // Create all tables for this board
+        // Query to create tables common to all boards
+        String commonSql;
+        try {
+            commonSql = Resources.toString(Resources.getResource("common.sql"), Charsets.UTF_8);
+        } catch(IOException e) {
+            throw new BoardInitException(e);
+        } catch(IllegalArgumentException e) {
+            throw new BoardInitException(e);
+        }
+        
+        // Query to create all tables for this board
         String boardSql;
         try {
             boardSql = Resources.toString(Resources.getResource("boards.sql"), Charsets.UTF_8);
@@ -100,15 +93,8 @@ public class Mysql extends Local implements SQL {
         } catch(IllegalArgumentException e) {
             throw new BoardInitException(e);
         }
-        
-        st = conn.createStatement();
-        try {
-            st.executeUpdate(boardSql);
-        } finally {
-            st.close();
-        }
 
-        // Create or replace triggers and procedures for this board
+        // Query to create or replace triggers and procedures for this board
         String triggersSql;
         try {
             triggersSql = Resources.toString(Resources.getResource("triggers.sql"), Charsets.UTF_8);
@@ -120,8 +106,10 @@ public class Mysql extends Local implements SQL {
             throw new BoardInitException(e);
         }
         
-        st = conn.createStatement();
+        Statement st = conn.createStatement();
         try {
+            st.executeUpdate(commonSql);
+            st.executeUpdate(boardSql);
             st.executeUpdate(triggersSql);
         } finally {
             st.close();

@@ -26,6 +26,12 @@ import com.google.gson.JsonSyntaxException;
 
 public class Dumper {
     private final String boardName;
+    private final boolean fullMedia;
+    private final int debugLevel;
+    
+    private static final String SETTINGS_FILE = "./asagi.json";
+
+    protected final int pageLimbo;
     protected final Local localBoard;
     protected final Board sourceBoard;
     protected final ConcurrentHashMap<Integer,Topic> topics;
@@ -33,17 +39,11 @@ public class Dumper {
     protected final BlockingQueue<Post> mediaUpdates;
     protected final BlockingQueue<Topic> topicUpdates;
     protected final BlockingQueue<Integer> newTopics;
-    private final boolean fullMedia;
-    
+
     public static final int ERROR = 1;
     public static final int WARN  = 2;
     public static final int TALK  = 3;
     public static final int INFO  = 4;
-    
-    private static final String SETTINGS_FILE = "./asagi.json";
-    
-    private final int debugLevel;
-    private final int pageLimbo;
     
     public Dumper(String boardName, Local localBoard, Board sourceBoard, boolean fullMedia) {
         this.boardName = boardName;

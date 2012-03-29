@@ -42,11 +42,9 @@ public class Yotsuba extends WWW {
             threadGetPatternString = Resources.toString(Resources.getResource("Yotsuba/thread_get.regex"), Charsets.UTF_8);            
             postGetPatternString = Resources.toString(Resources.getResource("Yotsuba/post_get.regex"), Charsets.UTF_8);                        
         } catch(IOException e) {
-            System.err.println(e.getMessage());
-            System.exit(-1);
+            throw new RuntimeException(e);
         } catch(IllegalArgumentException e) {
-            System.err.println(e.getMessage());
-            System.exit(-1);
+            throw new RuntimeException(e);
         }
         
         threadParsePattern = Pattern.compile(threadParsePatternString, Pattern.COMMENTS | Pattern.DOTALL);
