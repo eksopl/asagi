@@ -4,7 +4,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-
 import org.apache.http.annotation.ThreadSafe;
 
 import net.easymodo.asagi.exception.BoardInitException;
@@ -107,5 +106,10 @@ public class Pgsql extends Local implements SQL {
             conn.rollback();
             throw e;
         }
+    }
+    
+    public synchronized Media getMediaRow(Post post) throws SQLException {
+    	/** @todo add getMediaRow for Pgsql class */
+    	return new Media();
     }
 }

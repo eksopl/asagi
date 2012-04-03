@@ -9,6 +9,7 @@ public class Post {
     private String preview;
     private int previewW;
     private int previewH;
+    private int mediaId;
     private String media;
     private int mediaW;
     private int mediaH;
@@ -92,6 +93,14 @@ public class Post {
 
     public void setPreviewH(int previewH) {
         this.previewH = previewH;
+    }
+    
+    public int getMediaId() {
+    	return mediaId;
+    }
+    
+    public void setMediaId(int mediaId) {
+    	this.mediaId = mediaId;
     }
 
     public String getMedia() {
