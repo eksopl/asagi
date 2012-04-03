@@ -75,21 +75,6 @@ public class Dumper {
         if (level <= debugLevel)
             System.out.println(output);
     }
-
- 
-    private void updateTopic(Topic topic) {
-        List<Post> posts = topic.getPosts();
-        if(posts == null) return;
-        
-        for(Post post : posts) {
-            try {
-                if(post.getPreview() != null) mediaPreviewUpdates.put(post);
-                if(post.getMediaFilename() != null && fullMedia) mediaUpdates.put(post);
-            } catch(InterruptedException e) { }
-        }
-        
-        topicUpdates.add(topic);
-    }
     
    
     private boolean findDeleted(Topic oldTopic, Topic newTopic, boolean markDeleted) {
@@ -128,7 +113,13 @@ public class Dumper {
     }
    
     
-    public class ThumbFetcher implements Runnable {        
+    public class ThumbFetcher implements Runnable {
+    	private SQL sqlBoard;
+        
+        public ThumbFetcher(SQL sqlBoard) {
+            this.sqlBoard = sqlBoard;
+        }
+        
         @Override
         public void run() {
             while(true) {
@@ -136,11 +127,15 @@ public class Dumper {
                 
                 try {
                 mediaPrevPost = mediaPreviewUpdates.take();
-                } catch(InterruptedException e) { }  
+                } catch(InterruptedException e) { } 
                 
                 try {
-                    localBoard.insertMediaPreview(mediaPrevPost, sourceBoard);
-                } catch(ContentGetException e) {
+						localBoard.insertMediaPreview(mediaPrevPost, sourceBoard, sqlBoard);
+					} catch (SQLException e) {
+					debug(ERROR, "Couldn't get media data from database for preview of post " + 
+							mediaPrevPost.getNum() + ": " + e.getMessage());
+	                continue;
+				} catch(ContentGetException e) {
                     debug(ERROR, "Couldn't fetch preview of post " + 
                             mediaPrevPost.getNum() + ": " + e.getMessage());
                     continue;
@@ -153,6 +148,12 @@ public class Dumper {
     }
     
     public class MediaFetcher implements Runnable {
+    	private SQL sqlBoard;
+        
+        public MediaFetcher(SQL sqlBoard) {
+            this.sqlBoard = sqlBoard;
+        }
+    	
         @Override
         public void run() {
             while(true) {
@@ -163,7 +164,11 @@ public class Dumper {
                 } catch(InterruptedException e) { }  
                 
                 try {
-                    localBoard.insertMedia(mediaPost, sourceBoard);
+                    localBoard.insertMedia(mediaPost, sourceBoard, sqlBoard);
+                } catch (SQLException e) {
+					debug(ERROR, "Couldn't get media data from database for media of post " + 
+							mediaPost.getNum() + ": " + e.getMessage());
+	                continue;
                 } catch(ContentGetException e) {
                     debug(ERROR, "Couldn't fetch media of post " + 
                             mediaPost.getNum() + ": " + e.getMessage());
@@ -201,6 +206,15 @@ public class Dumper {
                             ": " + e.getMessage());
                     continue;
                 } finally {
+                	List<Post> posts = newTopic.getPosts();
+                	if(posts == null) return;
+                     
+                    for(Post post : posts) {
+                        try {
+                            if(post.getPreview() != null) mediaPreviewUpdates.put(post);
+                            if(post.getMediaFilename() != null && fullMedia) mediaUpdates.put(post);
+                        } catch(InterruptedException e) { }
+                    }
                     newTopic.lock.readLock().unlock();
                 }
             }
@@ -330,7 +344,7 @@ public class Dumper {
                         
                         newTopic.lock.readLock().lock();
                         // Push new posts/images/thumbs to their queues
-                        updateTopic(newTopic);
+                        topicUpdates.add(newTopic);
                         newTopic.lock.readLock().unlock();
                         
                         // And send the thread to the new threads queue if we were
@@ -401,7 +415,7 @@ public class Dumper {
                                if((op = oldTopic.getPosts().get(0)) != null) {
                                    op.setDeleted(true);
                                }
-                               updateTopic(oldTopic);
+                               topicUpdates.add(oldTopic);
                                debug(TALK, newTopic + ": deleted (last seen on page " + oldTopic.getLastPage() + ")");
                            }
                            
@@ -465,7 +479,7 @@ public class Dumper {
                }
                
                // We have a read lock, update it
-               updateTopic(topic);
+               topicUpdates.add(topic);
                topic.lock.readLock().unlock();
                
                debug(TALK, newTopic + ": " + (oldTopic != null ? "updated" : "new"));
@@ -589,13 +603,13 @@ public class Dumper {
         Dumper dumper = new Dumper(boardName, boardLocal, sourceBoard, fullMedia);
         
         for(int i = 0; i < bSet.getThumbThreads() ; i++) {
-            Thread thumbFetcher = new Thread(dumper.new ThumbFetcher());
+            Thread thumbFetcher = new Thread(dumper.new ThumbFetcher(boardSQL));
             thumbFetcher.setName("Thumb fetcher #" + i + " - " + boardName);
             thumbFetcher.start();
         }
         
         for(int i = 0; i < bSet.getMediaThreads() ; i++) {
-            Thread mediaFetcher = new Thread(dumper.new MediaFetcher());
+            Thread mediaFetcher = new Thread(dumper.new MediaFetcher(boardSQL));
             mediaFetcher.setName(" Media fetcher #" + i + " - " + boardName);
             mediaFetcher.start();
         }
