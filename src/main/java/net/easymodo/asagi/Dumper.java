@@ -596,7 +596,7 @@ public class Dumper {
         
         for(int i = 0; i < bSet.getMediaThreads() ; i++) {
             Thread mediaFetcher = new Thread(dumper.new MediaFetcher());
-            mediaFetcher.setName(" Media fetcher #" + i + " - " + boardName);
+            mediaFetcher.setName("Media fetcher #" + i + " - " + boardName);
             mediaFetcher.start();
         }
         
