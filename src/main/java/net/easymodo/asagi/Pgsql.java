@@ -3,10 +3,12 @@ package net.easymodo.asagi;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import org.apache.http.annotation.ThreadSafe;
 
 import net.easymodo.asagi.exception.BoardInitException;
+import net.easymodo.asagi.exception.MediaRowNotFoundException;
 import net.easymodo.asagi.settings.BoardSettings;
 
 @ThreadSafe
@@ -20,6 +22,7 @@ public class Pgsql extends Local implements SQL {
     private Connection conn = null;
     private PreparedStatement updateStmt = null;
     private PreparedStatement insertStmt = null;
+    private PreparedStatement selectMediaStmt = null;
 
     
     public Pgsql(String path, BoardSettings info) throws BoardInitException {
@@ -45,6 +48,9 @@ public class Pgsql extends Local implements SQL {
         String updateQuery = 
                 String.format("UPDATE %s SET comment = ?, deleted = ?, media = COALESCE(?, media)," +
                         "  sticky = (? OR sticky) WHERE num=? and subnum=?", this.table);
+        
+        String selectMediaQuery = String.format("SELECT * FROM %s_images WHERE media_hash = ?", 
+        		this.table);
   
         try {
             conn = DriverManager.getConnection(connStr);
@@ -52,7 +58,8 @@ public class Pgsql extends Local implements SQL {
             
             insertStmt = conn.prepareStatement(insertQuery);
             updateStmt = conn.prepareStatement(updateQuery);
-        } catch (SQLException e) {
+            selectMediaStmt = conn.prepareStatement(selectMediaQuery);
+       } catch (SQLException e) {
             throw new BoardInitException(e);
         }
     }
@@ -108,8 +115,26 @@ public class Pgsql extends Local implements SQL {
         }
     }
     
-    public synchronized Media getMediaRow(Post post) throws SQLException {
-    	/** @todo add getMediaRow for Pgsql class */
-    	return new Media();
+    public synchronized Media getMediaRow(Post post) throws SQLException, MediaRowNotFoundException {
+    	selectMediaStmt.setString(1, post.getMediaHash());
+    	ResultSet media = selectMediaStmt.executeQuery();
+
+    	if(media.first())
+    	{
+    		return new Media(
+    				media.getInt("id"),
+    				media.getString("media_hash"), 
+    				media.getString("media_filename"),
+    				media.getString("preview_op"),
+    				media.getString("preview_reply"),
+    				media.getInt("total"),
+    				media.getInt("banned")
+    			);
+    	}
+    	else
+    	{
+    		// It shouldn't happen that the row is not found, but I wouldn't trust MySQL
+    		throw new MediaRowNotFoundException();
+    	}
     }
 }
