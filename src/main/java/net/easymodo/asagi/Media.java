@@ -72,8 +72,8 @@ public class Media {
     	this.total = total;
     }
     
-    public boolean getBanned() {
-    	return banned == 1;
+    public int getBanned() {
+    	return banned;
     }
     
     public void setBanned(int banned) {

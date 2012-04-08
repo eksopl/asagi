@@ -147,7 +147,7 @@ public class Local extends Board {
 			return 0;
 		}
         
-        if(mediaRow.getBanned()) return 0;
+        if(mediaRow.getBanned() == 1) return 0;
         
         String filename;
         if(h.getParent() == 0)
@@ -208,7 +208,7 @@ public class Local extends Board {
 			return 0;
 		}
         
-        if(mediaRow.getBanned()) return 0;
+        if(mediaRow.getBanned() == 1) return 0;
         
         String filename = mediaRow.getMediaFilename();
         
