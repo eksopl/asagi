@@ -60,7 +60,7 @@ DROP PROCEDURE IF EXISTS `insert_image_%%BOARD%%`;
 CREATE PROCEDURE `insert_image_%%BOARD%%` (n_media_hash VARCHAR(25),
  n_media_filename VARCHAR(20), n_preview VARCHAR(20), n_parent INT, n_doc_id INT)
 BEGIN
-  IF n_parent = 0 THEN
+  IF n_parent = 0 AND n_media_hash IS NOT NULL THEN
     INSERT INTO `%%BOARD%%_images` (media_hash, media_filename, preview_op, total)
     VALUES (n_media_hash, n_media_filename, n_preview, 1) 
     ON DUPLICATE KEY UPDATE total = (total + 1), preview_op = COALESCE(preview_op, VALUES(preview_op));
