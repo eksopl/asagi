@@ -1,7 +1,9 @@
 package net.easymodo.asagi;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
@@ -661,11 +663,25 @@ public class Dumper {
         String settingsJson;
         Gson gson = new Gson();
         
-        try {
-            settingsJson = Files.toString(new File(SETTINGS_FILE), Charsets.UTF_8);
-        } catch(IOException e) {
-            System.out.println("ERROR: Can't find settings file ("+ SETTINGS_FILE + ")");
-            return;
+        File settingsFile = new File(SETTINGS_FILE);
+        if(settingsFile.exists())
+        {
+	        try {
+	            settingsJson = Files.toString(settingsFile, Charsets.UTF_8);
+	        } catch(IOException e) {
+	            System.out.println("ERROR: Can't find settings file ("+ SETTINGS_FILE + ")");
+	            return;
+	        }
+        }
+        else
+        {
+        	BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        	try {
+				settingsJson = reader.readLine();
+			} catch (IOException e) {
+				System.out.println("ERROR: Can't read the input.");
+				return;
+			}
         }
         
         
