@@ -42,9 +42,9 @@ END;
 
 DROP PROCEDURE IF EXISTS `create_thread_%%BOARD%%`;
 
-CREATE PROCEDURE `create_thread_%%BOARD%%` (doc_id INT, num INT, timestamp INT)
+CREATE PROCEDURE `create_thread_%%BOARD%%` (num INT, timestamp INT)
 BEGIN
-  INSERT IGNORE INTO `%%BOARD%%_threads` VALUES (doc_id, num, timestamp, timestamp,
+  INSERT IGNORE INTO `%%BOARD%%_threads` VALUES (num, timestamp, timestamp,
     timestamp, NULL, NULL, 0, 0);
 END;
 
@@ -154,7 +154,7 @@ BEGIN
   SET @COUNT = (SELECT COUNT(*) FROM `%%BOARD%%` WHERE num = NEW.num AND subnum = NEW.subnum);
   IF @COUNT = 0 THEN
     IF NEW.parent = 0 THEN
-      CALL create_thread_%%BOARD%%(NEW.doc_id, NEW.num, NEW.timestamp);
+      CALL create_thread_%%BOARD%%(NEW.num, NEW.timestamp);
     END IF;
     CALL update_thread_%%BOARD%%(NEW.parent);
     CALL insert_post_%%BOARD%%(NEW.timestamp, NEW.media_hash, NEW.email, NEW.name,
