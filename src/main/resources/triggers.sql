@@ -63,11 +63,11 @@ BEGIN
   IF n_parent = 0 THEN
     INSERT INTO `%%BOARD%%_images` (media_hash, media_filename, preview_op, total)
     VALUES (n_media_hash, n_media_filename, n_preview, 1) 
-    ON DUPLICATE KEY UPDATE total = (total + 1), preview_op = IFNULL(preview_op, VALUES(preview_op));
+    ON DUPLICATE KEY UPDATE total = (total + 1), preview_op = COALESCE(preview_op, VALUES(preview_op));
   ELSE
     INSERT INTO `%%BOARD%%_images` (media_hash, media_filename, preview_reply, total)
     VALUES (n_media_hash, n_media_filename, n_preview, 1) 
-    ON DUPLICATE KEY UPDATE total = (total + 1), preview_reply = IFNULL(preview_reply, VALUES(preview_reply));
+    ON DUPLICATE KEY UPDATE total = (total + 1), preview_reply = COALESCE(preview_reply, VALUES(preview_reply));
   END IF;
 END;
 
@@ -151,8 +151,7 @@ DROP TRIGGER IF EXISTS `before_ins_%%BOARD%%`;
 CREATE TRIGGER `before_ins_%%BOARD%%` BEFORE INSERT ON `%%BOARD%%`
 FOR EACH ROW
 BEGIN
-  SET @COUNT = (SELECT COUNT(*) FROM `%%BOARD%%` WHERE num = NEW.num AND subnum = NEW.subnum);
-  IF @COUNT = 0 THEN
+  IF (SELECT 1 FROM `%%BOARD%%` WHERE num = NEW.num AND subnum = NEW.subnum) IS NOT NULL THEN THEN
     IF NEW.parent = 0 THEN
       CALL create_thread_%%BOARD%%(NEW.num, NEW.timestamp);
     END IF;

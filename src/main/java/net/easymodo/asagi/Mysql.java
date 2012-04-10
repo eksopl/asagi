@@ -29,6 +29,7 @@ public class Mysql extends Local implements SQL {
     
     private Connection conn = null;
     private PreparedStatement insertStmt = null;
+    private PreparedStatement updateStmt = null;
     private PreparedStatement selectMediaStmt = null;
 
     public Mysql(String path, BoardSettings info) throws BoardInitException {
@@ -44,11 +45,23 @@ public class Mysql extends Local implements SQL {
         String connStr = String.format("jdbc:mysql://%s/%s?user=%s&password=%s&%s",
                 this.dbHost, this.dbName, this.dbUsername, this.dbPassword, this.extraArgs);
         
+        String insertQuery = String.format(
+                "INSERT INTO %s" +
+                " (id, num, subnum, parent, timestamp, preview, preview_w, preview_h, media, " +
+                " media_w, media_h, media_size, media_hash, media_filename, spoiler, deleted, " +
+                " capcode, email, name, trip, title, comment, delpass, sticky) " +
+                "  SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?" +
+                "  WHERE NOT EXISTS (SELECT 1 FROM %s WHERE num=? and subnum=?)", 
+                this.table, this.table);
+        String updateQuery = 
+                String.format("UPDATE %s SET comment = ?, deleted = ?, media = COALESCE(?, media)," +
+                        "  sticky = (? OR sticky) WHERE num=? and subnum=?", this.table);
+        /*
         String insertQuery = String.format("INSERT INTO %s VALUES " +
                 "(NULL,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)" +
                 "ON DUPLICATE KEY UPDATE comment = VALUES(comment), deleted = VALUES(deleted)," +
                 "media = COALESCE(VALUES(media), media), sticky = (VALUES(sticky) OR sticky)", this.table);
-       
+       */
         String selectMediaQuery = String.format("SELECT * FROM %s_images WHERE media_hash = ?", 
         		this.table);
         
@@ -59,6 +72,7 @@ public class Mysql extends Local implements SQL {
             this.createTables();
         
             insertStmt = conn.prepareStatement(insertQuery);
+            updateStmt = conn.prepareStatement(updateQuery);
             selectMediaStmt = conn.prepareStatement(selectMediaQuery);
         } catch (SQLException e) {
             throw new BoardInitException(e);
@@ -154,6 +168,7 @@ public class Mysql extends Local implements SQL {
             }
                 
             insertStmt.executeBatch();
+            updateStmt.executeBatch();
             conn.commit();
         } catch(SQLException e) {
             conn.rollback();
