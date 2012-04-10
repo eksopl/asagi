@@ -104,7 +104,7 @@ BEGIN
     names=names+d_name;
 
   -- Also should be a transaction. Lol MySQL.  
-  IF (SELECT trip FROM a_users WHERE trip = p_trip) IS NOT NULL THEN
+  IF (SELECT trip FROM %%BOARD%%_users WHERE trip = p_trip) IS NOT NULL THEN
     UPDATE %%BOARD%%_users SET postcount=postcount+1,
       firstseen = LEAST(p_timestamp, firstseen)
       WHERE trip = p_trip;
@@ -133,7 +133,7 @@ BEGIN
   SET d_trip = p_trip IS NOT NULL;
   SET d_name = COALESCE(p_name <> 'Anonymous' AND p_trip IS NULL, 1);
 
-  UPDATE a_daily SET posts=posts-1, images=images-d_image,
+  UPDATE %%BOARD%%_daily SET posts=posts-1, images=images-d_image,
     sage=sage-d_sage, anons=anons-d_anon, trips=trips-d_trip,
     names=names-d_name WHERE day = d_day;
 
