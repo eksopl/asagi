@@ -42,9 +42,9 @@ END;
 
 DROP PROCEDURE IF EXISTS `create_thread_%%BOARD%%`;
 
-CREATE PROCEDURE `create_thread_%%BOARD%%` (doc_id INT, num INT, timestamp INT)
+CREATE PROCEDURE `create_thread_%%BOARD%%` (num INT, timestamp INT)
 BEGIN
-  INSERT IGNORE INTO `%%BOARD%%_threads` VALUES (doc_id, num, timestamp, timestamp,
+  INSERT IGNORE INTO `%%BOARD%%_threads` VALUES (num, timestamp, timestamp,
     timestamp, NULL, NULL, 0, 0);
 END;
 
@@ -57,32 +57,25 @@ END;
 
 DROP PROCEDURE IF EXISTS `insert_image_%%BOARD%%`;
 
-CREATE PROCEDURE `insert_image_%%BOARD%%` (n_media_hash VARCHAR(25), n_num INT,
-  n_subnum INT, n_parent INT, n_preview VARCHAR(20))
+CREATE PROCEDURE `insert_image_%%BOARD%%` (n_media_hash VARCHAR(25),
+ n_media_filename VARCHAR(20), n_preview VARCHAR(20), n_parent INT, n_doc_id INT)
 BEGIN
-  DECLARE o_parent INT;
-
-  -- This should be a transaction, but MySquirrel doesn't support transactions
-  -- inside triggers or stored procedures (stay classy, MySQL)
-  SELECT parent INTO o_parent FROM `%%BOARD%%_images` WHERE media_hash = n_media_hash;
-  IF o_parent IS NULL THEN
-    INSERT INTO `%%BOARD%%_images` VALUES (n_media_hash, n_num, n_subnum, n_parent,
-      n_preview, 1);
-  ELSEIF o_parent <> 0 AND n_parent = 0 THEN
-    UPDATE `%%BOARD%%_images` SET num = n_num, subnum = n_subnum, parent = n_parent,
-      preview = n_preview, total = (total + 1)
-      WHERE media_hash = n_media_hash;
+  IF n_parent = 0 AND n_media_hash IS NOT NULL THEN
+    INSERT INTO `%%BOARD%%_images` (media_hash, media_filename, preview_op, total)
+    VALUES (n_media_hash, n_media_filename, n_preview, 1) 
+    ON DUPLICATE KEY UPDATE total = (total + 1), preview_op = COALESCE(preview_op, VALUES(preview_op));
   ELSE
-    UPDATE `%%BOARD%%_images` SET total = (total + 1) WHERE
-      media_hash = n_media_hash;
+    INSERT INTO `%%BOARD%%_images` (media_hash, media_filename, preview_reply, total)
+    VALUES (n_media_hash, n_media_filename, n_preview, 1) 
+    ON DUPLICATE KEY UPDATE total = (total + 1), preview_reply = COALESCE(preview_reply, VALUES(preview_reply));
   END IF;
 END;
 
 DROP PROCEDURE IF EXISTS `delete_image_%%BOARD%%`;
 
-CREATE PROCEDURE `delete_image_%%BOARD%%` (n_media_hash VARCHAR(25))
+CREATE PROCEDURE `delete_image_%%BOARD%%` (n_media_id INT)
 BEGIN
-  UPDATE `%%BOARD%%_images` SET total = (total - 1) WHERE media_hash = n_media_hash;
+  UPDATE `%%BOARD%%_images` SET total = (total - 1) WHERE id = n_media_id;
 END;
 
 DROP PROCEDURE IF EXISTS `insert_post_%%BOARD%%`;
@@ -153,20 +146,22 @@ BEGIN
   END IF;
 END;
 
-DROP TRIGGER IF EXISTS `after_ins_%%BOARD%%`;
+DROP TRIGGER IF EXISTS `before_ins_%%BOARD%%`;
 
-CREATE TRIGGER `after_ins_%%BOARD%%` AFTER INSERT ON `%%BOARD%%`
+CREATE TRIGGER `before_ins_%%BOARD%%` BEFORE INSERT ON `%%BOARD%%`
 FOR EACH ROW
 BEGIN
-  IF NEW.parent = 0 THEN
-    CALL create_thread_%%BOARD%%(NEW.doc_id, NEW.num, NEW.timestamp);
-  END IF;
-  CALL update_thread_%%BOARD%%(NEW.parent);
-  CALL insert_post_%%BOARD%%(NEW.timestamp, NEW.media_hash, NEW.email, NEW.name,
-    NEW.trip);
-  IF NEW.media_hash IS NOT NULL THEN
-    CALL insert_image_%%BOARD%%(NEW.media_hash, NEW.num, NEW.subnum, NEW.parent,
-      NEW.preview);
+  IF (SELECT 1 FROM `%%BOARD%%` WHERE num = NEW.num AND subnum = NEW.subnum) IS NOT NULL THEN THEN
+    IF NEW.parent = 0 THEN
+      CALL create_thread_%%BOARD%%(NEW.num, NEW.timestamp);
+    END IF;
+    CALL update_thread_%%BOARD%%(NEW.parent);
+    CALL insert_post_%%BOARD%%(NEW.timestamp, NEW.media_hash, NEW.email, NEW.name,
+      NEW.trip);
+    IF NEW.media_hash IS NOT NULL THEN
+      CALL insert_image_%%BOARD%%(NEW.media_hash, NEW.media_filename, NEW.preview, NEW.parent, NEW.doc_id);
+      SET NEW.media_id = LAST_INSERT_ID();
+    END IF;
   END IF;
 END;
 
@@ -182,6 +177,6 @@ BEGIN
   CALL delete_post_%%BOARD%%(OLD.timestamp, OLD.media_hash, OLD.email, OLD.name,
     OLD.trip);
   IF OLD.media_hash IS NOT NULL THEN
-    CALL delete_image_%%BOARD%%(OLD.media_hash);
+    CALL delete_image_%%BOARD%%(OLD.media_id);
   END IF;
 END;

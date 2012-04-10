@@ -14,6 +14,7 @@ import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 
 import net.easymodo.asagi.exception.BoardInitException;
+import net.easymodo.asagi.exception.ContentGetException;
 import net.easymodo.asagi.settings.BoardSettings;
 
 @ThreadSafe
@@ -28,6 +29,7 @@ public class Mysql extends Local implements SQL {
     
     private Connection conn = null;
     private PreparedStatement insertStmt = null;
+    private PreparedStatement selectMediaStmt = null;
 
     public Mysql(String path, BoardSettings info) throws BoardInitException {
         super(path, info);
@@ -43,10 +45,13 @@ public class Mysql extends Local implements SQL {
                 this.dbHost, this.dbName, this.dbUsername, this.dbPassword, this.extraArgs);
         
         String insertQuery = String.format("INSERT INTO %s VALUES " +
-                "(NULL,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)" +
+                "(NULL,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)" +
                 "ON DUPLICATE KEY UPDATE comment = VALUES(comment), deleted = VALUES(deleted)," +
                 "media = COALESCE(VALUES(media), media), sticky = (VALUES(sticky) OR sticky)", this.table);
-                
+       
+        String selectMediaQuery = String.format("SELECT * FROM %s_images WHERE media_hash = ?", 
+        		this.table);
+        
         try {
             conn = DriverManager.getConnection(connStr);
             conn.setAutoCommit(false);
@@ -54,6 +59,7 @@ public class Mysql extends Local implements SQL {
             this.createTables();
         
             insertStmt = conn.prepareStatement(insertQuery);
+            selectMediaStmt = conn.prepareStatement(selectMediaQuery);
         } catch (SQLException e) {
             throw new BoardInitException(e);
         }
@@ -153,6 +159,29 @@ public class Mysql extends Local implements SQL {
             conn.rollback();
             throw e;
         }
+    }
+    
+    public synchronized Media getMediaRow(Post post) throws SQLException, ContentGetException {
+    	selectMediaStmt.setString(1, post.getMediaHash());
+    	ResultSet media = selectMediaStmt.executeQuery();
+
+    	if(media.first())
+    	{
+    		return new Media(
+    				media.getInt("id"),
+    				media.getString("media_hash"), 
+    				media.getString("media_filename"),
+    				media.getString("preview_op"),
+    				media.getString("preview_reply"),
+    				media.getInt("total"),
+    				media.getInt("banned")
+    			);
+    	}
+    	else
+    	{
+    		// It shouldn't happen that the row is not found, but I wouldn't trust MySQL
+    		throw new ContentGetException("Media row not found for row inserted in post database");
+    	}
     }
 }
  

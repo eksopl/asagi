@@ -14,6 +14,7 @@ import org.apache.http.annotation.ThreadSafe;
 import com.sun.jna.Native;
 import com.sun.jna.Platform;
 
+import java.sql.SQLException;
 import net.easymodo.asagi.settings.BoardSettings;
 import net.easymodo.asagi.exception.*;
 import net.easymodo.asagi.posix.*;
@@ -80,19 +81,15 @@ public class Local extends Board {
         throw new UnsupportedOperationException();
     }
     
-    public String[] getSubdirs(int num) {
-        String patString = "(\\d+?)(\\d{2})\\d{0,3}$";      
-        Pattern pat = Pattern.compile(patString);
-        Matcher mat = pat.matcher(Integer.toString(num));
-        mat.find();
-        String subdir = String.format("%04d", Integer.parseInt(mat.group(1)));
-        String subdir2 = String.format("%02d", Integer.parseInt(mat.group(2)));
+    public String[] getSubdirs(String filename) {
+    	String subdir = filename.substring(0, 4);
+    	String subdir2 = filename.substring(4, 6);
         
         return new String[] {subdir, subdir2};
     }
     
-    public String getDir(int num, int dirType) {
-        String[] subdirs = getSubdirs(num);
+    public String getDir(String filename, int dirType) {
+        String[] subdirs = getSubdirs(filename);
         
         if(dirType == DIR_THUMB) {
             return String.format("%s/thumb/%s/%s", this.path, subdirs[0], subdirs[1]);
@@ -103,12 +100,12 @@ public class Local extends Board {
         }
     }
     
-    public String makeDir(int num, int dirType) throws ContentStoreException {
-        return this.makeDir(num, this.path, dirType);
+    public String makeDir(String filename, int dirType) throws ContentStoreException {
+        return this.makeDir(filename, this.path, dirType);
     }
     
-    public String makeDir(int num, String path, int dirType) throws ContentStoreException {
-        String[] subdirs = this.getSubdirs(num);
+    public String makeDir(String filename, String path, int dirType) throws ContentStoreException {
+        String[] subdirs = this.getSubdirs(filename);
         
         String dir;
         if(dirType == DIR_THUMB) {
@@ -136,13 +133,29 @@ public class Local extends Board {
             }
         }
                 
-        return this.getDir(num, dirType);
+        return this.getDir(filename, dirType);
     }
     
-    public int insertMediaPreview(Post h, Board source) throws ContentGetException, ContentStoreException {
-        String thumbDir = makeDir(h.getParent() == 0 ? h.getNum() : h.getParent(), DIR_THUMB);
-        
+    public int insertMediaPreview(Post h, Board source, SQL sqlBoard) throws ContentGetException, ContentStoreException, SQLException {
         if(h.getPreview() == null) return 0;
+                
+        Media mediaRow;
+        
+		mediaRow = sqlBoard.getMediaRow(h);
+        
+        if(mediaRow.getBanned() == 1) return 0;
+        
+        String filename;
+        if(h.getParent() == 0)
+        {
+        	filename = mediaRow.getPreviewOp();
+        }
+        else
+        {
+        	filename = mediaRow.getPreviewReply();
+        }
+        
+        String thumbDir = makeDir(filename, DIR_THUMB);
         
         // Construct the path and back down if the file already exists
         File thumbFile = new File(thumbDir + "/" + h.getPreview());
@@ -179,13 +192,23 @@ public class Local extends Board {
         return 1;
     }
     
-    public int insertMedia(Post h, Board source) throws ContentGetException, ContentStoreException {
-        String mediaDir = makeDir(h.getParent() == 0 ? h.getNum() : h.getParent(), DIR_MEDIA);
+    public int insertMedia(Post h, Board source, SQL sqlBoard) throws ContentGetException, ContentStoreException, SQLException {
         
         if(h.getMediaFilename() == null) return 0;
         
+        Media mediaRow;
+        
+		mediaRow = sqlBoard.getMediaRow(h);
+        
+        if(mediaRow.getBanned() == 1) return 0;
+        
+        String filename = mediaRow.getMediaFilename();
+        
+        // Preview filename is enough for us here, we just need the first part of the string
+        String mediaDir = makeDir(filename, DIR_MEDIA);
+
         // Construct the path and back down if the file already exists
-        File mediaFile = new File(mediaDir + "/" + h.getMediaFilename());
+        File mediaFile = new File(mediaDir + "/" + filename);
         if(mediaFile.exists()) return 1;
         
         // Throws ContentGetException on failure

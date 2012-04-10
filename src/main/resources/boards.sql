@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS %%BOARD%% ( 
   doc_id int unsigned NOT NULL auto_increment, 
+  media_id int unsigned NOT NULL DEFAULT '0', 
   id decimal(39,0) unsigned NOT NULL DEFAULT '0', 
   num int unsigned NOT NULL, 
   subnum int unsigned NOT NULL, 
@@ -41,7 +42,6 @@ CREATE TABLE IF NOT EXISTS %%BOARD%% (
 ) engine=MyISAM CHARSET=%%CHARSET%%;
 
 CREATE TABLE IF NOT EXISTS `%%BOARD%%_threads` (
-  `doc_id_p` int unsigned NOT NULL,
   `parent` int unsigned NOT NULL,
   `time_op` int unsigned NOT NULL,
   `time_last` int unsigned NOT NULL,
@@ -50,10 +50,11 @@ CREATE TABLE IF NOT EXISTS `%%BOARD%%_threads` (
   `time_ghost_bump` int unsigned DEFAULT NULL,
   `nreplies` int unsigned NOT NULL DEFAULT '0',
   `nimages` int unsigned NOT NULL DEFAULT '0',
-  PRIMARY KEY (`doc_id_p`),
+  PRIMARY KEY (`parent`),
   
-  UNIQUE parent_index (parent),
-  INDEX time_ghost_bump_index (time_ghost_bump)
+  INDEX time_op_index (time_op),
+  INDEX time_bump_index (time_bump),					
+  INDEX time_ghost_bump_index (time_ghost_bump),
 ) ENGINE=InnoDB CHARSET=%%CHARSET%%;
 
 CREATE TABLE IF NOT EXISTS `%%BOARD%%_users` (
@@ -68,14 +69,15 @@ CREATE TABLE IF NOT EXISTS `%%BOARD%%_users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=%%CHARSET%%;
 
 CREATE TABLE IF NOT EXISTS `%%BOARD%%_images` (
+  `id` int unsigned NOT NULL auto_increment,
   `media_hash` varchar(25) NOT NULL,
-  `num` int(10) unsigned NOT NULL,
-  `subnum` int(10) unsigned NOT NULL,
-  `parent` int(10) unsigned NOT NULL,
-  `preview` varchar(20) NOT NULL,
+  `media_filename` varchar(20),
+  `preview_op` varchar(20),
+  `preview_reply` varchar(20),
   `total` int(10) unsigned NOT NULL DEFAULT '0',
-  PRIMARY KEY (`media_hash`),
-  
+  `banned` smallint unsigned NOT NULL DEFAULT '0', 
+  PRIMARY KEY (`id`),
+  UNIQUE media_hash_index (`media_hash`),
   INDEX total_index (total)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
