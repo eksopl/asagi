@@ -8,7 +8,7 @@ import java.sql.SQLException;
 import org.apache.http.annotation.ThreadSafe;
 
 import net.easymodo.asagi.exception.BoardInitException;
-import net.easymodo.asagi.exception.MediaRowNotFoundException;
+import net.easymodo.asagi.exception.ContentGetException;
 import net.easymodo.asagi.settings.BoardSettings;
 
 @ThreadSafe
@@ -115,7 +115,7 @@ public class Pgsql extends Local implements SQL {
         }
     }
     
-    public synchronized Media getMediaRow(Post post) throws SQLException, MediaRowNotFoundException {
+    public synchronized Media getMediaRow(Post post) throws SQLException, ContentGetException {
     	selectMediaStmt.setString(1, post.getMediaHash());
     	ResultSet media = selectMediaStmt.executeQuery();
 
@@ -134,7 +134,7 @@ public class Pgsql extends Local implements SQL {
     	else
     	{
     		// It shouldn't happen that the row is not found, but I wouldn't trust MySQL
-    		throw new MediaRowNotFoundException();
+    		throw new ContentGetException("Media row not found for row inserted in post database");
     	}
     }
 }

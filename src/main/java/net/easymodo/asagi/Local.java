@@ -141,11 +141,7 @@ public class Local extends Board {
                 
         Media mediaRow;
         
-		try {
-			mediaRow = sqlBoard.getMediaRow(h);
-		} catch (MediaRowNotFoundException e1) {
-			return 0;
-		}
+		mediaRow = sqlBoard.getMediaRow(h);
         
         if(mediaRow.getBanned() == 1) return 0;
         
@@ -202,11 +198,7 @@ public class Local extends Board {
         
         Media mediaRow;
         
-		try {
-			mediaRow = sqlBoard.getMediaRow(h);
-		} catch (MediaRowNotFoundException e1) {
-			return 0;
-		}
+		mediaRow = sqlBoard.getMediaRow(h);
         
         if(mediaRow.getBanned() == 1) return 0;
         

@@ -566,10 +566,21 @@ public class Dumper {
         Class<?> sqlBoardClass;
         Constructor<?> boardCnst;
         Object localBoardObj;
+        
+        Class<?> sqlMediaClass;
+        Constructor<?> mediaCnst;
+        Object localMediaObj;
+        
         try {
+        	// For posts
             sqlBoardClass = Class.forName("net.easymodo.asagi." + boardEngine);
             boardCnst = sqlBoardClass.getConstructor(String.class, BoardSettings.class);
             localBoardObj = boardCnst.newInstance(bSet.getPath(), bSet);
+            
+            // For media
+            sqlMediaClass = Class.forName("net.easymodo.asagi." + boardEngine);
+            mediaCnst = sqlBoardClass.getConstructor(String.class, BoardSettings.class);
+            localMediaObj = boardCnst.newInstance(bSet.getPath(), bSet);
         } catch(ClassNotFoundException e) {
             throw new BoardInitException("Could not find board engine for " + boardEngine);
         } catch(NoSuchMethodException e) {
@@ -586,7 +597,7 @@ public class Dumper {
             throw new BoardInitException("Error initializing board engine " + boardEngine);
         }
         
-        // Making sure we got a valid engine class and etc
+        // Making sure we got a valid engine class and etc for the post insertion
         Local boardLocal = null;
         SQL boardSQL = null;
         if(localBoardObj instanceof Local) {
@@ -599,17 +610,27 @@ public class Dumper {
         if(boardLocal == null || boardSQL == null) {
             throw new BoardInitException("Wrong engine specified for " + boardEngine);
         }
+        
+        // Making sure we got a valid engine class and etc for the media fetching
+        SQL mediaSQL = null;
+        if(localBoardObj instanceof SQL) {
+            mediaSQL = (SQL)localMediaObj;
+        }
+        
+        if(boardLocal == null || boardSQL == null) {
+            throw new BoardInitException("Wrong engine specified for " + boardEngine);
+        }
 
         Dumper dumper = new Dumper(boardName, boardLocal, sourceBoard, fullMedia);
         
         for(int i = 0; i < bSet.getThumbThreads() ; i++) {
-            Thread thumbFetcher = new Thread(dumper.new ThumbFetcher(boardSQL));
+            Thread thumbFetcher = new Thread(dumper.new ThumbFetcher(mediaSQL));
             thumbFetcher.setName("Thumb fetcher #" + i + " - " + boardName);
             thumbFetcher.start();
         }
         
         for(int i = 0; i < bSet.getMediaThreads() ; i++) {
-            Thread mediaFetcher = new Thread(dumper.new MediaFetcher(boardSQL));
+            Thread mediaFetcher = new Thread(dumper.new MediaFetcher(mediaSQL));
             mediaFetcher.setName("Media fetcher #" + i + " - " + boardName);
             mediaFetcher.start();
         }
