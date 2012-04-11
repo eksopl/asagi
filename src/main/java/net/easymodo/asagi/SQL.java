@@ -131,7 +131,7 @@ public abstract class SQL implements DB {
         }
          
         try {
-            if(mediaRs.first()) {
+            if(mediaRs.next()) {
                 media = new Media(
                         mediaRs.getInt("id"),
                         mediaRs.getString("media_hash"), 
