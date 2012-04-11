@@ -37,10 +37,10 @@ public class Yotsuba extends WWW {
         String threadGetPatternString = null;
         String postGetPatternString = null;
         try {
-            threadParsePatternString = Resources.toString(Resources.getResource("Yotsuba/thread_parse.regex"), Charsets.UTF_8);
-            postParsePatternString = Resources.toString(Resources.getResource("Yotsuba/post_parse.regex"), Charsets.UTF_8);
-            threadGetPatternString = Resources.toString(Resources.getResource("Yotsuba/thread_get.regex"), Charsets.UTF_8);            
-            postGetPatternString = Resources.toString(Resources.getResource("Yotsuba/post_get.regex"), Charsets.UTF_8);                        
+            threadParsePatternString = Resources.toString(Resources.getResource("net/easymodo/asagi/defs/Yotsuba/thread_parse.regex"), Charsets.UTF_8);
+            postParsePatternString = Resources.toString(Resources.getResource("net/easymodo/asagi/defs/Yotsuba/post_parse.regex"), Charsets.UTF_8);
+            threadGetPatternString = Resources.toString(Resources.getResource("net/easymodo/asagi/defs/Yotsuba/thread_get.regex"), Charsets.UTF_8);            
+            postGetPatternString = Resources.toString(Resources.getResource("net/easymodo/asagi/defs/Yotsuba/post_get.regex"), Charsets.UTF_8);                        
         } catch(IOException e) {
             throw new RuntimeException(e);
         } catch(IllegalArgumentException e) {

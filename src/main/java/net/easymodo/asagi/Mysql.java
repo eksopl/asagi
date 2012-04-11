@@ -59,7 +59,7 @@ public class Mysql extends SQL {
         // Query to create tables common to all boards
         String commonSql;
         try {
-            commonSql = Resources.toString(Resources.getResource("common.sql"), Charsets.UTF_8);
+            commonSql = Resources.toString(Resources.getResource("net/easymodo/asagi/sql/Mysql/common.sql"), Charsets.UTF_8);
         } catch(IOException e) {
             throw new BoardInitException(e);
         } catch(IllegalArgumentException e) {
@@ -69,7 +69,7 @@ public class Mysql extends SQL {
         // Query to create all tables for this board
         String boardSql;
         try {
-            boardSql = Resources.toString(Resources.getResource("boards.sql"), Charsets.UTF_8);
+            boardSql = Resources.toString(Resources.getResource("net/easymodo/asagi/sql/Mysql/boards.sql"), Charsets.UTF_8);
             boardSql = boardSql.replaceAll("%%BOARD%%", table);
             boardSql = boardSql.replaceAll("%%CHARSET%%", charset);
         } catch(IOException e) {
@@ -81,7 +81,7 @@ public class Mysql extends SQL {
         // Query to create or replace triggers and procedures for this board
         String triggersSql;
         try {
-            triggersSql = Resources.toString(Resources.getResource("triggers.sql"), Charsets.UTF_8);
+            triggersSql = Resources.toString(Resources.getResource("net/easymodo/asagi/sql/Mysql/triggers.sql"), Charsets.UTF_8);
             triggersSql = triggersSql.replaceAll("%%BOARD%%", table);
             triggersSql = triggersSql.replaceAll("%%CHARSET%%", charset);
         } catch(IOException e) {
