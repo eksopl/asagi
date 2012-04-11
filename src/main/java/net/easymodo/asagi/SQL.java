@@ -46,7 +46,7 @@ public abstract class SQL implements DB {
         
         try {
             conn = DriverManager.getConnection(connStr);
-            conn.setAutoCommit(true);
+            conn.setAutoCommit(false);
             conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
             
             this.createTables();
@@ -105,16 +105,14 @@ public abstract class SQL implements DB {
             }
             insertStmt.executeBatch();
             updateStmt.executeBatch();
-            // conn.commit();
+            conn.commit();
         } catch(SQLException e) {
-            // MySQL acts stupid with autocommit off
-            // I don't even fucking know
-            /* try {
+            try {
                 conn.rollback();
             } catch(SQLException e1) {
                 e1.setNextException(e);
                 throw new ContentStoreException(e1);
-            } */
+            }
             throw new ContentStoreException(e);
         }
     }
@@ -127,6 +125,27 @@ public abstract class SQL implements DB {
             selectMediaStmt.setString(1, post.getMediaHash());
             mediaRs = selectMediaStmt.executeQuery();
         } catch(SQLException e) {
+            throw new ContentGetException(e);
+        }
+        
+        try {
+            conn.commit();
+        } catch(SQLException e) {
+            try {
+                conn.rollback();
+            } catch(SQLException e1) {
+                e1.setNextException(e);
+                throw new ContentGetException(e1);
+            } finally {
+                // throw new XzibitException.
+                // Since I'm cleaning all my resources like a good boy, I really
+                // have no other choice but to do this.
+                try {
+                    mediaRs.close();
+                } catch(SQLException e1) {
+                    throw new ContentGetException(e1);
+                }
+            }
             throw new ContentGetException(e);
         }
          
@@ -152,7 +171,9 @@ public abstract class SQL implements DB {
         }
         
         if(media == null) {
-            // Somehow, we got ahead of the post insertion. We'll get it next time
+            // Somehow, we got ahead of the post insertion. Oh well, we'll get it next time.
+            // Getting here means something isn't right with our transaction isolation mode
+            // (Or maybe the DB we're using just sucks)
             throw new ContentGetException("Media hash " + post.getMediaHash() + " not found in media DB table");
         }
         

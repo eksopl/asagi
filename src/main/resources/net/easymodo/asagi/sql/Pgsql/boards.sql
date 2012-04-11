@@ -1,5 +1,3 @@
-CREATE TYPE capcode AS ENUM ('N', 'M', 'A', 'G');
-
 CREATE TABLE %%BOARD%%_threads (
   parent integer NOT NULL,
   time_op integer NOT NULL,
@@ -73,7 +71,7 @@ CREATE TABLE %%BOARD%% (
   media_filename character varying(20),
   spoiler boolean DEFAULT false NOT NULL,
   deleted boolean DEFAULT false NOT NULL,
-  "capcode" capcode DEFAULT 'N' NOT NULL,
+  capcode character(1) DEFAULT 'N' NOT NULL CHECK (capcode = ANY (ARRAY['N', 'M', 'A', 'G'])),
   email character varying(100),
   name character varying(100),
   trip character varying(25),

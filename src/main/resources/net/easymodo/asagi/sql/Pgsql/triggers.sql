@@ -94,7 +94,7 @@ BEGIN
   d_anon := CASE WHEN $1.name = 'Anonymous' AND $1.trip IS NULL THEN 1 ELSE 0 END;
   d_trip := CASE WHEN $1.trip IS NOT NULL THEN 1 ELSE 0 END;
   d_name := CASE WHEN COALESCE($1.name <> 'Anonymous' AND $1.trip IS NULL, TRUE) THEN 1 ELSE 0 END;
-
+  
   INSERT INTO %%BOARD%%_daily 
     SELECT d_day, 0, 0, 0, 0, 0, 0
     WHERE NOT EXISTS (SELECT 1 FROM %%BOARD%%_daily WHERE day = d_day);
@@ -107,14 +107,14 @@ BEGIN
     UPDATE %%BOARD%%_users SET postcount=postcount+1,
       firstseen = LEAST($1.timestamp, firstseen)
       WHERE trip = $1.trip;
-  ELSE      
+  ELSE  
     INSERT INTO %%BOARD%%_users
       SELECT COALESCE($1.name,''), COALESCE($1.trip,''), $1.timestamp, 0
-      WHERE NOT EXISTS (SELECT 1 FROM %%BOARD%%_users WHERE (name = $1.name OR $1.name IS NULL) AND (trip = $1.trip OR $1.trip IS NULL));
+      WHERE NOT EXISTS (SELECT 1 FROM %%BOARD%%_users WHERE name = COALESCE($1.name,'') AND trip = COALESCE($1.trip,''));
     
     UPDATE %%BOARD%%_users SET postcount=postcount+1,
       firstseen = LEAST($1.timestamp, firstseen)
-      WHERE (name = $1.name OR $1.name IS NULL) AND (trip = $1.trip OR $1.trip IS NULL);
+      WHERE name = COALESCE($1.name,'') AND trip = COALESCE($1.trip,'');
   END IF;
 END;
 $$ LANGUAGE plpgsql;
