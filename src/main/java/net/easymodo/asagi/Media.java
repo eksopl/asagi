@@ -10,7 +10,7 @@ public class Media {
     private int banned;
     
     public Media(int id, String mediaHash, String mediaFilename, 
-    		String previewOp, String previewReply, int total, int banned) {
+            String previewOp, String previewReply, int total, int banned) {
     	setId(id);
     	setMediaHash(mediaHash);
     	setMediaFilename(mediaFilename);
@@ -18,10 +18,6 @@ public class Media {
     	setPreviewReply(previewReply);
     	setTotal(total);
     	setBanned(banned);
-    }
-    
-    public Media() {
-    	
     }
     
     public int getId() {

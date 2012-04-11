@@ -1,12 +1,9 @@
 package net.easymodo.asagi;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -34,7 +31,8 @@ public class Dumper {
     private static final String SETTINGS_FILE = "./asagi.json";
 
     protected final int pageLimbo;
-    protected final Local localBoard;
+    protected final Local topicLocalBoard;
+    protected final Local mediaLocalBoard;
     protected final Board sourceBoard;
     protected final ConcurrentHashMap<Integer,Topic> topics;
     protected final BlockingQueue<Post> mediaPreviewUpdates;
@@ -47,10 +45,12 @@ public class Dumper {
     public static final int TALK  = 3;
     public static final int INFO  = 4;
     
-    public Dumper(String boardName, Local localBoard, Board sourceBoard, boolean fullMedia) {
+    public Dumper(String boardName, Local topicLocalBoard, Local mediaLocalBoard,
+            Board sourceBoard, boolean fullMedia) {
         this.boardName = boardName;
-        this.localBoard = localBoard;
         this.sourceBoard = sourceBoard;
+        this.topicLocalBoard = topicLocalBoard;
+        this.mediaLocalBoard = mediaLocalBoard;
         this.topics = new ConcurrentHashMap<Integer,Topic>();
         this.mediaPreviewUpdates = new LinkedBlockingQueue<Post>();
         this.mediaUpdates = new LinkedBlockingQueue<Post>();
@@ -115,13 +115,7 @@ public class Dumper {
     }
    
     
-    public class ThumbFetcher implements Runnable {
-    	private SQL sqlBoard;
-        
-        public ThumbFetcher(SQL sqlBoard) {
-            this.sqlBoard = sqlBoard;
-        }
-        
+    public class ThumbFetcher implements Runnable {        
         @Override
         public void run() {
             while(true) {
@@ -132,11 +126,7 @@ public class Dumper {
                 } catch(InterruptedException e) { } 
                 
                 try {
-						localBoard.insertMediaPreview(mediaPrevPost, sourceBoard, sqlBoard);
-					} catch (SQLException e) {
-					debug(ERROR, "Couldn't get media data from database for preview of post " + 
-							mediaPrevPost.getNum() + ": " + e.getMessage());
-	                continue;
+                    mediaLocalBoard.insertMediaPreview(mediaPrevPost, sourceBoard);
 				} catch(ContentGetException e) {
                     debug(ERROR, "Couldn't fetch preview of post " + 
                             mediaPrevPost.getNum() + ": " + e.getMessage());
@@ -149,13 +139,7 @@ public class Dumper {
         }
     }
     
-    public class MediaFetcher implements Runnable {
-    	private SQL sqlBoard;
-        
-        public MediaFetcher(SQL sqlBoard) {
-            this.sqlBoard = sqlBoard;
-        }
-    	
+    public class MediaFetcher implements Runnable {    	
         @Override
         public void run() {
             while(true) {
@@ -166,11 +150,7 @@ public class Dumper {
                 } catch(InterruptedException e) { }  
                 
                 try {
-                    localBoard.insertMedia(mediaPost, sourceBoard, sqlBoard);
-                } catch (SQLException e) {
-					debug(ERROR, "Couldn't get media data from database for media of post " + 
-							mediaPost.getNum() + ": " + e.getMessage());
-	                continue;
+                    mediaLocalBoard.insertMedia(mediaPost, sourceBoard);
                 } catch(ContentGetException e) {
                     debug(ERROR, "Couldn't fetch media of post " + 
                             mediaPost.getNum() + ": " + e.getMessage());
@@ -184,13 +164,7 @@ public class Dumper {
         }
     }
     
-    public class TopicInserter implements Runnable {
-        private SQL sqlBoard;
-        
-        public TopicInserter(SQL sqlBoard) {
-            this.sqlBoard = sqlBoard;
-        }
-        
+    public class TopicInserter implements Runnable {        
         @Override
         public void run() {
             while(true) {
@@ -202,23 +176,28 @@ public class Dumper {
                 newTopic.lock.readLock().lock();
                 
                 try {
-                    sqlBoard.insert(newTopic);
-                } catch(SQLException e) {
+                    topicLocalBoard.insert(newTopic);
+                } catch(ContentStoreException e) {
                     debug(ERROR, "Couldn't insert topic " + newTopic.getNum() +
                             ": " + e.getMessage());
-                    continue;
-                } finally {
-                	List<Post> posts = newTopic.getPosts();
-                	if(posts == null) return;
-                     
-                    for(Post post : posts) {
-                        try {
-                            if(post.getPreview() != null) mediaPreviewUpdates.put(post);
-                            if(post.getMediaFilename() != null && fullMedia) mediaUpdates.put(post);
-                        } catch(InterruptedException e) { }
-                    }
+                    
                     newTopic.lock.readLock().unlock();
+                    continue;
                 }
+                
+                List<Post> posts = newTopic.getPosts();
+                if(posts == null) {
+                    newTopic.lock.readLock().unlock();
+                    return;
+                }
+                 
+                for(Post post : posts) {
+                    try {
+                        if(post.getPreview() != null) mediaPreviewUpdates.put(post);
+                        if(post.getMediaFilename() != null && fullMedia) mediaUpdates.put(post);
+                    } catch(InterruptedException e) { }
+                }
+                newTopic.lock.readLock().unlock();
             }
         } 
     }
@@ -361,7 +340,7 @@ public class Dumper {
                 
                 long left = this.wait - (DateTime.now().getMillis() - now);
                 if(left > 0) {
-                    try { Thread.sleep(left); } catch(InterruptedException e) { debug(TALK, "interrupted"); }
+                    try { Thread.sleep(left); } catch(InterruptedException e) { }
                 }
             }            
         }
@@ -563,26 +542,25 @@ public class Dumper {
         
         Yotsuba sourceBoard = new Yotsuba(boardName);
 
-        // Get and init board engine class through reflection
+        // Get and init DB engine class through reflection
         String boardEngine = bSet.getEngine() == null ? "Mysql" : bSet.getEngine();
         Class<?> sqlBoardClass;
         Constructor<?> boardCnst;
-        Object localBoardObj;
         
-        Class<?> sqlMediaClass;
-        Constructor<?> mediaCnst;
-        Object localMediaObj;
+        // Init two DB objects: one for topic insertion and another
+        // for media insertion
+        Object topicDbObj;
+        Object mediaDbObj;
         
         try {
-        	// For posts
             sqlBoardClass = Class.forName("net.easymodo.asagi." + boardEngine);
             boardCnst = sqlBoardClass.getConstructor(String.class, BoardSettings.class);
-            localBoardObj = boardCnst.newInstance(bSet.getPath(), bSet);
+                       
+            // For topics
+            topicDbObj = boardCnst.newInstance(bSet.getPath(), bSet);
             
             // For media
-            sqlMediaClass = Class.forName("net.easymodo.asagi." + boardEngine);
-            mediaCnst = sqlBoardClass.getConstructor(String.class, BoardSettings.class);
-            localMediaObj = boardCnst.newInstance(bSet.getPath(), bSet);
+            mediaDbObj = boardCnst.newInstance(bSet.getPath(), bSet);
         } catch(ClassNotFoundException e) {
             throw new BoardInitException("Could not find board engine for " + boardEngine);
         } catch(NoSuchMethodException e) {
@@ -599,40 +577,32 @@ public class Dumper {
             throw new BoardInitException("Error initializing board engine " + boardEngine);
         }
         
-        // Making sure we got a valid engine class and etc for the post insertion
-        Local boardLocal = null;
-        SQL boardSQL = null;
-        if(localBoardObj instanceof Local) {
-            boardLocal = (Local) localBoardObj;
-        }
-        if(localBoardObj instanceof SQL) {
-            boardSQL = (SQL)localBoardObj;
-        }
+        // Making sure we got valid DB engines for post and media insertion
+        DB topicDb = null;
+        DB mediaDb = null;
         
-        if(boardLocal == null || boardSQL == null) {
-            throw new BoardInitException("Wrong engine specified for " + boardEngine);
-        }
-        
-        // Making sure we got a valid engine class and etc for the media fetching
-        SQL mediaSQL = null;
-        if(localBoardObj instanceof SQL) {
-            mediaSQL = (SQL)localMediaObj;
-        }
-        
-        if(boardLocal == null || boardSQL == null) {
-            throw new BoardInitException("Wrong engine specified for " + boardEngine);
+        if(topicDbObj instanceof DB && mediaDbObj instanceof DB) {
+            topicDb = (DB) topicDbObj;
+            mediaDb = (DB) mediaDbObj;
         }
 
-        Dumper dumper = new Dumper(boardName, boardLocal, sourceBoard, fullMedia);
+        if(topicDb == null || mediaDb == null) {
+            throw new BoardInitException("Wrong engine specified for " + boardEngine);
+        }
+        
+        Local topicLocalBoard = new Local(bSet.getPath(), bSet, topicDb);
+        Local mediaLocalBoard = new Local(bSet.getPath(), bSet, mediaDb);
+        
+        Dumper dumper = new Dumper(boardName, topicLocalBoard, mediaLocalBoard, sourceBoard, fullMedia);
         
         for(int i = 0; i < bSet.getThumbThreads() ; i++) {
-            Thread thumbFetcher = new Thread(dumper.new ThumbFetcher(mediaSQL));
+            Thread thumbFetcher = new Thread(dumper.new ThumbFetcher());
             thumbFetcher.setName("Thumb fetcher #" + i + " - " + boardName);
             thumbFetcher.start();
         }
         
         for(int i = 0; i < bSet.getMediaThreads() ; i++) {
-            Thread mediaFetcher = new Thread(dumper.new MediaFetcher(mediaSQL));
+            Thread mediaFetcher = new Thread(dumper.new MediaFetcher());
             mediaFetcher.setName("Media fetcher #" + i + " - " + boardName);
             mediaFetcher.start();
         }
@@ -649,7 +619,7 @@ public class Dumper {
             pageScanner.start();
         }
         
-        Thread topicInserter = new Thread(dumper.new TopicInserter(boardSQL));
+        Thread topicInserter = new Thread(dumper.new TopicInserter());
         topicInserter.setName("Topic inserter" + " - " + boardName);
         topicInserter.start();
         
@@ -664,26 +634,13 @@ public class Dumper {
         Gson gson = new Gson();
         
         File settingsFile = new File(SETTINGS_FILE);
-        if(settingsFile.exists())
-        {
-	        try {
-	            settingsJson = Files.toString(settingsFile, Charsets.UTF_8);
-	        } catch(IOException e) {
-	            System.out.println("ERROR: Can't find settings file ("+ SETTINGS_FILE + ")");
-	            return;
-	        }
+
+        try {
+            settingsJson = Files.toString(settingsFile, Charsets.UTF_8);
+        } catch(IOException e) {
+            System.out.println("ERROR: Can't find settings file ("+ SETTINGS_FILE + ")");
+            return;
         }
-        else
-        {
-        	BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-        	try {
-				settingsJson = reader.readLine();
-			} catch (IOException e) {
-				System.out.println("ERROR: Can't read the input.");
-				return;
-			}
-        }
-        
         
         try {
             fullSettings = gson.fromJson(settingsJson, Settings.class);

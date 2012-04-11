@@ -58,9 +58,9 @@ END;
 DROP PROCEDURE IF EXISTS `insert_image_%%BOARD%%`;
 
 CREATE PROCEDURE `insert_image_%%BOARD%%` (n_media_hash VARCHAR(25),
- n_media_filename VARCHAR(20), n_preview VARCHAR(20), n_parent INT, n_doc_id INT)
+ n_media_filename VARCHAR(20), n_preview VARCHAR(20), n_parent INT)
 BEGIN
-  IF n_parent = 0 AND n_media_hash IS NOT NULL THEN
+  IF n_parent = 0 THEN
     INSERT INTO `%%BOARD%%_images` (media_hash, media_filename, preview_op, total)
     VALUES (n_media_hash, n_media_filename, n_preview, 1) 
     ON DUPLICATE KEY UPDATE total = (total + 1), preview_op = COALESCE(preview_op, VALUES(preview_op));
@@ -151,17 +151,15 @@ DROP TRIGGER IF EXISTS `before_ins_%%BOARD%%`;
 CREATE TRIGGER `before_ins_%%BOARD%%` BEFORE INSERT ON `%%BOARD%%`
 FOR EACH ROW
 BEGIN
-  IF (SELECT 1 FROM `%%BOARD%%` WHERE num = NEW.num AND subnum = NEW.subnum) IS NOT NULL THEN THEN
-    IF NEW.parent = 0 THEN
-      CALL create_thread_%%BOARD%%(NEW.num, NEW.timestamp);
-    END IF;
-    CALL update_thread_%%BOARD%%(NEW.parent);
-    CALL insert_post_%%BOARD%%(NEW.timestamp, NEW.media_hash, NEW.email, NEW.name,
-      NEW.trip);
-    IF NEW.media_hash IS NOT NULL THEN
-      CALL insert_image_%%BOARD%%(NEW.media_hash, NEW.media_filename, NEW.preview, NEW.parent, NEW.doc_id);
-      SET NEW.media_id = LAST_INSERT_ID();
-    END IF;
+  IF NEW.parent = 0 THEN
+    CALL create_thread_%%BOARD%%(NEW.num, NEW.timestamp);
+  END IF;
+  CALL update_thread_%%BOARD%%(NEW.parent);
+  CALL insert_post_%%BOARD%%(NEW.timestamp, NEW.media_hash, NEW.email, NEW.name,
+    NEW.trip);
+  IF NEW.media_hash IS NOT NULL THEN
+    CALL insert_image_%%BOARD%%(NEW.media_hash, NEW.media_filename, NEW.preview, NEW.parent);
+    SET NEW.media_id = LAST_INSERT_ID();
   END IF;
 END;
 

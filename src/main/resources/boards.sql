@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS `%%BOARD%%_threads` (
   
   INDEX time_op_index (time_op),
   INDEX time_bump_index (time_bump),					
-  INDEX time_ghost_bump_index (time_ghost_bump),
+  INDEX time_ghost_bump_index (time_ghost_bump)
 ) ENGINE=InnoDB CHARSET=%%CHARSET%%;
 
 CREATE TABLE IF NOT EXISTS `%%BOARD%%_users` (

@@ -6,15 +6,12 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.http.annotation.ThreadSafe;
 
 import com.sun.jna.Native;
 import com.sun.jna.Platform;
 
-import java.sql.SQLException;
 import net.easymodo.asagi.settings.BoardSettings;
 import net.easymodo.asagi.exception.*;
 import net.easymodo.asagi.posix.*;
@@ -28,6 +25,7 @@ public class Local extends Board {
     private final static int DIR_MEDIA = 2;
     
     private final static Posix posix;
+    private DB db;
     
     static {
         if(Platform.isWindows()) {
@@ -37,8 +35,9 @@ public class Local extends Board {
         } 
     }
     
-    public Local(String path, BoardSettings info) {
+    public Local(String path, BoardSettings info, DB db) {
         this.path = path;
+        this.db = db;
         
         // getgrnam is thread-safe on sensible OSes, but it's not thread safe
         // on most ones.
@@ -136,30 +135,29 @@ public class Local extends Board {
         return this.getDir(filename, dirType);
     }
     
-    public int insertMediaPreview(Post h, Board source, SQL sqlBoard) throws ContentGetException, ContentStoreException, SQLException {
-        if(h.getPreview() == null) return 0;
+    public void insert(Topic topic) throws ContentStoreException {
+        this.db.insert(topic);
+    }
+    
+    public void insertMediaPreview(Post h, Board source) throws ContentGetException, ContentStoreException {
+        if(h.getPreview() == null) return;
                 
-        Media mediaRow;
+        Media mediaRow = db.getMedia(h);
         
-		mediaRow = sqlBoard.getMediaRow(h);
-        
-        if(mediaRow.getBanned() == 1) return 0;
+        if(mediaRow.getBanned() == 1) return;
         
         String filename;
-        if(h.getParent() == 0)
-        {
+        if(h.getParent() == 0) {
         	filename = mediaRow.getPreviewOp();
-        }
-        else
-        {
-        	filename = mediaRow.getPreviewReply();
+        } else {
+            filename = mediaRow.getPreviewReply();
         }
         
         String thumbDir = makeDir(filename, DIR_THUMB);
         
         // Construct the path and back down if the file already exists
         File thumbFile = new File(thumbDir + "/" + h.getPreview());
-        if(thumbFile.exists()) return 1;
+        if(thumbFile.exists()) return;
         
         byte[] data = source.getMediaPreview(h);
         
@@ -188,19 +186,15 @@ public class Local extends Board {
                 throw new ContentStoreException(e);
             }
         }
-        
-        return 1;
     }
     
-    public int insertMedia(Post h, Board source, SQL sqlBoard) throws ContentGetException, ContentStoreException, SQLException {
+    public void insertMedia(Post h, Board source) throws ContentGetException, ContentStoreException {
         
-        if(h.getMediaFilename() == null) return 0;
+        if(h.getMediaFilename() == null) return;
         
-        Media mediaRow;
-        
-		mediaRow = sqlBoard.getMediaRow(h);
-        
-        if(mediaRow.getBanned() == 1) return 0;
+        Media mediaRow = db.getMedia(h);
+                
+        if(mediaRow.getBanned() == 1) return;
         
         String filename = mediaRow.getMediaFilename();
         
@@ -209,7 +203,7 @@ public class Local extends Board {
 
         // Construct the path and back down if the file already exists
         File mediaFile = new File(mediaDir + "/" + filename);
-        if(mediaFile.exists()) return 1;
+        if(mediaFile.exists()) return;
         
         // Throws ContentGetException on failure
         byte[] data = source.getMedia(h);
@@ -238,8 +232,6 @@ public class Local extends Board {
             } catch(IOException e) {
                 throw new ContentStoreException(e);
             }
-        }
-        
-        return 1;
+        }        
     }
 }
