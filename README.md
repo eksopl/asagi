@@ -10,6 +10,8 @@ A first goal is to reach feature parity with Fuuka's dumper. New features and en
 Asagi is not ready for public consumption yet. An early alpha/developer preview/whatever is coming soon.
 
 The very brave can pull the code and start messing with it (it's in a functional state already), but please do not do so unless you actually know what you're doing.
+
+Asagi is storing image files and thumbnails according to a new directory configuration that doesn't save duplicates, but that isn't currently supported by neither foolfuuka nor fuuka, so it won't be of any use for you if you just want a functioning archive with a web frontend.
 <hr>
 
 Its short term goals are to:
@@ -21,16 +23,17 @@ Its short term goals are to:
 
 Its long term goals are to eventually be:
 
-* Extendable to other database backends
 * Extendable to other imageboards
 * Extendable to other means of data feeding (local rather than HTTP, for example)
 
 It uses:
 
 * MySQL Connector/J to talk to MySQL
+* PostgreSQL JDBC Driver to talk to PostgreSQL
 * Apache HttpComponents to perform HTTP requests
 * Joda Time to be able to do anything with dates in Java without losing one's sanity
 * Gson to read the configuration file
+* Guava for small extras that are nice to have here and there
 * JNA to be able to perform chown/chmod/getgrnam on Unix platforms
 * Maven for dependency resolution and building
 
@@ -49,10 +52,10 @@ I just couldn't think of any good markup language for the configuration file. Am
 * YAML, while well intended, is completely unusuable for configuration files due to its whitespace sensitivity. While you can specify a language with forced indentation of code and have programmers happy with it, you cannot reasonably expect a regular user that just wants to get software working to know (or care) about indentation, spaces vs tabs, etc.
 * Java property files are pretty simple. Unfortunatly, they're too simple -- they're restricted to latin1 and they don't support lists. Even if you try to get around those limitations by using Apache Commons Configuration, you still can't get lists inside lists, which I needed.
 * INI files, as with Java property files, actually have a reasonable format overall, but they have the same issue as property files. On top of that, their grammar and syntax isn't well defined by anything or anyone.
-* JSON is pretty okay, it only falls short because its grammar is overly strict to be used in configuration files, in my opinion. Forgetting a comma will mean trouble, inserting an extra comma: likewise.
+* JSON is pretty okay. It falls short because its grammar is overly strict to be used in configuration files, in my opinion. Forgetting a comma will mean trouble, inserting an extra comma: likewise. Its huge gotcha is that it has no way of inserting comments, unacceptable for most configuration files.
 * I'm sure there's tons of really good markup languages out there, but unfortunatly, they're either not very popular (which means that it's going to be hard to find a module/library/extension/plugin to deal with it in pretty much every environment), or I just haven't heard of them.
 
-So out of all of those, I ended up with JSON.
+So out of all of those, even after weighing downsides, I ended up with JSON.
 
 ### What's with the name?
 Asagi is the eldest of the Ayase sisters. Fuuka is the middle sister. The Ayase family lives next door to Yotsuba. Get it?
