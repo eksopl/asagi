@@ -544,6 +544,8 @@ public class Dumper {
 
         // Get and init DB engine class through reflection
         String boardEngine = bSet.getEngine() == null ? "Mysql" : bSet.getEngine();
+        bSet.setEngine(boardEngine);
+        
         Class<?> sqlBoardClass;
         Constructor<?> boardCnst;
         

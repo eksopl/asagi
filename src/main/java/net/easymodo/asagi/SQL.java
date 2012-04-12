@@ -1,12 +1,17 @@
 package net.easymodo.asagi;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 import org.apache.http.annotation.ThreadSafe;
+
+import com.google.common.base.Charsets;
+import com.google.common.io.Resources;
 
 import net.easymodo.asagi.exception.BoardInitException;
 import net.easymodo.asagi.exception.ContentGetException;
@@ -16,16 +21,28 @@ import net.easymodo.asagi.settings.BoardSettings;
 @ThreadSafe
 public abstract class SQL implements DB {
     protected String table;
+    protected String charset;
+
     protected Connection conn = null;
+    protected String tableCheckQuery = null;
     protected String insertQuery = null;
     protected String updateQuery = null;
     
+    protected String commonSqlRes = null;
+    protected String boardSqlRes = null;
+    protected String triggersSqlRes = null;
+    
+    private PreparedStatement tableChkStmt = null;
     private PreparedStatement updateStmt = null;
     private PreparedStatement insertStmt = null;
     private PreparedStatement selectMediaStmt = null;
         
     public synchronized void init(String connStr, String path, BoardSettings info) throws BoardInitException {
         this.table = info.getTable();
+        this.commonSqlRes = "net/easymodo/asagi/sql/" + info.getEngine() + "/common.sql";
+        this.boardSqlRes = "net/easymodo/asagi/sql/" + info.getEngine() + "/boards.sql";
+        this.triggersSqlRes = "net/easymodo/asagi/sql/" + info.getEngine() + "/triggers.sql";
+
 
         if(this.insertQuery == null) {
             this.insertQuery = String.format(
@@ -49,7 +66,16 @@ public abstract class SQL implements DB {
             conn.setAutoCommit(false);
             conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
             
-            this.createTables();
+            tableChkStmt = conn.prepareStatement(tableCheckQuery);
+  
+            try {
+                this.createTables();
+            } catch(SQLException e) {
+                conn.rollback();
+                throw e;
+            }
+            
+            tableChkStmt.close();
             
             insertStmt = conn.prepareStatement(insertQuery);
             updateStmt = conn.prepareStatement(updateQuery);
@@ -59,7 +85,76 @@ public abstract class SQL implements DB {
         }
     }
     
-    public abstract void createTables() throws BoardInitException, SQLException;
+    public synchronized void createTables() throws BoardInitException, SQLException {
+        ResultSet res = null;
+        String commonSql = null;
+        
+        // Check if common stuff has already been created
+        tableChkStmt.setString(1, "index_counters");
+        res = tableChkStmt.executeQuery();
+        try {
+            if(!res.isBeforeFirst()) {
+                // Query to create tables common to all boards
+                try {
+                    commonSql = Resources.toString(Resources.getResource(commonSqlRes), Charsets.UTF_8);
+                } catch(IOException e) {
+                    throw new BoardInitException(e);
+                } catch(IllegalArgumentException e) {
+                    throw new BoardInitException(e);
+                }
+            }
+        } finally {
+            res.close();
+        }
+
+        // Check if the tables for this board have already been created too
+        // Bail out if yes
+            tableChkStmt.setString(1, this.table);
+            res = tableChkStmt.executeQuery();
+            try {
+                if(res.isBeforeFirst()) {
+                    conn.commit();
+                    return;
+                }
+            } finally {
+                res.close();
+            }
+       
+        // Query to create all tables for this board
+        String boardSql;
+        try {
+            boardSql = Resources.toString(Resources.getResource(boardSqlRes), Charsets.UTF_8);
+            boardSql = boardSql.replaceAll("%%BOARD%%", table);
+            boardSql = boardSql.replaceAll("%%CHARSET%%", charset);
+        } catch(IOException e) {
+            throw new BoardInitException(e);
+        } catch(IllegalArgumentException e) {
+            throw new BoardInitException(e);
+        }
+
+        // Query to create or replace triggers and procedures for this board
+        String triggersSql;
+        try {
+            triggersSql = Resources.toString(Resources.getResource(triggersSqlRes), Charsets.UTF_8);
+            triggersSql = triggersSql.replaceAll("%%BOARD%%", table);
+            triggersSql = triggersSql.replaceAll("%%CHARSET%%", charset);
+        } catch(IOException e) {
+            throw new BoardInitException(e);
+        } catch(IllegalArgumentException e) {
+            throw new BoardInitException(e);
+        }
+        
+        Statement st = conn.createStatement();
+        try {
+            if(commonSql != null) 
+                st.executeUpdate(commonSql);
+            st.executeUpdate(boardSql);
+            st.executeUpdate(triggersSql);
+            conn.commit();
+        } finally {
+            st.close();
+        }
+    }
     
     public synchronized void insert(Topic topic) throws ContentStoreException {    
         try{
