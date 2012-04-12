@@ -25,12 +25,12 @@ import com.google.gson.JsonSyntaxException;
 
 public class Dumper {
     private final String boardName;
-    private final boolean fullMedia;
     private final int debugLevel;
     
     private static final String SETTINGS_FILE = "./asagi.json";
 
     protected final int pageLimbo;
+    protected final boolean fullMedia;
     protected final Local topicLocalBoard;
     protected final Local mediaLocalBoard;
     protected final Board sourceBoard;
