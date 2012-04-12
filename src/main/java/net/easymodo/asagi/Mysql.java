@@ -20,7 +20,6 @@ public class Mysql extends SQL {
         
         // TODO: Let user specify charset
         this.charset = "utf8mb4";
-        this.table = info.getTable();
         this.insertQuery = String.format(
                 "INSERT INTO %s" +
                 " (id, num, subnum, parent, timestamp, preview, preview_w, preview_h, media, " +
@@ -28,8 +27,9 @@ public class Mysql extends SQL {
                 " capcode, email, name, trip, title, comment, delpass, sticky) " +
                 "  SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? FROM DUAL " +
                 "  WHERE NOT EXISTS (SELECT 1 FROM %s WHERE num=? and subnum=?)", 
-                this.table, this.table);
+                info.getTable(), info.getTable());
         this.tableCheckQuery = "SHOW TABLES LIKE ?";
+        
         this.init(connStr, path, info);
     }
 }

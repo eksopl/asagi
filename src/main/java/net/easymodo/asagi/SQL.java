@@ -20,10 +20,9 @@ import net.easymodo.asagi.settings.BoardSettings;
 
 @ThreadSafe
 public abstract class SQL implements DB {
-    protected String table;
-    protected String charset;
+    protected String table = null;
+    protected String charset = null;
 
-    protected Connection conn = null;
     protected String tableCheckQuery = null;
     protected String insertQuery = null;
     protected String updateQuery = null;
@@ -32,17 +31,18 @@ public abstract class SQL implements DB {
     protected String boardSqlRes = null;
     protected String triggersSqlRes = null;
     
-    private PreparedStatement tableChkStmt = null;
-    private PreparedStatement updateStmt = null;
-    private PreparedStatement insertStmt = null;
-    private PreparedStatement selectMediaStmt = null;
+    protected Connection conn = null;
+    protected PreparedStatement tableChkStmt = null;
+    protected PreparedStatement updateStmt = null;
+    protected PreparedStatement insertStmt = null;
+    protected PreparedStatement selectMediaStmt = null;
         
     public synchronized void init(String connStr, String path, BoardSettings info) throws BoardInitException {
         this.table = info.getTable();
+        
         this.commonSqlRes = "net/easymodo/asagi/sql/" + info.getEngine() + "/common.sql";
         this.boardSqlRes = "net/easymodo/asagi/sql/" + info.getEngine() + "/boards.sql";
         this.triggersSqlRes = "net/easymodo/asagi/sql/" + info.getEngine() + "/triggers.sql";
-
 
         if(this.insertQuery == null) {
             this.insertQuery = String.format(
@@ -59,7 +59,7 @@ public abstract class SQL implements DB {
                         "  sticky = (? OR sticky) WHERE num=? and subnum=?", table);
         
         String selectMediaQuery = String.format("SELECT * FROM %s_images WHERE media_hash = ?", 
-                table);
+                this.table);
         
         try {
             conn = DriverManager.getConnection(connStr);
@@ -70,6 +70,9 @@ public abstract class SQL implements DB {
   
             try {
                 this.createTables();
+            } catch(BoardInitException e) {
+                conn.commit();
+                throw e;
             } catch(SQLException e) {
                 conn.rollback();
                 throw e;
@@ -81,8 +84,8 @@ public abstract class SQL implements DB {
             updateStmt = conn.prepareStatement(updateQuery);
             selectMediaStmt = conn.prepareStatement(selectMediaQuery);
        } catch (SQLException e) {
-            throw new BoardInitException(e);
-        }
+           throw new BoardInitException(e);
+       }
     }
     
     public synchronized void createTables() throws BoardInitException, SQLException {
@@ -106,20 +109,22 @@ public abstract class SQL implements DB {
         } finally {
             res.close();
         }
+        conn.commit();
 
         // Check if the tables for this board have already been created too
         // Bail out if yes
-            tableChkStmt.setString(1, this.table);
-            res = tableChkStmt.executeQuery();
-            try {
-                if(res.isBeforeFirst()) {
-                    conn.commit();
-                    return;
-                }
-            } finally {
-                res.close();
+        tableChkStmt.setString(1, this.table);
+        res = tableChkStmt.executeQuery();
+        try {
+            if(res.isBeforeFirst()) {
+                conn.commit();
+                return;
             }
-       
+        } finally {
+            res.close();
+        }
+        conn.commit();
+
         // Query to create all tables for this board
         String boardSql;
         try {
@@ -243,17 +248,18 @@ public abstract class SQL implements DB {
             }
             throw new ContentGetException(e);
         }
-         
+        
         try {
             if(mediaRs.next()) {
                 media = new Media(
-                        mediaRs.getInt("id"),
-                        mediaRs.getString("media_hash"), 
-                        mediaRs.getString("media_filename"),
-                        mediaRs.getString("preview_op"),
-                        mediaRs.getString("preview_reply"),
-                        mediaRs.getInt("total"),
-                        mediaRs.getInt("banned"));
+                    mediaRs.getInt("id"),
+                    mediaRs.getString("media_hash"), 
+                    mediaRs.getString("media_filename"),
+                    mediaRs.getString("preview_op"),
+                    mediaRs.getString("preview_reply"),
+                    mediaRs.getInt("total"),
+                    mediaRs.getInt("banned")
+                );
             }
         } catch(SQLException e) {
             throw new ContentGetException(e);
