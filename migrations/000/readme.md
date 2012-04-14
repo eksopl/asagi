@@ -23,8 +23,9 @@ Requirements
 Usage 
 -----
 
-Put this script in the same folder where your asagi.json resides and run it:
+Have the `migrations` directory in the same directory where you have `asagi.json`. Reach the directory via command line and run the script:
 
+	$ cd asagi/migrations/000/
 	$ php migrate_000.php
 
 You can run it as many times as you want, until you are done: it is able to check where the process has stopped. Of course it will waste time in doing so, so let it run and leave it alone as much as possible.
@@ -39,7 +40,7 @@ We're turning the large tables into InnoDB, which has particular memory requirem
 * `innodb_log_file_size = 1024M` or even `512M`. Don't try to match the suggested 25% over such amounts.
 * If you change the above two variables, remember to go in your `../mysql/data` folder and remove the `ib_logfile0` and `ib_logfile1`, else MySQL won't boot. If unsure, look here: http://dba.stackexchange.com/a/1265
 * `innodb_flush_log_at_trx_commit = 2` unless you care to have your database safe till the last query. With 2 you might lose one second of queries if MySQL crashes. This will speed up insertions. Absolutely have it on 2 during the migration.
-* If you're on Linux or other non windows system, `innodb_flush_method = O_DIRECT` should improve performance. More on this: http://stackoverflow.com/a/2763487/644504
+* If you're on Linux or other non-Windows systems, `innodb_flush_method = O_DIRECT` should improve performance. More on this: http://stackoverflow.com/a/2763487/644504
 * If you have time to waste you should add `innodb_file_per_table`. It will help not having a humongous file containing all the InnoDB databases that won't shrink in filesize on row deletion. The issue in this is that you will have to backup all your InnoDB tables, delete them and restore them, to be able to  remove the humongous file. Here's the procedure: http://stackoverflow.com/a/3456885/644504 or, you could convert your InnoDB tables to MyISAM instead of backing up, then convert them back.
 * Have a lot of swap available: we've had some spikes of memory usage that made Linux kill MySQL during the migration. If you've lived calm with 16Gb RAM and never saw your server swapping, this might come like a shock to you - it did for me and I was clueless for two days on why MySQL was going down. http://serverfault.com/a/218125 will help you adding a swap file. 2Gb to 10Gb of swap is nice to have.
 
@@ -59,4 +60,4 @@ What exactly does this migration do
 Notes
 -----
 
-Migration made in April 2012. Blame Woxxy for mistakes in this file.
+Migration made in April 2012. Blame @woxxy for mistakes in this file.
