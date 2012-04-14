@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS %%BOARD%% (
   
   PRIMARY KEY (doc_id), 
   UNIQUE num_subnum_index (num, subnum), 
+  INDEX media_id_index(media_id),
   INDEX id_index(id), 
   INDEX num_index(num), 
   INDEX subnum_index(subnum),
@@ -38,8 +39,7 @@ CREATE TABLE IF NOT EXISTS %%BOARD%% (
   INDEX name_index(name),
   INDEX trip_index(trip),
   INDEX fullname_index(name,trip),
-  fulltext INDEX comment_index(COMMENT)
-) engine=MyISAM CHARSET=%%CHARSET%%;
+) engine=InnoDB	 CHARSET=%%CHARSET%%;
 
 CREATE TABLE IF NOT EXISTS `%%BOARD%%_threads` (
   `parent` int unsigned NOT NULL,

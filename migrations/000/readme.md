@@ -1,63 +1,160 @@
-Asagi migration from Fuuka (migrate_000.php)
+Fuuka fetcher to Asagi fetcher Migration
 ========================================
+#### Note: This entire readme will be using the board `tv` as a reference.
 
-Script to migrate from Fuuka fetcher to Asagi fetcher
+DISCLAIMER
+----------
+This migration script makes large modifications to structure of the databases and image directory. A backup of all contents (both databases and images) is recommended before running this script. We will not be held accountable for your actions. Therefore, please read the entire content of this file before proceeding.
 
-__In this whole readme I used the board `tv` only as example.__
 
-----
+What are the exact modifications done in this migration?
+--------------------------------------------------------
+* __This changes the current database engine of MyISAM to InnoDB.__
 
-ATTENTION
----------
-This script modifies a large part of your database and of your image folder.
-You want to have a backup of all your databases and all your images before running this.
-Also, please read all the content of this file.
+	This will improve the safety of the database operations and introduce the ability to use transactions. Dropping the table-locking MyISAM greatly improves the performance, making it possible to run some slower queries without freezing the entire board. The memory usage will be higher, but it can be managed with the suggestions in the next section of this file.
+
+* __The entire file structure of the image directory is changed completely.__
+
+	This will decrease the current disk space usage by approximately 60% by only storing only one copy of every images. The folder structure will be generated using the filename of the image stored at the time.
+
+* __A column will be appended to both the `tv` and `tv_images` table.__
+
+    This will allow MySQL to search the `media_hash` columns and `JOIN` tables much faster.
+
+* __The columns `op_filename`, `reply_filename` and `media_filename` will be appended to the `tv_images` table.__
+
+    This will be used to locate the new path of the images matching the unique `media_hash`. Although we stated that all images are stored only once, thumbnails fall under a unique exemption and may store at most two images to match 4chan's thumbnail preview.
+
+* __All MySQL triggers and procedures are updated to the latest revision.__
+
+
+Suggestions and Possible Issues
+----------------------
+InnoDB has a reputation of having a much larger memory footprint than MyISAM. Since the current database engine has been converted to InnoDB, the configuration of the MySQL Server must be changed accordingly. All of the settings below were used on a server with 16GB RAM. Although these settings currently work with our tests, it is still recommended that settings are changed to suit the environment/server used. Unless the server is a Dedicated MySQL Server, please do not match your settings to ones found in tutorials online.
+
+#### MySQL
+* `innodb_buffer_size = 6G` [M-FN1]
+
+    This is a very important setting for InnoDB and affects its performance. It is recommended to do serveral tests and find an optimal setting for this option. It should be noted that this setting should not be set too high causing the OS to forcefully kill MySQL or other processes.
+
+* `innodb_log_file_size = 1024M` or `innodb_log_file_size = 512M`
+
+    This is another important setting for InnoDB that allows for recovery during crashes or power failure. This setting should not be too high or it may take a long time before MySQL becomes operational again.
+
+* `innodb_flush_log_at_trx_commit = 2`
+
+    Due to performance issues, it is recommended to have this setting at `2` during migration. However, this can be changed depending on how safe you wish to have your database and wish to maintain all queries done to the database up until the crash.
+
+* `innodb_flush_method = O_DIRECT` [M-FN2]
+
+    This allows MySQL to bypass the OS Cache that should increase InnoDB performance. It mainly affects non-Windows systems.
+
+* `innodb_file_per_table = 1` [M-FN3]
+
+    This will allow InnoDB to store each table and its indexes in their own file instead of one large file containing all InnoDB data for the entire MySQL Server.
+
+#### Operating System
+* `Swap Memory = 10G`
+
+    This is to allow MySQL or the OS to use additional memory in case it is needed to avoid any future problems.
+
+
+#### Notes
+* M-FN1: _If these settings are changed, the log files `ib_logfile0` and `ib_logfile1` must be removed from the system in order for MySQL to boot. Refer to http://dba.stackexchange.com/a/1265 for more information._
+* M-FN2: _For more information, please read http://stackoverflow.com/a/2763487/644504 to learn more about this setting._
+* M-FN3: _For instructions, please read and follow http://stackoverflow.com/a/3456885/644504 to apply on exising tables._
+
 
 Requirements
 ------------
-* PHP 5.3+ (if you have any less than 5.3.10 _upgrade as soon as possible_)
-* MySQL 5.5+ (lower is OK, but it won't enable you to use utf8mb4, which means you will _keep_ saving question marks instead of 4-byte symbols)
-* The Fuuka database on the latest version available
-* Being prepared to see this run for hours or even days, depending on the size of the database (users will not notice that it's processing)
+* Disk Space for Backup and Migration
+* Fuuka r142+
+* PHP 5.2+ (Preferred: 5.3.10+)
+* MySQL 5.1+ (Preferred: 5.5+ for UTF8MB4/4-byte Char Support)
 
-Usage 
+Usage
 -----
 
-Have the `migrations` directory in the same directory where you have `asagi.json`. Reach the directory via command line and run the script:
+The script is meant to be safe to stop and restart, but it's better if left alone, as fallback functions after a restart can be considerably slower. Run the phases sequentially and make sure they have finished their operations before going on. A notice is printed on screen when done. If unsure if the phase has completed, run the phase again.
 
-	$ cd asagi/migrations/000/
-	$ php migrate_000.php
+It is suggested to use GNU Screen (or tmux, if you prefer it), to run your migration, so even if your SSH client disconnects it will keep running safely. A short guide:
 
-You can run it as many times as you want, until you are done: it is able to check where the process has stopped. Of course it will waste time in doing so, so let it run and leave it alone as much as possible.
+	bash$ screen -S migration  # runs a new session named migration, just use the 
+	CTRL+A, then D             # "detaches" the screen session
+	bash$ screen -x migration  # "attaches" to the screen session
+	screen$ exit               # closes the screen session
 
-You don't need to put offline your database as the migration will deal with creating temporary tables and rotating them with the live ones. __You can keep the dumpers running__. You will have some moments in which the single board is locked, but unless you have a table with several tens of millions of rows, you will only have like 5 minutes of downtime while the temporary table is being created.
+Ensure that the `migrations` folder is located in the same directory as the `asagi.json` configuration file.
 
-Suggestions and possible issues
----------------
-We're turning the large tables into InnoDB, which has particular memory requirements. Almost for sure will have to change settings in your `my.cnf`. Here's some suggestions.
+1. If you already have Asagi running with other boards, leave it running. Open `asagi.json` and add the board you're going to work on.
 
-* `innodb_buffer_pool_size = 6G` on a 16Gb RAM server, if not less, like `4G`. On sites you will find people saying that 80% of your server RAM is good, but they don't take in account Sphinx running and other applications. They consider it a MySQL-only server, which you might not be able to afford.
-* `innodb_log_file_size = 1024M` or even `512M`. Don't try to match the suggested 25% over such amounts.
-* If you change the above two variables, remember to go in your `../mysql/data` folder and remove the `ib_logfile0` and `ib_logfile1`, else MySQL won't boot. If unsure, look here: http://dba.stackexchange.com/a/1265
-* `innodb_flush_log_at_trx_commit = 2` unless you care to have your database safe till the last query. With 2 you might lose one second of queries if MySQL crashes. This will speed up insertions. Absolutely have it on 2 during the migration.
-* If you're on Linux or other non-Windows systems, `innodb_flush_method = O_DIRECT` should improve performance. More on this: http://stackoverflow.com/a/2763487/644504
-* If you have time to waste you should add `innodb_file_per_table`. It will help not having a humongous file containing all the InnoDB databases that won't shrink in filesize on row deletion. The issue in this is that you will have to backup all your InnoDB tables, delete them and restore them, to be able to  remove the humongous file. Here's the procedure: http://stackoverflow.com/a/3456885/644504 or, you could convert your InnoDB tables to MyISAM instead of backing up, then convert them back.
-* Have a lot of swap available: we've had some spikes of memory usage that made Linux kill MySQL during the migration. If you've lived calm with 16Gb RAM and never saw your server swapping, this might come like a shock to you - it did for me and I was clueless for two days on why MySQL was going down. http://serverfault.com/a/218125 will help you adding a swap file. 2Gb to 10Gb of swap is nice to have.
+1. Navigate to the folder containing the migration script.
 
-You can be OCD about InnoDB by googling the hell out of it! Here's an interesting link from which I learned a lot http://www.mysqlperformanceblog.com/2007/11/01/innodb-performance-optimization-basics/
+        $ cd /path/to/asagi/migrations/000/
 
-Notice that when MySQL 5.6 will be final the situation will improve for InnoDB drammatically, but I don't suggest using 5.6 betas. Rather, I suggest to have the latest stable MySQL release as InnoDB keeps being improved.
+1. Run the first phase of the migration process, that will convert your database to InnoDB. Decide if you want to do it with or without downtime.
+  * With downtime
+	
+      1. Stop your Fuuka fetcher for this board now. Run the following:
+      
+      1. Run the following:
+
+				$ php migrate_000.php --board tv --phase 1 --with-downtime
+  * Without downtime
+	
+		You will have to duplicate manually the board database files into temporary files. This is not necessary and probably better to avoid if you aren't savvy with MySQL.
+      1. Shut down MySQL (in example on Debian `/etc/init.d/mysql stop`)
+
+      1. Reach your MySQL data folder (in example `cd /usr/local/mysql/data/`)
+
+      1. Enter the folder with the same name of your database (in example `cd fuuka/`)
+
+      1. Start copying your table files:
+	
+		
+				cp tv.MYI tv_temp.MYI
+				cp tv.MYD tv_temp.MYD
+				cp tv.frm tv_temp.frm
+				chown mysql:mysql tv_temp*
+				
+			Do this for every board you need to convert.
+
+      1. Start MySQL (in example on Debian `/etc/init.d/mysql start`)
+
+      1. Run the command:
+		
+				$ php migrate_000.php --board tv --phase 1
+				
+      1. When done, stop the Fuuka fetcher for this board and make your board unavailable on your site
+        
+1. Run the second phase of the process, that will update your database definitions:
 
 
-What exactly does this migration do
------------------------------------
-* turns `tv` to InnoDB. To avoid downtime, it will copy your live `tv` table into a `tv_temp` table. It will then create a `tv_new` InnoDB table and copy the posts in blocks of 2m rows from `tv_temp`. When the `tv_temp` posts are all copied, it will grab the latest posts from the live `tv` table to get up to date. When done, the live `tv` table will be named `tv_old` and the `tv_new` table will be renamed to `tv`.
-* `media_id` column will be added to the board table, and a `id` column will be added to the `_images` table. This will allow for faster `media\_hash` search and faster `JOIN` on the table.
-* changes the images' directory naming scheme to store only one copy of every image. The directory names will be based on the timestamp in the filename. The migration script will rename the old image directory to `_old` and create a new directory
-* adds `op_filename`, `reply_filename` and `media_filename` columns to the `_images` table to locate the file. We're going to have two different files for OP and replies.
-* updates the MySQL triggers and procedures to the latest versions.
+        $ php migrate_000.php --board tv --phase 2
 
-Notes
------
+1. Run or restart the Asagi fetcher and make your board available again.
 
-Migration made in April 2012. Blame @woxxy for mistakes in this file.
+1. Run the third phase of the process, that will copy the images without duplicates:
+
+		$ php migrate_000.php --board tv --phase 3
+
+1. Run the fourth phase of the process, that will remove the temporary tables used:
+
+		$ php migrate_000.php --board tv --phase 4		
+		
+1. Remove the old images folders manually:
+
+		$ cd /path/to/your/fuuka/board/
+		$ rm -R tv_old/
+
+Documentation
+-------------
+    $ php migrate_000.php --help
+	Options:
+	--board <board>        Process the specified board only.
+						   If this argument is not set, all boards will be processed sequentially.
+	--phase <num>          Run the phase specified only. [1] To InnoDB [2] Alter tables [3] Copy images [4] Clean up.
+						   If this argument is not set, all phases will be run sequentially, on all selected boards.
+	--with-downtime        Do not minimize the downtime of migration to InnoDB with _temp tables.
+	--move-images          Move the images instead of copying them. Can cause image loss if you stop or crash during the third phase.
+	--ignore-db-errors     Ignore the database errors. It shouldn't be necessary.

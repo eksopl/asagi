@@ -1,4 +1,9 @@
-DROP PROCEDURE IF EXISTS `update_thread_%%BOARD%%`;
+-- the DELIMITER statement is not inserted here because this is not a valid SQL file!
+-- this is meant to be read by a PHP function that explodes strings!
+
+
+DROP PROCEDURE IF EXISTS `update_thread_%%BOARD%%`
+//
 
 CREATE PROCEDURE `update_thread_%%BOARD%%` (tnum INT)
 BEGIN
@@ -38,24 +43,30 @@ BEGIN
           re.parent = tnum
       )
     WHERE op.parent = tnum;
-END;
+END
+//
 
-DROP PROCEDURE IF EXISTS `create_thread_%%BOARD%%`;
+DROP PROCEDURE IF EXISTS `create_thread_%%BOARD%%` 
+//
 
 CREATE PROCEDURE `create_thread_%%BOARD%%` (num INT, timestamp INT)
 BEGIN
   INSERT IGNORE INTO `%%BOARD%%_threads` VALUES (num, timestamp, timestamp,
     timestamp, NULL, NULL, 0, 0);
-END;
+END
+//
 
 DROP PROCEDURE IF EXISTS `delete_thread_%%BOARD%%`;
+//
 
 CREATE PROCEDURE `delete_thread_%%BOARD%%` (tnum INT)
 BEGIN
   DELETE FROM `%%BOARD%%_threads` WHERE parent = tnum;
-END;
+END
+//
 
-DROP PROCEDURE IF EXISTS `insert_image_%%BOARD%%`;
+DROP PROCEDURE IF EXISTS `insert_image_%%BOARD%%`
+//
 
 CREATE PROCEDURE `insert_image_%%BOARD%%` (n_media_hash VARCHAR(25),
  n_media_filename VARCHAR(20), n_preview VARCHAR(20), n_parent INT)
@@ -71,16 +82,20 @@ BEGIN
     ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id), 
     	total = (total + 1), preview_reply = COALESCE(preview_reply, VALUES(preview_reply));
   END IF;
-END;
+END
+//
 
-DROP PROCEDURE IF EXISTS `delete_image_%%BOARD%%`;
+DROP PROCEDURE IF EXISTS `delete_image_%%BOARD%%`
+//
 
 CREATE PROCEDURE `delete_image_%%BOARD%%` (n_media_id INT)
 BEGIN
   UPDATE `%%BOARD%%_images` SET total = (total - 1) WHERE id = n_media_id;
-END;
+END
+//
 
-DROP PROCEDURE IF EXISTS `insert_post_%%BOARD%%`;
+DROP PROCEDURE IF EXISTS `insert_post_%%BOARD%%`
+//
 
 CREATE PROCEDURE `insert_post_%%BOARD%%` (p_timestamp INT, p_media_hash VARCHAR(25),
   p_email VARCHAR(100), p_name VARCHAR(100), p_trip VARCHAR(25))
@@ -114,9 +129,11 @@ BEGIN
     ON DUPLICATE KEY UPDATE postcount=postcount+1,
     firstseen = LEAST(VALUES(firstseen), firstseen);
   END IF;
-END;
+END
+//
 
-DROP PROCEDURE IF EXISTS `delete_post_%%BOARD%%`;
+DROP PROCEDURE IF EXISTS `delete_post_%%BOARD%%`
+//
 
 CREATE PROCEDURE `delete_post_%%BOARD%%` (p_timestamp INT, p_media_hash VARCHAR(25), p_email VARCHAR(100), p_name VARCHAR(100), p_trip VARCHAR(25))
 BEGIN
@@ -144,9 +161,11 @@ BEGIN
     UPDATE %%BOARD%%_users SET postcount = postcount-1 WHERE
       name = COALESCE(p_name, '') AND trip = COALESCE(p_trip, '');
   END IF;
-END;
+END
+//
 
-DROP TRIGGER IF EXISTS `before_ins_%%BOARD%%`;
+DROP TRIGGER IF EXISTS `before_ins_%%BOARD%%`
+//
 
 CREATE TRIGGER `before_ins_%%BOARD%%` BEFORE INSERT ON `%%BOARD%%`
 FOR EACH ROW
@@ -155,9 +174,11 @@ BEGIN
     CALL insert_image_%%BOARD%%(NEW.media_hash, NEW.media_filename, NEW.preview, NEW.parent);
     SET NEW.media_id = LAST_INSERT_ID();
   END IF;
-END;
+END
+//
 
-DROP TRIGGER IF EXISTS `after_ins_%%BOARD%%`;
+DROP TRIGGER IF EXISTS `after_ins_%%BOARD%%`
+//
 
 CREATE TRIGGER `after_ins_%%BOARD%%` AFTER INSERT ON `%%BOARD%%`
 FOR EACH ROW
@@ -168,9 +189,11 @@ BEGIN
   CALL update_thread_%%BOARD%%(NEW.parent);
   CALL insert_post_%%BOARD%%(NEW.timestamp, NEW.media_hash, NEW.email, NEW.name,
     NEW.trip);
-END;
+END
+//
 
 DROP TRIGGER IF EXISTS `after_del_%%BOARD%%`;
+//
 
 CREATE TRIGGER `after_del_%%BOARD%%` AFTER DELETE ON `%%BOARD%%`
 FOR EACH ROW
@@ -184,4 +207,5 @@ BEGIN
   IF OLD.media_hash IS NOT NULL THEN
     CALL delete_image_%%BOARD%%(OLD.media_id);
   END IF;
-END;
+END
+//
