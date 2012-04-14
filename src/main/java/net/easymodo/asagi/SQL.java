@@ -1,12 +1,17 @@
 package net.easymodo.asagi;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 import org.apache.http.annotation.ThreadSafe;
+
+import com.google.common.base.Charsets;
+import com.google.common.io.Resources;
 
 import net.easymodo.asagi.exception.BoardInitException;
 import net.easymodo.asagi.exception.ContentGetException;
@@ -15,17 +20,29 @@ import net.easymodo.asagi.settings.BoardSettings;
 
 @ThreadSafe
 public abstract class SQL implements DB {
-    protected String table;
-    protected Connection conn = null;
+    protected String table = null;
+    protected String charset = null;
+
+    protected String tableCheckQuery = null;
     protected String insertQuery = null;
     protected String updateQuery = null;
     
-    private PreparedStatement updateStmt = null;
-    private PreparedStatement insertStmt = null;
-    private PreparedStatement selectMediaStmt = null;
+    protected String commonSqlRes = null;
+    protected String boardSqlRes = null;
+    protected String triggersSqlRes = null;
+    
+    protected Connection conn = null;
+    protected PreparedStatement tableChkStmt = null;
+    protected PreparedStatement updateStmt = null;
+    protected PreparedStatement insertStmt = null;
+    protected PreparedStatement selectMediaStmt = null;
         
     public synchronized void init(String connStr, String path, BoardSettings info) throws BoardInitException {
         this.table = info.getTable();
+        
+        this.commonSqlRes = "net/easymodo/asagi/sql/" + info.getEngine() + "/common.sql";
+        this.boardSqlRes = "net/easymodo/asagi/sql/" + info.getEngine() + "/boards.sql";
+        this.triggersSqlRes = "net/easymodo/asagi/sql/" + info.getEngine() + "/triggers.sql";
 
         if(this.insertQuery == null) {
             this.insertQuery = String.format(
@@ -42,24 +59,107 @@ public abstract class SQL implements DB {
                         "  sticky = (? OR sticky) WHERE num=? and subnum=?", table);
         
         String selectMediaQuery = String.format("SELECT * FROM %s_images WHERE media_hash = ?", 
-                table);
+                this.table);
         
         try {
             conn = DriverManager.getConnection(connStr);
-            conn.setAutoCommit(true);
+            conn.setAutoCommit(false);
             conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
             
-            this.createTables();
+            tableChkStmt = conn.prepareStatement(tableCheckQuery);
+  
+            try {
+                this.createTables();
+            } catch(BoardInitException e) {
+                conn.commit();
+                throw e;
+            } catch(SQLException e) {
+                conn.rollback();
+                throw e;
+            }
+            
+            tableChkStmt.close();
             
             insertStmt = conn.prepareStatement(insertQuery);
             updateStmt = conn.prepareStatement(updateQuery);
             selectMediaStmt = conn.prepareStatement(selectMediaQuery);
        } catch (SQLException e) {
-            throw new BoardInitException(e);
-        }
+           throw new BoardInitException(e);
+       }
     }
     
-    public abstract void createTables() throws BoardInitException, SQLException;
+    public synchronized void createTables() throws BoardInitException, SQLException {
+        ResultSet res = null;
+        String commonSql = null;
+        
+        // Check if common stuff has already been created
+        tableChkStmt.setString(1, "index_counters");
+        res = tableChkStmt.executeQuery();
+        try {
+            if(!res.isBeforeFirst()) {
+                // Query to create tables common to all boards
+                try {
+                    commonSql = Resources.toString(Resources.getResource(commonSqlRes), Charsets.UTF_8);
+                } catch(IOException e) {
+                    throw new BoardInitException(e);
+                } catch(IllegalArgumentException e) {
+                    throw new BoardInitException(e);
+                }
+            }
+        } finally {
+            res.close();
+        }
+        conn.commit();
+
+        // Check if the tables for this board have already been created too
+        // Bail out if yes
+        tableChkStmt.setString(1, this.table);
+        res = tableChkStmt.executeQuery();
+        try {
+            if(res.isBeforeFirst()) {
+                conn.commit();
+                return;
+            }
+        } finally {
+            res.close();
+        }
+        conn.commit();
+
+        // Query to create all tables for this board
+        String boardSql;
+        try {
+            boardSql = Resources.toString(Resources.getResource(boardSqlRes), Charsets.UTF_8);
+            boardSql = boardSql.replaceAll("%%BOARD%%", table);
+            boardSql = boardSql.replaceAll("%%CHARSET%%", charset);
+        } catch(IOException e) {
+            throw new BoardInitException(e);
+        } catch(IllegalArgumentException e) {
+            throw new BoardInitException(e);
+        }
+
+        // Query to create or replace triggers and procedures for this board
+        String triggersSql;
+        try {
+            triggersSql = Resources.toString(Resources.getResource(triggersSqlRes), Charsets.UTF_8);
+            triggersSql = triggersSql.replaceAll("%%BOARD%%", table);
+            triggersSql = triggersSql.replaceAll("%%CHARSET%%", charset);
+        } catch(IOException e) {
+            throw new BoardInitException(e);
+        } catch(IllegalArgumentException e) {
+            throw new BoardInitException(e);
+        }
+        
+        Statement st = conn.createStatement();
+        try {
+            if(commonSql != null) 
+                st.executeUpdate(commonSql);
+            st.executeUpdate(boardSql);
+            st.executeUpdate(triggersSql);
+            conn.commit();
+        } finally {
+            st.close();
+        }
+    }
     
     public synchronized void insert(Topic topic) throws ContentStoreException {    
         try{
@@ -105,16 +205,14 @@ public abstract class SQL implements DB {
             }
             insertStmt.executeBatch();
             updateStmt.executeBatch();
-            // conn.commit();
+            conn.commit();
         } catch(SQLException e) {
-            // MySQL acts stupid with autocommit off
-            // I don't even fucking know
-            /* try {
+            try {
                 conn.rollback();
             } catch(SQLException e1) {
                 e1.setNextException(e);
                 throw new ContentStoreException(e1);
-            } */
+            }
             throw new ContentStoreException(e);
         }
     }
@@ -129,17 +227,39 @@ public abstract class SQL implements DB {
         } catch(SQLException e) {
             throw new ContentGetException(e);
         }
-         
+        
         try {
-            if(mediaRs.first()) {
+            conn.commit();
+        } catch(SQLException e) {
+            try {
+                conn.rollback();
+            } catch(SQLException e1) {
+                e1.setNextException(e);
+                throw new ContentGetException(e1);
+            } finally {
+                // throw new XzibitException.
+                // Since I'm cleaning all my resources like a good boy, I really
+                // have no other choice but to do this.
+                try {
+                    mediaRs.close();
+                } catch(SQLException e1) {
+                    throw new ContentGetException(e1);
+                }
+            }
+            throw new ContentGetException(e);
+        }
+        
+        try {
+            if(mediaRs.next()) {
                 media = new Media(
-                        mediaRs.getInt("id"),
-                        mediaRs.getString("media_hash"), 
-                        mediaRs.getString("media_filename"),
-                        mediaRs.getString("preview_op"),
-                        mediaRs.getString("preview_reply"),
-                        mediaRs.getInt("total"),
-                        mediaRs.getInt("banned"));
+                    mediaRs.getInt("id"),
+                    mediaRs.getString("media_hash"), 
+                    mediaRs.getString("media_filename"),
+                    mediaRs.getString("preview_op"),
+                    mediaRs.getString("preview_reply"),
+                    mediaRs.getInt("total"),
+                    mediaRs.getInt("banned")
+                );
             }
         } catch(SQLException e) {
             throw new ContentGetException(e);
@@ -152,7 +272,9 @@ public abstract class SQL implements DB {
         }
         
         if(media == null) {
-            // Somehow, we got ahead of the post insertion. We'll get it next time
+            // Somehow, we got ahead of the post insertion. Oh well, we'll get it next time.
+            // Getting here means something isn't right with our transaction isolation mode
+            // (Or maybe the DB we're using just sucks)
             throw new ContentGetException("Media hash " + post.getMediaHash() + " not found in media DB table");
         }
         

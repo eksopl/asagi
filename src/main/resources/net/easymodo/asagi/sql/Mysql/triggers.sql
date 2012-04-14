@@ -103,7 +103,6 @@ BEGIN
     sage=sage+d_sage, anons=anons+d_anon, trips=trips+d_trip,
     names=names+d_name;
 
-  -- Also should be a transaction. Lol MySQL.  
   IF (SELECT trip FROM %%BOARD%%_users WHERE trip = p_trip) IS NOT NULL THEN
     UPDATE %%BOARD%%_users SET postcount=postcount+1,
       firstseen = LEAST(p_timestamp, firstseen)
@@ -137,7 +136,6 @@ BEGIN
     sage=sage-d_sage, anons=anons-d_anon, trips=trips-d_trip,
     names=names-d_name WHERE day = d_day;
 
-  -- Also should be a transaction. Lol MySQL.
   IF (SELECT trip FROM %%BOARD%%_users WHERE trip = p_trip) IS NOT NULL THEN
     UPDATE %%BOARD%%_users SET postcount = postcount-1 WHERE trip = p_trip;
   ELSE
@@ -151,16 +149,23 @@ DROP TRIGGER IF EXISTS `before_ins_%%BOARD%%`;
 CREATE TRIGGER `before_ins_%%BOARD%%` BEFORE INSERT ON `%%BOARD%%`
 FOR EACH ROW
 BEGIN
+  IF NEW.media_hash IS NOT NULL THEN
+    CALL insert_image_%%BOARD%%(NEW.media_hash, NEW.media_filename, NEW.preview, NEW.parent);
+    SET NEW.media_id = LAST_INSERT_ID();
+  END IF;
+END;
+
+DROP TRIGGER IF EXISTS `after_ins_%%BOARD%%`;
+
+CREATE TRIGGER `after_ins_%%BOARD%%` AFTER INSERT ON `%%BOARD%%`
+FOR EACH ROW
+BEGIN
   IF NEW.parent = 0 THEN
     CALL create_thread_%%BOARD%%(NEW.num, NEW.timestamp);
   END IF;
   CALL update_thread_%%BOARD%%(NEW.parent);
   CALL insert_post_%%BOARD%%(NEW.timestamp, NEW.media_hash, NEW.email, NEW.name,
     NEW.trip);
-  IF NEW.media_hash IS NOT NULL THEN
-    CALL insert_image_%%BOARD%%(NEW.media_hash, NEW.media_filename, NEW.preview, NEW.parent);
-    SET NEW.media_id = LAST_INSERT_ID();
-  END IF;
 END;
 
 DROP TRIGGER IF EXISTS `after_del_%%BOARD%%`;

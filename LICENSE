@@ -3,7 +3,7 @@
 
 Asagi Imageboard Archiver
 Copyright (c) 2012 Eksopl
-Released under the GNU General Public License, version 2, or later.
+Released under the GNU General Public License, version 3, or later.
 See COPYING for terms.
 
 -------------------------------------------------------------------------------
@@ -42,18 +42,30 @@ The Apache Software Foundation (http://www.apache.org/).
 This project contains annotations derived from JCIP-ANNOTATIONS
 Copyright (c) 2005 Brian Goetz and Tim Peierls. See http://www.jcip.net
 
+Joda Time
+Copyright (c) Joda.org 2003-2012
+Released under the Apache License, Version 2.0.
+
 This product includes software developed by
 Joda.org (http://www.joda.org/).
 
-This product includes software developed by
-google-gson (http://code.google.com/p/google-gson/).
+Google Gson
+Copyright (c) 2008-2011 Google Inc.
+Released under the Apache License, Version 2.0.
 
 This product includes software developed by
-Guava (http://code.google.com/p/guava-libraries/).
+Google Inc. (http://code.google.com/p/google-gson/).
+
+Guava
+Copyright (c) 2007-2012 The Guava Authors
+Released under the Apache License, Version 2.0.
+
+This product includes software developed by
+The Guava Authors (http://code.google.com/p/guava-libraries/).
 
 Java Native Access (JNA)
 Copyright (c) 2006-2011 Todd Fast, Timothy Wall, Wayne Meissner & others
-Released under version 2.1 of the GNU LGPL License.
+Released under version 2.1 of the GNU LGPL License or later.
 
 MySQL Connector/J
 Copyright (c) 2000, 2011, Oracle and/or its affiliates. All rights reserved.
@@ -62,3 +74,49 @@ Released under the version 2 of the GNU General Public License.
 Additionally, MySQL Connector/J is also subject to the terms of the
 MySQL FOSS License Exception, available at:
 <http://www.mysql.com/about/legal/licensing/foss-exception.html>
+
+PostgreSQL JDBC driver
+Copyright (c) 1997-2011, PostgreSQL Global Development Group
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice,
+   this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+3. Neither the name of the PostgreSQL Global Development Group nor the names
+   of its contributors may be used to endorse or promote products derived
+   from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
+-------------------------------------------------------------------------------
+Full third-party library license terms:
+-------------------------------------------------------------------------------
+
+Apache License, Version 2.0, available at:
+<http://www.apache.org/licenses/LICENSE-2.0.html>
+
+GNU Lesser General Public License, version 2.1 and later, available at:
+<http://www.gnu.org/licenses/lgpl-2.1.html>
+<http://www.gnu.org/licenses/lgpl.html>
+
+GNU General Public License, version 2, available at:
+<http://www.gnu.org/licenses/gpl-2.0.html>
+
+MySQL FOSS License Exception, available at:
+<http://www.mysql.com/about/legal/licensing/foss-exception.html>
+

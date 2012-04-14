@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS %%BOARD%% (
   INDEX num_index(num), 
   INDEX subnum_index(subnum),
   INDEX parent_index(parent),
-  INDEX timestamp_index(TIMESTAMP),
+  INDEX timestamp_index(timestamp),
   INDEX media_hash_index(media_hash),
   INDEX email_index(email),
   INDEX name_index(name),
