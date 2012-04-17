@@ -150,11 +150,14 @@ Ensure that the `migrations` folder is located in the same directory as the `asa
 Documentation
 -------------
     $ php migrate_000.php --help
+    ============================
 	Options:
 	--board <board>        Process the specified board only.
 						   If this argument is not set, all boards will be processed sequentially.
 	--phase <num>          Run the phase specified only. [1] To InnoDB [2] Alter tables [3] Copy images [4] Clean up.
 						   If this argument is not set, all phases will be run sequentially, on all selected boards.
 	--with-downtime        Do not minimize the downtime of migration to InnoDB with _temp tables.
-	--move-images          Move the images instead of copying them. Can cause image loss if you stop or crash during the third phase.
-	--ignore-db-errors     Ignore the database errors. It shouldn't be necessary.
+	--full-images          If you have full images stored, this will move them as well.
+	--move-images          Move the thumbnails instead of copying them. Can cause image loss if you stop or crash during the third phase.
+	--move-full-images     As above, but for full images.
+	--ignore-db-errors     Ignore the database errors. It shouldn\'t be necessary.

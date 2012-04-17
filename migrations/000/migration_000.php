@@ -54,11 +54,13 @@ Options:
 --phase <num>          Run the phase specified only. [1] To InnoDB [2] Alter tables [3] Copy images [4] Clean up.
                        If this argument is not set, all phases will be run sequentially, on all selected boards.
 --with-downtime        Do not minimize the downtime of migration to InnoDB with _temp tables.
---move-images          Move the images instead of copying them. Can cause image loss if you stop or crash during the third phase.
+--full-images          If you have full images stored, this will move them as well.
+--move-images          Move the thumbnails instead of copying them. Can cause image loss if you stop or crash during the third phase.
+--move-full-images     As above, but for full images.
 --ignore-db-errors     Ignore the database errors. It shouldn\'t be necessary.
 ' . PHP_EOL);
 }
-
+	
 $disable_db_errors = $args->passed('--ignore-db-errors') == TRUE;
 
 $move_images = $args->passed('--move-images') == TRUE;
@@ -404,12 +406,17 @@ foreach($json as $shortname => $board)
 	
 	if(!$args->passed('--phase') || $args->get_full_passed('--phase') == 3)
 	{
+		$internal_board = $args->passed('--internal-board') == TRUE;
+		$full_images = $args->passed('--full-images') == TRUE;
+		$move_full_images = $args->passed('--move-full-images') == TRUE;
+	
 		// superpower this system by using a TEMPORARY TABLE
 		$db->query('
 			CREATE TEMPORARY TABLE ' . $shortname .  '_images_tmp (
 				id int unsigned NOT NULL DEFAULT \'0\',
 				preview_op varchar(20),
 				preview_reply varchar(20),
+				media_filename varchar(20),
 				
 				PRIMARY KEY (id)
 			)
@@ -467,24 +474,37 @@ foreach($json as $shortname => $board)
 				ON brd.media_id = img.id
 				WHERE doc_id < ' . $offset . ' AND doc_id >= ' . ($offset - 100000) . '
 					AND brd.media_hash IS NOT NULL 
-					AND IF(brd.parent = 0, img.preview_op, img.preview_reply) IS NULL 
+					AND (IF(brd.parent = 0, img.preview_op, img.preview_reply) IS NULL
+						' . ((!$full_images)?:'OR img.media_filename IS NULL') . ' )
 			');
 			if ($db->error && !$disable_db_errors) die('[database error] ' . $db->error . PHP_EOL . 'You can ignore errors with the --ignore-db-errors argument. Use the --help argument to know more.' . PHP_EOL);
 			
 			while($row = $images_res->fetch_object())
-			{	
-				preg_match('/(\d+?)(\d{2})\d{0,3}$/', ($row->parent == 0)?$row->num:$row->parent, $subpath);
-				for ($index = 1; $index <= 2; $index++)
+			{
+				if(!$internal_board)
 				{
-					if (!isset($subpath[$index]))
+					preg_match('/(\d+?)(\d{2})\d{0,3}$/', ($row->parent == 0)?$row->num:$row->parent, $subpath);
+					for ($index = 1; $index <= 2; $index++)
+					{
+						if (!isset($subpath[$index]))
 						$subpath[$index] = '';
+					}
+	
+					$old_image_path_inner = str_pad($subpath[1], 4, "0", STR_PAD_LEFT) . str_pad($subpath[2], 2, "0", STR_PAD_LEFT);
+					$old_image_path_inner = substr($old_image_path_inner, 0, 4) . '/' . substr($old_image_path_inner, 4, 2);
+					$new_image_path_inner = substr($row->preview, 0, 4) . '/' . substr($row->preview, 4, 2);
+					$old_image_path = $old_path . '/thumb/' . $old_image_path_inner . '/' . $row->preview;
+					$old_full_image_path = $old_path . '/img/' . $old_image_path_inner . '/' . str_replace('s.', '.', $row->preview);
 				}
-
-				$old_image_path_inner = str_pad($subpath[1], 4, "0", STR_PAD_LEFT) . str_pad($subpath[2], 2, "0", STR_PAD_LEFT);
-				$old_image_path_inner = substr($old_image_path_inner, 0, 4) . '/' . substr($old_image_path_inner, 4, 2);
-				$new_image_path_inner = substr($row->preview, 0, 4) . '/' . substr($row->preview, 4, 2);
-				$old_image_path = $old_path . '/thumb/' . $old_image_path_inner . '/' . $row->preview;
+				else
+				{
+					$old_image_path_inner = substr($row->preview, 0, 4) . '/' . substr($row->preview, 4, 2);
+					$new_image_path_inner = substr($row->preview, 0, 4) . '/' . substr($row->preview, 4, 2);
+					$old_image_path = $old_path . '/thumb/' . $old_image_path_inner . '/' . $row->preview;
+					$old_full_image_path = $old_path . '/img/' . $old_image_path_inner . '/' . str_replace('s.', '.', $row->preview);
+				}
 				$new_image_path = $new_path . '/thumb/' . $new_image_path_inner . '/' . $row->preview;
+				$new_full_image_path = $new_path . '/img/' . $new_image_path_inner . '/' . str_replace('s.', '.', $row->preview);
 				if(file_exists($old_image_path))
 				{
 					if(!file_exists($new_image_path))
@@ -494,13 +514,36 @@ foreach($json as $shortname => $board)
 							rename($old_image_path, $new_image_path);
 						else
 							copy($old_image_path, $new_image_path);
+							
+						$db->query('INSERT INTO `' . $shortname .  '_images_tmp` 
+							(id, preview_' . (($row->parent == 0)?'op':'reply') . ') 
+							VALUES (\'' . $row->media_id . '\', \'' . $db->real_escape_string($row->preview) . '\')
+							ON DUPLICATE KEY UPDATE preview_' . (($row->parent == 0)?'op':'reply') . ' = VALUES(preview_' . (($row->parent == 0)?'op':'reply') . ')
+						');
+						if ($db->error && !$disable_db_errors) die('[database error] ' . $db->error . PHP_EOL . 'You can ignore errors with the --ignore-db-errors argument. Use the --help argument to know more.' . PHP_EOL);
 					}
 					
-					$db->query('INSERT IGNORE INTO `' . $shortname .  '_images_tmp` (id, preview_' . (($row->parent == 0)?'op':'reply') . ') VALUES (\'' . $row->media_id . '\', \'' . $db->real_escape_string($row->preview) . '\')');
-					if ($db->error && !$disable_db_errors) die('[database error] ' . $db->error . PHP_EOL . 'You can ignore errors with the --ignore-db-errors argument. Use the --help argument to know more.' . PHP_EOL);
+					
+					if($full_images && file_exists($old_full_image_path) && !file_exists($new_full_image_path))
+					{
+						@mkdir($new_path . '/img/' . $new_image_path_inner, 0777, TRUE);
+						if($move_full_images)
+							rename($old_full_image_path, $new_full_image_path);
+						else
+							copy($old_full_image_path, $new_full_image_path);
+							
+						$db->query('INSERT INTO `' . $shortname .  '_images_tmp`
+							(id, media_filename) 
+							VALUES (\'' . $row->media_id . '\', \'' . $db->real_escape_string(str_replace('s.', '.', $row->preview)) . '\')
+							ON DUPLICATE KEY UPDATE media_filename = VALUES(media_filename)
+						');
+						if ($db->error && !$disable_db_errors) die('[database error] ' . $db->error . PHP_EOL . 'You can ignore errors with the --ignore-db-errors argument. Use the --help argument to know more.' . PHP_EOL);
+					}
+					
 					
 					$images_processed++;
 					
+					// this is just a screen printing system
 					if(time() - $init_time > 0)
 					{
 						if(!isset($last_output))
@@ -521,19 +564,20 @@ foreach($json as $shortname => $board)
 			$db->query('
 				UPDATE ' . $shortname . '_images img, ' . $shortname . '_images_tmp temp
 				SET img.preview_op = COALESCE(temp.preview_op, img.preview_op),
-					img.preview_reply = COALESCE(temp.preview_reply, img.preview_reply)
-				WHERE img.id = temp.id
+					img.preview_reply = COALESCE(temp.preview_reply, img.preview_reply)' .
+					((!$full_images)?:', img.media_filename = COALESCE(temp.media_filename, img.media_filename)') .
+				' WHERE img.id = temp.id
 			');
-			if ($db->error && !$disable_db_errors) die('[database error] ' . $db->error . PHP_EOL . 'You can ignore errors with the --ignore-db-errors argument. Use the --help argument to know more.' . PHP_EOL);
+			if ($db->error && !$disable_db_errors) die(PHP_EOL . '[database error] ' . $db->error . PHP_EOL . 'You can ignore errors with the --ignore-db-errors argument. Use the --help argument to know more.' . PHP_EOL);
 			
 			$db->query('TRUNCATE ' . $shortname . '_images_tmp;');
-			if ($db->error && !$disable_db_errors) die('[database error] ' . $db->error . PHP_EOL . 'You can ignore errors with the --ignore-db-errors argument. Use the --help argument to know more.' . PHP_EOL);
+			if ($db->error && !$disable_db_errors) die(PHP_EOL . '[database error] ' . $db->error . PHP_EOL . 'You can ignore errors with the --ignore-db-errors argument. Use the --help argument to know more.' . PHP_EOL);
 			
 			mysqli_free_result($images_res);
 			
 			$offset -= 100000;
 		}
-		
+		echo PHP_EOL; // the static output doesn't play well here
 		echo 'Phase 3, in board `' . $shortname . '`: done.'. PHP_EOL;
 	}
 	
