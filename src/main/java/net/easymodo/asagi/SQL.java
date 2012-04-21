@@ -35,6 +35,7 @@ public abstract class SQL implements DB {
     protected PreparedStatement tableChkStmt = null;
     protected PreparedStatement updateStmt = null;
     protected PreparedStatement insertStmt = null;
+    protected PreparedStatement updateDeletedStmt = null;
     protected PreparedStatement selectMediaStmt = null;
         
     public synchronized void init(String connStr, String path, BoardSettings info) throws BoardInitException {
@@ -57,7 +58,9 @@ public abstract class SQL implements DB {
         this.updateQuery = 
                 String.format("UPDATE %s SET comment = ?, deleted = ?, media = COALESCE(?, media)," +
                         "  sticky = (? OR sticky) WHERE num=? and subnum=?", table);
-        
+      
+        String updateDeletedQuery = String.format("UPDATE %s SET deleted = ? WHERE num = ? and subnum = ?", 
+                this.table);
         String selectMediaQuery = String.format("SELECT * FROM %s_images WHERE media_hash = ?", 
                 this.table);
         
@@ -82,6 +85,7 @@ public abstract class SQL implements DB {
             
             insertStmt = conn.prepareStatement(insertQuery);
             updateStmt = conn.prepareStatement(updateQuery);
+            updateDeletedStmt = conn.prepareStatement(updateDeletedQuery);
             selectMediaStmt = conn.prepareStatement(selectMediaQuery);
        } catch (SQLException e) {
            throw new BoardInitException(e);
@@ -217,7 +221,25 @@ public abstract class SQL implements DB {
         }
     }
     
-    public synchronized Media getMedia(Post post) throws ContentGetException {
+    public synchronized void markDeleted(int post) throws ContentStoreException {    
+        try {
+            updateDeletedStmt.setBoolean(1, true);
+            updateDeletedStmt.setInt(2, post);
+            updateDeletedStmt.setInt(3, 0);
+            updateDeletedStmt.execute();
+            conn.commit();
+        } catch(SQLException e) {
+            try {
+                conn.rollback();
+            } catch(SQLException e1) {
+                e1.setNextException(e);
+                throw new ContentStoreException(e1);
+            }
+            throw new ContentStoreException(e);
+        }
+    }
+    
+    public synchronized Media getMedia(MediaPost post) throws ContentGetException {
         Media media = null;
         ResultSet mediaRs = null;
         

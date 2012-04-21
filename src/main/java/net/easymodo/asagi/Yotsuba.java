@@ -1,6 +1,7 @@
 package net.easymodo.asagi;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -57,6 +58,15 @@ public class Yotsuba extends WWW {
     
     public Yotsuba(String boardName) {
         boardLinks = Yotsuba.getBoardLinks(boardName);
+    }
+    
+    private static Map<String,String> getBoardLinks(String boardName) {
+        Map<String,String> boardInfo = new HashMap<String,String>();
+        boardInfo.put("link", "http://boards.4chan.org/" + boardName);
+        boardInfo.put("imgLink", "http://images.4chan.org/" + boardName);
+        boardInfo.put("previewLink", "http://0.thumbs.4chan.org/" + boardName);
+        boardInfo.put("html", "http://boards.4chan.org/" + boardName + "/");
+        return Collections.unmodifiableMap(boardInfo);
     }
     
     public String cleanSimple(String text) {
@@ -200,25 +210,35 @@ public class Yotsuba extends WWW {
     }    
     
     @Override
-    public byte[] getMediaPreview(Post h) throws ContentGetException {
-        if(h.getPreview() == null)
+    public InputStream getMediaPreview(MediaPost h) throws ContentGetException {
+        if(h.getPreviewFilename() == null)
             return null;
         
-        byte[] data = this.wget(this.boardLinks.get("previewLink") + "/thumb/"
-                + h.getPreview() + "?" + System.currentTimeMillis()).getContent();
+        InputStream inStream = null;
+        try {
+            inStream = this.wget(this.boardLinks.get("previewLink") + "/thumb/"
+                + h.getPreviewFilename() + "?" + System.currentTimeMillis()).getEntity().getContent();
+        } catch(IOException e) {
+            throw new ContentGetException(e);
+        }
         
-        return data;
+        return inStream;
     }
     
     @Override
-    public byte[] getMedia(Post h) throws ContentGetException {
-        if(h.getLink() == null)
+    public InputStream getMedia(MediaPost h) throws ContentGetException {
+        if(h.getMediaFilename() == null)
             return null;
         
-        byte[] data = this.wget(this.boardLinks.get("imgLink") + "/src/"
-                + h.getMediaFilename() + "?" + System.currentTimeMillis()).getContent();
+        InputStream inStream = null;
+        try {
+            inStream = this.wget(this.boardLinks.get("imgLink") + "/src/"
+                + h.getMediaFilename() + "?" + System.currentTimeMillis()).getEntity().getContent();
+        } catch(IOException e) {
+            throw new ContentGetException(e);
+        }
                 
-        return data;
+        return inStream;
     }
     
 
@@ -229,33 +249,41 @@ public class Yotsuba extends WWW {
             throw new ContentParseException("Could not parse thread (thread regex failed)");
         }
         
-        String link = mat.group(1);
-        String mediaFilename = mat.group(2);
+        // Java's substring methods actually just return a new string that
+        // points to the original string.
+        // In our case, Java will keep the entire page HTML on its heap until
+        // it can collect all of the substring.
+        // This is very wasteful when it comes to memory, so we force creating
+        // new strings for the regex matches through the String constructor.
+        String link     = (mat.group(1) != null) ? new String(mat.group(1)) : null;
+        String mediaFn  = (mat.group(2) != null) ?  new String(mat.group(2)) : null;
         boolean spoiler = (mat.group(3) != null);
-        String filesize = mat.group(4);
-        int width = (mat.group(5) != null) ? Integer.parseInt(mat.group(5)) : 0;
-        int height = (mat.group(6) != null) ? Integer.parseInt(mat.group(6)) : 0;
-        String filename = mat.group(7);
-        int tWidth = (mat.group(8) != null) ? Integer.parseInt(mat.group(8)) : 0;
-        int tHeight = (mat.group(9) != null) ? Integer.parseInt(mat.group(9)): 0;
-        String md5Base64 = mat.group(10);
-        int num = Integer.parseInt(mat.group(11));
-        String title = mat.group(12);
-        String email = mat.group(13);
-        String name = mat.group(14);
-        String trip = mat.group(15);
-        String capcode = (mat.group(16) == null) ? mat.group(17) : mat.group(16);
+        String fileSize = (mat.group(4) != null) ? new String(mat.group(4)) : null;
+        int width       = (mat.group(5) != null) ? Integer.parseInt(mat.group(5)) : 0;
+        int height      = (mat.group(6) != null) ? Integer.parseInt(mat.group(6)) : 0;
+        String fileName = (mat.group(7) != null) ? new String(mat.group(7)) : null;
+        int tWidth      = (mat.group(8) != null) ? Integer.parseInt(mat.group(8)) : 0;
+        int tHeight     = (mat.group(9) != null) ? Integer.parseInt(mat.group(9)): 0;
+        String md5b64   = (mat.group(10) != null) ? new String(mat.group(10)) : null;
+        int num         = Integer.parseInt(mat.group(11));
+        String title    = new String(mat.group(12));
+        String email    = (mat.group(13) != null) ? new String(mat.group(13)) : null;
+        String name     = new String(mat.group(14));
+        String trip     = (mat.group(15) != null) ? new String(mat.group(15)) : null;
+        String capcode  = (mat.group(16) == null) ? 
+                          ((mat.group(17) != null) ? new String(mat.group(17)) : null) : 
+                          new String(mat.group(16));
         //String uid = mat.group(18);
-        String date = mat.group(19);
-        boolean sticky = (mat.group(20) != null);
-        String comment = mat.group(21);
+        String date     = (mat.group(19) != null) ? new String(mat.group(19)) : null;
+        boolean sticky  = (mat.group(20) != null);
+        String comment  = new String(mat.group(21));
         boolean omitted = (mat.group(22) != null);
-        int omPosts = (mat.group(23) != null) ? Integer.parseInt(mat.group(23)) : 0;
-        int omImages = (mat.group(24) != null) ? Integer.parseInt(mat.group(24)) : 0;
+        int omPosts     = (mat.group(23) != null) ? Integer.parseInt(mat.group(23)) : 0;
+        int omImages    = (mat.group(24) != null) ? Integer.parseInt(mat.group(24)) : 0;
         
         Topic thread = new Topic(num, omPosts, omImages);
-        Post op = this.newYotsubaPost(link, mediaFilename, spoiler, filesize, width, height, filename, tWidth, 
-                tHeight, md5Base64, num, title, email, name, trip, capcode, date, sticky, comment, omitted, 0);
+        Post op = this.newYotsubaPost(link, mediaFn, spoiler, fileSize, width, height, fileName, tWidth, 
+                tHeight, md5b64, num, title, email, name, trip, capcode, date, sticky, comment, omitted, 0);
         thread.addPost(op);
         
         return thread;
@@ -267,30 +295,32 @@ public class Yotsuba extends WWW {
         if(!mat.find()) {
             throw new ContentParseException("Could not parse post (post regex failed)");
         }        
-        int num = Integer.parseInt(mat.group(1));
-        String title = mat.group(2);
-        String email = mat.group(3);
-        String name = mat.group(4);
-        String trip = mat.group(5);
-        String capcode = (mat.group(6) == null) ? mat.group(7) : mat.group(6);
-        //String uid = mat.group(8);
-        String date = mat.group(9);
-        String link = mat.group(10);
-        String media_filename = mat.group(11);
+        int num         = Integer.parseInt(mat.group(1));
+        String title    = new String(mat.group(2));
+        String email    = (mat.group(3) != null) ? new String(mat.group(3)) : null;
+        String name     = new String(mat.group(4));
+        String trip     = (mat.group(5) != null) ? new String(mat.group(5)) : null;
+        String capcode  = (mat.group(6) == null) ? 
+                          ((mat.group(7) != null) ? new String(mat.group(7)) : null) : 
+                          new String(mat.group(6));
+        //String uid    = mat.group(8);
+        String date     = (mat.group(9) != null) ? new String(mat.group(9)) : null;
+        String link     = (mat.group(10) != null) ? new String(mat.group(10)) : null;
+        String mediaFn  = (mat.group(11) != null) ? new String(mat.group(11)) : null;
         boolean spoiler = (mat.group(12) != null);
-        String filesize = mat.group(13);
-        int width = (mat.group(14) != null) ? Integer.parseInt(mat.group(14)) : 0;
-        int height = (mat.group(15) != null) ? Integer.parseInt(mat.group(15)) : 0;
-        String filename = mat.group(16);
-        int twidth = (mat.group(17) != null) ? Integer.parseInt(mat.group(17)) : 0;
-        int theight =  (mat.group(18) != null) ? Integer.parseInt(mat.group(18)) : 0;
-        String md5base64 = mat.group(19);
-        String comment = mat.group(20);
+        String fileSize = (mat.group(13) != null) ? new String(mat.group(13)) : null;
+        int width       = (mat.group(14) != null) ? Integer.parseInt(mat.group(14)) : 0;
+        int height      = (mat.group(15) != null) ? Integer.parseInt(mat.group(15)) : 0;
+        String fileName = (mat.group(16) != null) ? new String(mat.group(16)) : null;
+        int tWidth      = (mat.group(17) != null) ? Integer.parseInt(mat.group(17)) : 0;
+        int tHeight     = (mat.group(18) != null) ? Integer.parseInt(mat.group(18)) : 0;
+        String md5b64   = (mat.group(19) != null) ? new String(mat.group(19)) : null;
+        String comment  = new String(mat.group(20));
         boolean omitted = (mat.group(21) != null);
-        boolean sticky = false;
+        boolean sticky  = false;
        
-        Post post = this.newYotsubaPost(link, media_filename, spoiler, filesize, width, height, filename, twidth, 
-                theight, md5base64, num, title, email, name, trip, capcode, date, sticky, comment, omitted, parent);
+        Post post = this.newYotsubaPost(link, mediaFn, spoiler, fileSize, width, height, fileName, tWidth, 
+                tHeight, md5b64, num, title, email, name, trip, capcode, date, sticky, comment, omitted, parent);
         
         return post;
     }
@@ -368,14 +398,5 @@ public class Yotsuba extends WWW {
         
         t.setLastMod(newLastMod);
         return t;
-    }
-    
-    public static Map<String,String> getBoardLinks(String boardName) {
-        Map<String,String> boardInfo = new HashMap<String,String>();
-        boardInfo.put("link", "http://boards.4chan.org/" + boardName);
-        boardInfo.put("imgLink", "http://images.4chan.org/" + boardName);
-        boardInfo.put("previewLink", "http://0.thumbs.4chan.org/" + boardName);
-        boardInfo.put("html", "http://boards.4chan.org/" + boardName + "/");
-        return Collections.unmodifiableMap(boardInfo);
     }
 }
