@@ -63,12 +63,12 @@ BEGIN
   IF n_parent = 0 THEN
     INSERT INTO `%%BOARD%%_images` (media_hash, media_filename, preview_op, total)
     VALUES (n_media_hash, n_media_filename, n_preview, 1) 
-    ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id),
+    ON DUPLICATE KEY UPDATE media_id = LAST_INSERT_ID(media_id),
     	total = (total + 1), preview_op = COALESCE(preview_op, VALUES(preview_op));
   ELSE
     INSERT INTO `%%BOARD%%_images` (media_hash, media_filename, preview_reply, total)
     VALUES (n_media_hash, n_media_filename, n_preview, 1) 
-    ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id), 
+    ON DUPLICATE KEY UPDATE media_id = LAST_INSERT_ID(media_id),
     	total = (total + 1), preview_reply = COALESCE(preview_reply, VALUES(preview_reply));
   END IF;
 END;
@@ -77,7 +77,7 @@ DROP PROCEDURE IF EXISTS `delete_image_%%BOARD%%`;
 
 CREATE PROCEDURE `delete_image_%%BOARD%%` (n_media_id INT)
 BEGIN
-  UPDATE `%%BOARD%%_images` SET total = (total - 1) WHERE id = n_media_id;
+  UPDATE `%%BOARD%%_images` SET total = (total - 1) WHERE media_id = n_media_id;
 END;
 
 DROP PROCEDURE IF EXISTS `insert_post_%%BOARD%%`;
@@ -152,7 +152,7 @@ CREATE TRIGGER `before_ins_%%BOARD%%` BEFORE INSERT ON `%%BOARD%%`
 FOR EACH ROW
 BEGIN
   IF NEW.media_hash IS NOT NULL THEN
-    CALL insert_image_%%BOARD%%(NEW.media_hash, NEW.media_filename, NEW.preview, NEW.parent);
+    CALL insert_image_%%BOARD%%(NEW.media_hash, NEW.orig_filename, NEW.preview, NEW.parent);
     SET NEW.media_id = LAST_INSERT_ID();
   END IF;
 END;
