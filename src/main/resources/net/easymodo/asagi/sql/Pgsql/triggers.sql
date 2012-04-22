@@ -61,13 +61,13 @@ DECLARE
 BEGIN
   INSERT INTO %%BOARD%%_images 
     (media_hash, media_filename, preview_op, preview_reply, total)
-    SELECT n_row.media_hash, n_row.media_filename, NULL, NULL, 0
+    SELECT n_row.media_hash, n_row.orig_filename, NULL, NULL, 0
     WHERE NOT EXISTS (SELECT 1 FROM %%BOARD%%_images WHERE media_hash = n_row.media_hash);
 
   IF n_row.parent = 0 THEN
-    UPDATE %%BOARD%%_images SET total = (total + 1), preview_op = COALESCE(preview_op, n_row.preview) WHERE media_hash = n_row.media_hash RETURNING id INTO img_id;
+    UPDATE %%BOARD%%_images SET total = (total + 1), preview_op = COALESCE(preview_op, n_row.preview) WHERE media_hash = n_row.media_hash RETURNING media_id INTO img_id;
   ELSE
-    UPDATE %%BOARD%%_images SET total = (total + 1), preview_reply = COALESCE(preview_reply, n_row.preview) WHERE media_hash = n_row.media_hash RETURNING id INTO img_id;
+    UPDATE %%BOARD%%_images SET total = (total + 1), preview_reply = COALESCE(preview_reply, n_row.preview) WHERE media_hash = n_row.media_hash RETURNING media_id INTO img_id;
   END IF;
   RETURN img_id;
 END;

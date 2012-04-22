@@ -27,7 +27,7 @@ CREATE INDEX %%BOARD%%_users_firstseen_index on %%BOARD%%_users (firstseen);
 CREATE INDEX %%BOARD%%_users_postcount_index on %%BOARD%%_users (postcount);
 
 CREATE TABLE %%BOARD%%_images (
-  id SERIAL NOT NULL,
+  media_id SERIAL NOT NULL,
   media_hash character varying(25) NOT NULL,
   media_filename character varying(20),
   preview_op character varying(20),
@@ -68,7 +68,7 @@ CREATE TABLE %%BOARD%% (
   media_h integer DEFAULT 0 NOT NULL,
   media_size integer DEFAULT 0 NOT NULL,
   media_hash character varying(25),
-  media_filename character varying(20),
+  orig_filename character varying(20),
   spoiler boolean DEFAULT false NOT NULL,
   deleted boolean DEFAULT false NOT NULL,
   capcode character(1) DEFAULT 'N' NOT NULL CHECK (capcode = ANY (ARRAY['N', 'M', 'A', 'G'])),
@@ -91,6 +91,7 @@ CREATE INDEX %%BOARD%%_num_index on %%BOARD%% (num);
 CREATE INDEX %%BOARD%%_subnum_index on %%BOARD%% (subnum);
 CREATE INDEX %%BOARD%%_parent_index on %%BOARD%% (parent);
 CREATE INDEX %%BOARD%%_timestamp_index on %%BOARD%% (timestamp);
+CREATE INDEX %%BOARD%%_orig_filename_index on %%BOARD%% (orig_filename);
 CREATE INDEX %%BOARD%%_media_hash_index on %%BOARD%% USING hash (media_hash) ;
 CREATE INDEX %%BOARD%%_email_index on %%BOARD%% (email);
 CREATE INDEX %%BOARD%%_name_index on %%BOARD%% (name);
