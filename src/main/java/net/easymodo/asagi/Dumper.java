@@ -6,7 +6,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -35,9 +34,10 @@ public class Dumper {
     protected final Local mediaLocalBoard;
     protected final Board sourceBoard;
     protected final ConcurrentHashMap<Integer,Topic> topics;
-    protected final BlockingQueue<Post> mediaPreviewUpdates;
-    protected final BlockingQueue<Post> mediaUpdates;
+    protected final BlockingQueue<MediaPost> mediaPreviewUpdates;
+    protected final BlockingQueue<MediaPost> mediaUpdates;
     protected final BlockingQueue<Topic> topicUpdates;
+    protected final BlockingQueue<Integer> deletedPosts;
     protected final BlockingQueue<Integer> newTopics;
 
     public static final int ERROR = 1;
@@ -52,9 +52,10 @@ public class Dumper {
         this.topicLocalBoard = topicLocalBoard;
         this.mediaLocalBoard = mediaLocalBoard;
         this.topics = new ConcurrentHashMap<Integer,Topic>();
-        this.mediaPreviewUpdates = new LinkedBlockingQueue<Post>();
-        this.mediaUpdates = new LinkedBlockingQueue<Post>();
+        this.mediaPreviewUpdates = new LinkedBlockingQueue<MediaPost>();
+        this.mediaUpdates = new LinkedBlockingQueue<MediaPost>();
         this.topicUpdates = new LinkedBlockingQueue<Topic>();
+        this.deletedPosts = new LinkedBlockingQueue<Integer>();
         this.newTopics = new LinkedBlockingQueue<Integer>();
         this.fullMedia = fullMedia;
         this.debugLevel = TALK;
@@ -84,33 +85,33 @@ public class Dumper {
         
         if(oldTopic == null) return changed;
        
-        List<Post> oldPosts = new ArrayList<Post>(oldTopic.getPosts());
+        List<Integer> oldPosts = new ArrayList<Integer>(oldTopic.getAllPosts());
         
         // Get the posts from the old thread not marked as deleted.
         // We have to do this, otherwise our math for omitted posts will be
         // wrong.
-        for(Iterator<Post> it = oldPosts.iterator(); it.hasNext();) {
+        /* for(Iterator<Integer> it = oldPosts.iterator(); it.hasNext();) {
             if(it.next().isDeleted())
                 it.remove();
-        }
+        }*/
                 
-        if(oldPosts.isEmpty()) return changed;
+        if(oldTopic.getAllPosts().isEmpty()) return changed;
         
         for(int i = 0; i < oldPosts.size(); i++) {
-            Post post = oldPosts.get(i);
-            if(!post.isDeleted() && newTopic.findPost(post.getNum()) == null) {
+            int num = oldPosts.get(i);
+            if(!newTopic.findPost(num)) {
                 // We just found a possibly deleted post, but we haven't been
                 // instructed to actually mark deleted posts.
                 if(!markDeleted) return true;
                 
                 changed = true;
-                post.setDeleted(true);
-                newTopic.addPost(post);
-                debug(TALK, post.getNum() + " (post): deleted");
+                oldTopic.getAllPosts().remove(num);
+                deletedPosts.add(num);
+                debug(TALK, num + " (post): deleted");
             }
             if(i == 0) i = newTopic.getOmPosts();
         }
-        
+
         return changed;
     }
    
@@ -119,7 +120,7 @@ public class Dumper {
         @Override
         public void run() {
             while(true) {
-                Post mediaPrevPost = null;
+                MediaPost mediaPrevPost = null;
                 
                 try {
                 mediaPrevPost = mediaPreviewUpdates.take();
@@ -143,7 +144,7 @@ public class Dumper {
         @Override
         public void run() {
             while(true) {
-                Post mediaPost = null;
+                MediaPost mediaPost = null;
                 
                 try {
                     mediaPost = mediaUpdates.take();
@@ -173,7 +174,7 @@ public class Dumper {
                      newTopic = topicUpdates.take();
                 } catch(InterruptedException e) { }
                 
-                newTopic.lock.readLock().lock();
+                newTopic.lock.writeLock().lock();
                 
                 try {
                     topicLocalBoard.insert(newTopic);
@@ -181,26 +182,52 @@ public class Dumper {
                     debug(ERROR, "Couldn't insert topic " + newTopic.getNum() +
                             ": " + e.getMessage());
                     
-                    newTopic.lock.readLock().unlock();
+                    newTopic.lock.writeLock().unlock();
                     continue;
                 }
                 
                 List<Post> posts = newTopic.getPosts();
                 if(posts == null) {
-                    newTopic.lock.readLock().unlock();
+                    newTopic.lock.writeLock().unlock();
                     return;
                 }
-                 
+                
                 for(Post post : posts) {
                     try {
-                        if(post.getPreview() != null) mediaPreviewUpdates.put(post);
-                        if(post.getMediaFilename() != null && fullMedia) mediaUpdates.put(post);
+                        MediaPost mediaPost = new MediaPost(post.getNum(), post.getParent() == 0, 
+                                post.getPreview(), post.getMediaFilename(), post.getMediaHash());
+
+                        if(post.getPreview() != null) mediaPreviewUpdates.put(mediaPost);
+                        if(post.getMediaFilename() != null && fullMedia) mediaUpdates.put(mediaPost);
                     } catch(InterruptedException e) { }
                 }
-                newTopic.lock.readLock().unlock();
+                newTopic.purgePosts();
+                newTopic.lock.writeLock().unlock();
             }
         } 
     }
+    
+    public class PostDeleter implements Runnable {     
+        @Override
+        public void run() {
+            while(true) {
+                int deletedPost = 0;
+                
+                try {
+                    deletedPost = deletedPosts.take();
+                } catch(InterruptedException e) { }  
+                
+                try {
+                    topicLocalBoard.markDeleted(deletedPost);
+                } catch(ContentStoreException e) {
+                    debug(ERROR, "Couldn't update deleted status of post " + 
+                            deletedPost + ": " + e.getMessage());
+                    continue;
+                }
+            } 
+        }
+    }
+    
     
     public class PageScanner implements Runnable {
         private final List<Integer> pageNos;
@@ -295,19 +322,16 @@ public class Dumper {
                             newPosts++;
                          }
                         
-                        for(Post newPost : newTopic.getPosts()) {
-                            // Get the same post from the previous encountered thread
-                            Post oldPost = fullTopic.findPost(newPost.getNum());
+                        for(Post newPost : newTopic.getPosts()) {                            
+                            // This post was already in topics map. Next post
+                            if(fullTopic.findPost(newPost.getNum())) { oldPosts++; continue; }
+                            
+                            // Looks like it's new
+                            fullTopic.addPost(newPost); newPosts++;
                             
                             // Comment too long. Click here to view the full text.
                             // This means we have to refresh the full thread
                             if(newPost.isOmitted()) mustRefresh = true;
-                            
-                            // This post was already in topics map. Next post
-                            if(oldPost != null) { oldPosts++; continue; }
-                            
-                            // Looks like it's new
-                            fullTopic.addPost(newPost); newPosts++;
                             
                             // We have to refresh to get the image filename, sadly
                             if(newPost.getMedia() != null) mustRefresh = true;
@@ -392,9 +416,11 @@ public class Dumper {
                            // If we found the topic before the page limbo
                            // threshold, then it was forcefully deleted
                            if(oldTopic.getLastPage() < pageLimbo) {
-                               Post op = null;
-                               if((op = oldTopic.getPosts().get(0)) != null) {
-                                   op.setDeleted(true);
+                               if(oldTopic.getAllPosts().size() > 1) {
+                                   int op = oldTopic.getAllPosts().iterator().next();
+                                   try {
+                                       deletedPosts.put(op);
+                                   } catch(InterruptedException e1) { }
                                }
                                topicUpdates.add(oldTopic);
                                debug(TALK, newTopic + ": deleted (last seen on page " + oldTopic.getLastPage() + ")");
@@ -444,7 +470,7 @@ public class Dumper {
                    }
                    
                    // Get the deleted posts from the old topic
-                   // Also, mark them as such
+                   // Update their status in the DB, too.
                    findDeleted(oldTopic, topic, true);
                    
                    // We don't really know at which page this thread is, so let
@@ -624,6 +650,10 @@ public class Dumper {
         Thread topicInserter = new Thread(dumper.new TopicInserter());
         topicInserter.setName("Topic inserter" + " - " + boardName);
         topicInserter.start();
+        
+        Thread postDeleter = new Thread(dumper.new PostDeleter());
+        postDeleter.setName("Post deleter" + " - " + boardName);
+        postDeleter.start();
         
         Thread topicRebuilder = new Thread(dumper.new TopicRebuilder(bSet.getThreadRefreshRate()));
         topicRebuilder.setName("Topic rebuilder" + " - " + boardName);

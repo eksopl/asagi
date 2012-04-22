@@ -5,10 +5,12 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 
 import org.apache.http.annotation.ThreadSafe;
 
+import com.google.common.io.ByteStreams;
 import com.sun.jna.Native;
 import com.sun.jna.Platform;
 
@@ -69,13 +71,13 @@ public class Local extends Board {
     }  
     
     @Override
-    public byte[] getMediaPreview(Post h) {
+    public InputStream getMediaPreview(MediaPost h) {
         // Unimplemented
         throw new UnsupportedOperationException();
     }
     
     @Override
-    public byte[] getMedia(Post h) {
+    public InputStream getMedia(MediaPost h) {
         // Unimplemented
         throw new UnsupportedOperationException();
     }
@@ -139,27 +141,23 @@ public class Local extends Board {
         this.db.insert(topic);
     }
     
-    public void insertMediaPreview(Post h, Board source) throws ContentGetException, ContentStoreException {
-        if(h.getPreview() == null) return;
-                
+    public void markDeleted(int post) throws ContentStoreException {
+        this.db.markDeleted(post);
+    }
+    
+    public void insertMediaPreview(MediaPost h, Board source) throws ContentGetException, ContentStoreException {
+        if(h.getPreviewFilename() == null) return;
         Media mediaRow = db.getMedia(h);
-        
         if(mediaRow.getBanned() == 1) return;
-        
-        String filename;
-        if(h.getParent() == 0) {
-        	filename = mediaRow.getPreviewOp();
-        } else {
-            filename = mediaRow.getPreviewReply();
-        }
+        String filename = h.isOp() ?  mediaRow.getPreviewOp() : mediaRow.getPreviewReply();
         
         String thumbDir = makeDir(filename, DIR_THUMB);
         
         // Construct the path and back down if the file already exists
-        File thumbFile = new File(thumbDir + "/" + h.getPreview());
+        File thumbFile = new File(thumbDir + "/" + h.getPreviewFilename());
         if(thumbFile.exists()) return;
         
-        byte[] data = source.getMediaPreview(h);
+        InputStream inStream = source.getMediaPreview(h);
         
         OutputStream outFile = null;
         try {
@@ -169,7 +167,8 @@ public class Local extends Board {
         }
         
         try{
-            outFile.write(data);
+            ByteStreams.copy(inStream, outFile);
+            inStream.close();
             
             if(this.webGroupId != 0) {
                 posix.chmod(thumbFile.getCanonicalPath(), 0664);
@@ -181,6 +180,7 @@ public class Local extends Board {
             throw new ContentStoreException(e);
         } finally {
             try {
+                inStream.close();
                 outFile.close();
             } catch(IOException e) {
                 throw new ContentStoreException(e);
@@ -188,14 +188,10 @@ public class Local extends Board {
         }
     }
     
-    public void insertMedia(Post h, Board source) throws ContentGetException, ContentStoreException {
-        
+    public void insertMedia(MediaPost h, Board source) throws ContentGetException, ContentStoreException {
         if(h.getMediaFilename() == null) return;
-        
-        Media mediaRow = db.getMedia(h);
-                
+        Media mediaRow = db.getMedia(h); 
         if(mediaRow.getBanned() == 1) return;
-        
         String filename = mediaRow.getMediaFilename();
         
         // Preview filename is enough for us here, we just need the first part of the string
@@ -206,7 +202,7 @@ public class Local extends Board {
         if(mediaFile.exists()) return;
         
         // Throws ContentGetException on failure
-        byte[] data = source.getMedia(h);
+        InputStream inStream = source.getMedia(h);
         
         OutputStream outFile = null;
         try {
@@ -216,7 +212,7 @@ public class Local extends Board {
         }
         
         try{
-            outFile.write(data);
+            ByteStreams.copy(inStream, outFile);
             
             if(this.webGroupId != 0) {
                 posix.chmod(mediaFile.getCanonicalPath(), 0664);
@@ -228,6 +224,7 @@ public class Local extends Board {
             throw new ContentStoreException(e);
         } finally {
             try {
+                inStream.close();
                 outFile.close();
             } catch(IOException e) {
                 throw new ContentStoreException(e);

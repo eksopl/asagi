@@ -1,7 +1,9 @@
 package net.easymodo.asagi;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Topic {
@@ -9,6 +11,7 @@ public class Topic {
     private int omPosts;
     private int omImages;
     private String lastMod;
+    private LinkedHashSet<Integer> allPosts;
     private List<Post> posts;
     private int lastPage;
     private long lastHit;
@@ -20,6 +23,7 @@ public class Topic {
         this.omPosts = omPosts;
         this.omImages = omImages;
         this.posts = new ArrayList<Post>();
+        this.allPosts = new LinkedHashSet<Integer>();
         this.lastPage = 0;
         this.lastHit = 0;
         this.busy = false;
@@ -54,19 +58,23 @@ public class Topic {
     }
 
     public void setPosts(List<Post> posts) {
+        for(Post post : posts) {
+            allPosts.add(post.getNum());
+        }
         this.posts = posts;
     }
     
     public void addPost(Post post) {
+        this.allPosts.add(post.getNum());
         this.posts.add(post);
     }
     
-    public Post findPost(int num) {
-        for(Post post : this.posts) {
-            if(post.getNum() == num)
-                return post;
-        }
-        return null;
+    public void purgePosts() {
+        posts.clear();
+    }
+    
+    public boolean findPost(int num) {
+        return this.allPosts.contains(num);
     }
 
     public void setLastMod(String lastMod) {
@@ -99,5 +107,13 @@ public class Topic {
 
     public void setLastPage(int lastPage) {
         this.lastPage = lastPage;
+    }
+
+    public Set<Integer> getAllPosts() {
+        return allPosts;
+    }
+
+    public void setAllPosts(LinkedHashSet<Integer> allPosts) {
+        this.allPosts = allPosts;
     }
 }

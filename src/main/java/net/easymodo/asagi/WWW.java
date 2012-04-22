@@ -47,15 +47,15 @@ public abstract class WWW extends Board {
         httpClient = new ContentEncodingHttpClient(tsccm, params);
     }
     
-    public HttpContent wget(String link) throws HttpGetException {
+    public HttpResponse wget(String link) throws HttpGetException {
         return this.wget(link, "");
     }
 
-    public HttpContent wget(String link, String referer) throws HttpGetException {
+    public HttpResponse wget(String link, String referer) throws HttpGetException {
         return wget(link, referer, "");
     }
     
-    public HttpContent wget(String link, String referer, String lastMod) throws HttpGetException {
+    public HttpResponse wget(String link, String referer, String lastMod) throws HttpGetException {
         HttpGet req = new HttpGet(link);
         req.setHeader("Referer", referer);
         if(lastMod != null) req.setHeader("If-Modified-Since", lastMod);
@@ -88,36 +88,26 @@ public abstract class WWW extends Board {
             }
             throw new HttpGetException(res.getStatusLine().getReasonPhrase(), statusCode);
         }
-
-        // Slurps everything out of the network and turns it into a byte array.
-        // Also closes the underlying stream after it's done.
-        byte[] content;
-        try {
-            content = EntityUtils.toByteArray(entity);
-        } catch(IOException e) {
-            throw new HttpGetException(e);
-        }
         
-        return new HttpContent(content, res);
+        return res;
     }
     
     public String[] wgetText(String link, String lastMod) throws ContentGetException {
         // Throws ContentGetException on failure
-        HttpContent httpContent = this.wget(link, "", lastMod);
-        HttpResponse httpResponse = httpContent.getHttpResponse();
-        
+        HttpResponse httpResponse = this.wget(link, "", lastMod);
+
         Header[] newLastModHead = httpResponse.getHeaders("Last-Modified");
         String newLastMod = null;
         if(newLastModHead.length > 0)
             newLastMod = newLastModHead[0].getValue();
 
         String pageText = null;
-        String entityEncoding = EntityUtils.getContentCharSet(httpResponse.getEntity());
         try {
-            pageText = new String(httpContent.getContent(), 
-                    (entityEncoding != null) ? entityEncoding : "UTF-8");
+            pageText =  EntityUtils.toString(httpResponse.getEntity(), "UTF-8");
         } catch(UnsupportedEncodingException e) {
             throw new ContentGetException("Unsupported encoding in HTTP response");
+        } catch(IOException e) {
+            throw new HttpGetException(e);
         }
         
         return new String[] {pageText, newLastMod};
