@@ -114,19 +114,10 @@ foreach($json as $shortname => $board)
 	// mysqli is awesome
 	$db = new mysqli($hostname, $username, $password, $database);
 	if ($db->connect_error) die($db->connect_error . PHP_EOL);
-	
-	$mysql_version = $db->server_info;
 
-	// automatically select the multibyte setting
-	// I seriously hope everyone is on 5+ at this point of time
-	if(intval(substr($mysql_version, 0, 1)) < 5)
-	{
-		die('Seriously, update your MySQL. Get MySQL 5.5+.'.PHP_EOL);
-	}
-	
-	// if MySQL>5.5 || MySQL>6
-	if((intval(substr($mysql_version, 0, 1)) == 5  && intval(substr($mysql_version, 2, 1)) >= 5)
-		|| intval(substr($mysql_version, 0, 1)) > 5)
+    // check utf8mb4 availability	
+	$utf8mb4_available = $db->query("SHOW CHARACTER SET WHERE Charset = 'utf8mb4';");
+	if($utf8mb4_available->num_rows)
 	{
 		$charset = 'utf8mb4';
 		echo 'Detected MySQL server compatible with 4-byte characters, using utf8mb4 charset'.PHP_EOL;
@@ -135,7 +126,7 @@ foreach($json as $shortname => $board)
 	{
 		$charset = 'utf8';
 		echo 'Detected MySQL server not compatible with 4-byte characters, using utf8 charset.'.PHP_EOL;
-		echo 'If you want to use utf8mb4 you must upgrade to MySQL 5.5+'.PHP_EOL;
+		echo 'If you want to use utf8mb4, you must upgrade to MySQL 5.5+.'.PHP_EOL;
 	}
 
 	$db->set_charset($charset);
@@ -380,6 +371,32 @@ foreach($json as $shortname => $board)
 		//$db->query('UPDATE `' . $shortname . '` AS board SET media_id = (SELECT media_id FROM ' . $shortname . '_images WHERE media_hash = board.media_hash) WHERE board.media_hash IS NOT NULL;');
 		if ($db->error && !$disable_db_errors) die('[database error] ' . $db->error . PHP_EOL . 'You can ignore errors with the --ignore-db-errors argument. Use the --help argument to know more.' . PHP_EOL);
 		
+		
+		
+		// recreate the _users table
+		$db->query('DROP TABLE ' . $shortname . '_users');	
+		$db->query('
+		    CREATE TABLE IF NOT EXISTS `' . $shortname . '_users` (
+                `user_id` int unsigned NOT NULL auto_increment,
+                `name` varchar(100) NOT NULL DEFAULT '',
+                `trip` varchar(25) NOT NULL DEFAULT '',
+                `firstseen` int(11) NOT NULL,
+                `postcount` int(11) NOT NULL,
+                PRIMARY KEY (`user_id`),
+                  
+                UNIQUE name_trip_index (`name`, `trip`),
+                INDEX firstseen_index (firstseen),
+                INDEX postcount_index (postcount)
+            ) ENGINE=InnoDB DEFAULT CHARSET=' . $charset . '
+        ');
+        
+        $db->query('
+            INSERT INTO `' . $shortname . '_users` (
+                SELECT NULL, COALESCE(name, ''), COALESCE(trip, ''), MIN(timestamp), COUNT(*) from `' . $shortname . '`
+                WHERE trip IS NOT NULL OR name IS NOT NULL
+                GROUP BY COALESCE(name, ''), COALESCE(trip, '') 
+            );
+        ');
 		
 		// This allows to run Asagi before starting phase 3
 		// rename the images folder, and if your site supports the _old table you will still have visible images

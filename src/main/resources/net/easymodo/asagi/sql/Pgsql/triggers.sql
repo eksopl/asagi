@@ -103,13 +103,14 @@ BEGIN
     sage=sage+d_sage, anons=anons+d_anon, trips=trips+d_trip,
     names=names+d_name WHERE day = d_day;
 
-  IF EXISTS (SELECT 1 FROM %%BOARD%%_users WHERE trip = COALESCE($1.trip,'') AND name = COALESCE($1.trip,'')) THEN
+  IF (SELECT trip FROM %%BOARD%%_users WHERE trip = $1.trip) IS NOT NULL THEN
     UPDATE %%BOARD%%_users SET postcount=postcount+1,
-      firstseen = LEAST($1.timestamp, firstseen)
-      WHERE trip = COALESCE($1.trip,'') AND name = COALESCE($1.name,'');
+      firstseen = LEAST($1.timestamp, firstseen),
+      name = COALESCE($1.name, '')
+      WHERE trip = $1.trip;
   ELSE  
     INSERT INTO %%BOARD%%_users
-      SELECT NULL, COALESCE($1.name,''), COALESCE($1.trip,''), $1.timestamp, 0
+      SELECT COALESCE($1.name,''), COALESCE($1.trip,''), $1.timestamp, 0
       WHERE NOT EXISTS (SELECT 1 FROM %%BOARD%%_users WHERE name = COALESCE($1.name,'') AND trip = COALESCE($1.trip,''));
     
     UPDATE %%BOARD%%_users SET postcount=postcount+1,
