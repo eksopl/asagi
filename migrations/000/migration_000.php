@@ -373,31 +373,39 @@ foreach($json as $shortname => $board)
 		
 		
 		
-		// recreate the _users table
-		$db->query('DROP TABLE ' . $shortname . '_users');	
+		// alter the users table
+		echo 'Altering the ' . $shortname . '_users table.' . PHP_EOL;
 		$db->query('
-		    CREATE TABLE IF NOT EXISTS `' . $shortname . '_users` (
-                `user_id` int unsigned NOT NULL auto_increment,
-                `name` varchar(100) NOT NULL DEFAULT '',
-                `trip` varchar(25) NOT NULL DEFAULT '',
-                `firstseen` int(11) NOT NULL,
-                `postcount` int(11) NOT NULL,
-                PRIMARY KEY (`user_id`),
-                  
-                UNIQUE name_trip_index (`name`, `trip`),
-                INDEX firstseen_index (firstseen),
-                INDEX postcount_index (postcount)
-            ) ENGINE=InnoDB DEFAULT CHARSET=' . $charset . '
+		    ALTER TABLE `' . $shortname . '_users`
+		    DROP PRIMARY INDEX,
+		    ADD COLUMN user_id int unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST,
+            ADD UNIQUE INDEX name_trip_index(name, trip)
         ');
         
+        /*
+        // make sure everything is done
+        $db->query('ALTER TABLE '.$shortname.'_threads ADD COLUMN user_id int unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST');
+        if ($db->error && strpos($db->error, 'it must be defined as a key') !== FALSE)
+        {
+            $db->query('ALTER TABLE '.$shortname.'_threads DROP PRIMARY INDEX');
+            $db->query('ALTER TABLE '.$shortname.'_threads ADD COLUMN user_id int unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST');
+        }
+        $db->query('ALTER TABLE '.$shortname.'_threads ADD UNIQUE INDEX name_trip_index(name, trip)');
+        
+        // update with latest names to match new updating pattern
+        echo 'Updating the ' . $shortname . '_users table to show the latest usernames.' . PHP_EOL;
         $db->query('
-            INSERT INTO `' . $shortname . '_users` (
-                SELECT NULL, COALESCE(name, ''), COALESCE(trip, ''), MIN(timestamp), COUNT(*) from `' . $shortname . '`
-                WHERE trip IS NOT NULL OR name IS NOT NULL
-                GROUP BY COALESCE(name, ''), COALESCE(trip, '') 
-            );
+            UPDATE IGNORE `' . $shortname . '_users` SET name = (
+                SELECT COALESCE(gg.name, \'\') FROM (
+                    SELECT timestamp`' . $shortname . '` 
+                    WHERE `' . $shortname . '`.trip = `' . $shortname . '_users`.trip 
+                    ORDER BY `' . $shortname . '`.timestamp DESC 
+                    LIMIT 1
+                ) AS gg
+            ) 
+            WHERE trip <> \'\'
         ');
-		
+		*/
 		// This allows to run Asagi before starting phase 3
 		// rename the images folder, and if your site supports the _old table you will still have visible images
 		$old_path = $path . '/' . $shortname . '_old';
@@ -589,6 +597,7 @@ foreach($json as $shortname => $board)
 					((!$full_images)?:', img.media_filename = COALESCE(temp.media_filename, img.media_filename)') .
 				' WHERE img.media_id = temp.media_id
 			');
+			
 			if ($db->error && !$disable_db_errors) die(PHP_EOL . '[database error] ' . $db->error . PHP_EOL . 'You can ignore errors with the --ignore-db-errors argument. Use the --help argument to know more.' . PHP_EOL);
 			
 			$db->query('TRUNCATE ' . $shortname . '_images_tmp;');
