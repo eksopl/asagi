@@ -23,7 +23,7 @@ public class Mysql extends SQL {
         this.insertQuery = String.format(
                 "INSERT INTO %s" +
                 " (id, num, subnum, parent, timestamp, preview, preview_w, preview_h, media, " +
-                " media_w, media_h, media_size, media_hash, media_filename, spoiler, deleted, " +
+                " media_w, media_h, media_size, media_hash, orig_filename, spoiler, deleted, " +
                 " capcode, email, name, trip, title, comment, delpass, sticky) " +
                 "  SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? FROM DUAL " +
                 "  WHERE NOT EXISTS (SELECT 1 FROM %s WHERE num=? and subnum=?)", 

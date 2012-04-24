@@ -95,7 +95,7 @@ public class Local extends Board {
         if(dirType == DIR_THUMB) {
             return String.format("%s/thumb/%s/%s", this.path, subdirs[0], subdirs[1]);
         } else if(dirType == DIR_MEDIA) {
-            return String.format("%s/img/%s/%s", this.path, subdirs[0], subdirs[1]);
+            return String.format("%s/image/%s/%s", this.path, subdirs[0], subdirs[1]);
         } else {
             return null;
         }
@@ -112,7 +112,7 @@ public class Local extends Board {
         if(dirType == DIR_THUMB) {
             dir = "thumb";
         } else if(dirType == DIR_MEDIA) {
-            dir = "img";
+            dir = "image";
         } else {
             return null;
         }

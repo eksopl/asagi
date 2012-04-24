@@ -195,10 +195,10 @@ public class Dumper {
                 for(Post post : posts) {
                     try {
                         MediaPost mediaPost = new MediaPost(post.getNum(), post.getParent() == 0, 
-                                post.getPreview(), post.getMediaFilename(), post.getMediaHash());
+                                post.getPreview(), post.getOrigFilename(), post.getMediaHash());
 
                         if(post.getPreview() != null) mediaPreviewUpdates.put(mediaPost);
-                        if(post.getMediaFilename() != null && fullMedia) mediaUpdates.put(mediaPost);
+                        if(post.getOrigFilename() != null && fullMedia) mediaUpdates.put(mediaPost);
                     } catch(InterruptedException e) { }
                 }
                 newTopic.purgePosts();
