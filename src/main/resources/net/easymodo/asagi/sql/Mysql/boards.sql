@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS %%BOARD%% (
   INDEX email_index(email),
   INDEX name_index(name),
   INDEX trip_index(trip),
-  INDEX fullname_index(name,trip),
+  INDEX fullname_index(name,trip)
 ) engine=InnoDB	 CHARSET=%%CHARSET%%;
 
 CREATE TABLE IF NOT EXISTS `%%BOARD%%_threads` (
