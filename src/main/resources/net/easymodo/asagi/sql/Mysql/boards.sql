@@ -59,12 +59,14 @@ CREATE TABLE IF NOT EXISTS `%%BOARD%%_threads` (
 ) ENGINE=InnoDB CHARSET=%%CHARSET%%;
 
 CREATE TABLE IF NOT EXISTS `%%BOARD%%_users` (
+  `user_id` int unsigned NOT NULL auto_increment,
   `name` varchar(100) NOT NULL DEFAULT '',
   `trip` varchar(25) NOT NULL DEFAULT '',
   `firstseen` int(11) NOT NULL,
   `postcount` int(11) NOT NULL,
-  PRIMARY KEY (`name`, `trip`),
+  PRIMARY KEY (`user_id`),
   
+  UNIQUE name_trip_index (`name`, `trip`),
   INDEX firstseen_index (firstseen),
   INDEX postcount_index (postcount)
 ) ENGINE=InnoDB DEFAULT CHARSET=%%CHARSET%%;
