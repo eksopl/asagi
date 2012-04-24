@@ -105,16 +105,10 @@ BEGIN
     sage=sage+d_sage, anons=anons+d_anon, trips=trips+d_trip,
     names=names+d_name;
 
-  IF (SELECT user_id FROM %%BOARD%%_users WHERE name = p_name AND trip = p_trip ) IS NOT NULL THEN
-    UPDATE %%BOARD%%_users SET postcount=postcount+1,
-      firstseen = LEAST(p_timestamp, firstseen)
-      WHERE name = p_name AND trip = p_trip;
-  ELSE
-    INSERT INTO %%BOARD%%_users VALUES
-      (NULL, COALESCE(p_name,''), COALESCE(p_trip,''), p_timestamp, 1)
-      ON DUPLICATE KEY UPDATE postcount=postcount+1,
+  INSERT INTO %%BOARD%%_users VALUES
+    (NULL, COALESCE(p_name,''), COALESCE(p_trip,''), p_timestamp, 1)
+    ON DUPLICATE KEY UPDATE postcount=postcount+1,
       firstseen = LEAST(VALUES(firstseen), firstseen);
-  END IF;
 END;
 
 DROP PROCEDURE IF EXISTS `delete_post_%%BOARD%%`;
@@ -139,13 +133,8 @@ BEGIN
     sage=sage-d_sage, anons=anons-d_anon, trips=trips-d_trip,
     names=names-d_name WHERE day = d_day;
 
-  IF (SELECT user_id FROM %%BOARD%%_users WHERE name = p_name AND trip = p_trip) IS NOT NULL THEN
-    UPDATE %%BOARD%%_users SET postcount = postcount-1 WHERE 
-      name = p_name AND trip = p_trip;
-  ELSE
-    UPDATE %%BOARD%%_users SET postcount = postcount-1 WHERE
-      name = COALESCE(p_name, '') AND trip = COALESCE(p_trip, '');
-  END IF;
+  UPDATE %%BOARD%%_users SET postcount = postcount-1 WHERE
+    name = COALESCE(p_name, '') AND trip = COALESCE(p_trip, '');
 END;
 
 DROP TRIGGER IF EXISTS `before_ins_%%BOARD%%`;

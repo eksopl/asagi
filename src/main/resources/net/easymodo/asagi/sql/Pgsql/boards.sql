@@ -15,12 +15,14 @@ CREATE INDEX %%BOARD%%_threads_time_bump_index on %%BOARD%%_threads (time_bump);
 CREATE INDEX %%BOARD%%_threads_time_ghost_bump_index on %%BOARD%%_threads (time_ghost_bump);
 
 CREATE TABLE %%BOARD%%_users (
+  user_id SERIAL NOT NULL,
   name character varying(100) NOT NULL DEFAULT '',
   trip character varying(25) NOT NULL DEFAULT '',
   firstseen integer NOT NULL,
   postcount integer NOT NULL,
   
-  PRIMARY KEY (name, trip)
+  PRIMARY KEY (user_id),
+  UNIQUE (name, trip)
 );
 
 CREATE INDEX %%BOARD%%_users_firstseen_index on %%BOARD%%_users (firstseen);
@@ -35,7 +37,7 @@ CREATE TABLE %%BOARD%%_images (
   total integer NOT NULL DEFAULT '0',
   banned smallint NOT NULL DEFAULT '0',
   
-  PRIMARY KEY (id),
+  PRIMARY KEY (media_id),
   UNIQUE (media_hash)
 );
 
