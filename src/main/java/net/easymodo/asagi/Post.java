@@ -15,7 +15,7 @@ public class Post {
     private int mediaH;
     private int mediaSize;
     private String mediaHash;
-    private String mediaFilename;
+    private String origFilename;
     private boolean spoiler;
     private boolean deleted;
     private String capcode;
@@ -143,12 +143,12 @@ public class Post {
         this.mediaHash = mediaHash;
     }
 
-    public String getMediaFilename() {
-        return mediaFilename;
+    public String getOrigFilename() {
+        return origFilename;
     }
 
-    public void setMediaFilename(String mediaFilename) {
-        this.mediaFilename = mediaFilename;
+    public void setOrigFilename(String origFilename) {
+        this.origFilename = origFilename;
     }
 
     public boolean isSpoiler() {
