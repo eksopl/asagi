@@ -1,13 +1,3 @@
-    ((?:
-        (?:
-            <span \s class="filesize">.*?
-            |
-            <img \s src="[^"]*" \s alt="File \s deleted\.">.*?
-        )?
-        (<a \s name="[^"]*"></a> \s* <input [^>]*><span \s class="filetitle">)
-        (?>.*?</blockquote>)
-        (?:<span \s class="oldpost">[^<]*</span><br> \s*)?
-        (?:<span \s class="omittedposts">[^<]*</span>)?
-    )
-    |
-    (?:<table><tr><td \s nowrap \s class="doubledash">(?>.*?</blockquote></td></tr></table>)))
+ (<div \s class="postContainer \s (opContainer|replyContainer)">.*?</blockquote>
+ \s* </div> 
+ (?: \s* <div [^>]*> \s* <span \s class="info">.*?</span>)?)
