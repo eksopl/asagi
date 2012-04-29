@@ -288,10 +288,12 @@ public class Yotsuba extends WWW {
         // Java's substring methods actually just return a new string that
         // points to the original string.
         // In our case, Java will keep the entire page HTML on its heap until
-        // it can collect all of the substring.
+        // it can garbate collect all of the substrings returned by the matchers.
         // This is very wasteful when it comes to memory, so throughout this
-        // method, we will be forcing creating new strings for the regex
-        // matches through the String constructor.
+        // method, we will be forcing the creation of new strings for all
+        // string regex matches through the String constructor.
+        // Software like FindBugs will complain we're pointlessly calling the
+        // String constructor, but in this case, we know exactly what we're doing.
         
         Matcher mat = numPattern.matcher(text);
         if(!mat.find()) {
