@@ -1,7 +1,7 @@
 package net.easymodo.asagi;
 
 public class Media {
-	private int id;
+	private int mediaId;
     private String mediaHash;
     private String mediaFilename;
     private String previewOp;
@@ -9,9 +9,9 @@ public class Media {
     private int total;
     private int banned;
     
-    public Media(int id, String mediaHash, String mediaFilename, 
+    public Media(int mediaId, String mediaHash, String mediaFilename, 
             String previewOp, String previewReply, int total, int banned) {
-    	setId(id);
+    	setMediaId(mediaId);
     	setMediaHash(mediaHash);
     	setMediaFilename(mediaFilename);
     	setPreviewOp(previewOp);
@@ -20,12 +20,12 @@ public class Media {
     	setBanned(banned);
     }
     
-    public int getId() {
-    	return id;
+    public int getMediaId() {
+    	return mediaId;
     }
     
-    public void setId(int id) {
-    	this.id = id;
+    public void setMediaId(int mediaId) {
+    	this.mediaId = mediaId;
     }
     
     public String getMediaHash() {

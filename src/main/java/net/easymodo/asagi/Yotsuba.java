@@ -211,7 +211,7 @@ public class Yotsuba extends WWW {
         post.setType(type);
         post.setMedia(media);
         post.setMediaHash(md5);
-        post.setMediaFilename(mediaFilename);
+        post.setOrigFilename(mediaFilename);
         post.setMediaSize(mediaSize);
         post.setMediaW(width);
         post.setMediaH(height);

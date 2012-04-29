@@ -49,7 +49,7 @@ public abstract class SQL implements DB {
             this.insertQuery = String.format(
                     "INSERT INTO %s" +
                     " (id, num, subnum, parent, timestamp, preview, preview_w, preview_h, media, " +
-                    " media_w, media_h, media_size, media_hash, media_filename, spoiler, deleted, " +
+                    " media_w, media_h, media_size, media_hash, orig_filename, spoiler, deleted, " +
                     " capcode, email, name, trip, title, comment, delpass, sticky) " +
                     "  SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? " +
                     "  WHERE NOT EXISTS (SELECT 1 FROM %s WHERE num=? and subnum=?)", 
@@ -191,7 +191,7 @@ public abstract class SQL implements DB {
                 insertStmt.setInt(c++, post.getMediaH());
                 insertStmt.setInt(c++, post.getMediaSize());
                 insertStmt.setString(c++, post.getMediaHash());
-                insertStmt.setString(c++, post.getMediaFilename());
+                insertStmt.setString(c++, post.getOrigFilename());
                 insertStmt.setBoolean(c++, post.isSpoiler());
                 insertStmt.setBoolean(c++, post.isDeleted());
                 insertStmt.setString(c++, (post.getCapcode() != null) ? post.getCapcode() : "N");
@@ -274,7 +274,7 @@ public abstract class SQL implements DB {
         try {
             if(mediaRs.next()) {
                 media = new Media(
-                    mediaRs.getInt("id"),
+                    mediaRs.getInt("media_id"),
                     mediaRs.getString("media_hash"), 
                     mediaRs.getString("media_filename"),
                     mediaRs.getString("preview_op"),
