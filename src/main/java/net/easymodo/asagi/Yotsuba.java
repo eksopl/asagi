@@ -132,7 +132,7 @@ public class Yotsuba extends WWW {
 
     public int parseDate(String date) {
         Pattern pat = 
-            Pattern.compile("(\\d+)/(\\d+)/(\\d+) \\(\\w+\\) (\\d+):(\\d+)(?:(\\d+))?", Pattern.COMMENTS);
+            Pattern.compile("(\\d+)/(\\d+)/(\\d+)\\s*\\(\\w+\\)\\s*(\\d+):(\\d+)(?::(\\d+))?", Pattern.COMMENTS);
         Matcher mat = pat.matcher(date);
         
         if(!mat.find())
