@@ -19,9 +19,10 @@ if(version_compare(PHP_VERSION, '5.2.0') < 0)
 
 
 // CONSTANTS
-define('BOARD_COLUMNS', 'doc_id, 0, id, num, subnum, parent, timestamp, preview, preview_w, preview_h, media, media_w, 
-  	media_h, media_size, media_hash, media_filename AS orig_filename, spoiler, deleted, capcode, email, name, trip, title,
-  	comment, delpass, sticky');
+define('BOARD_COLUMNS', 'doc_id, 0, id AS poster_id, num, subnum, parent AS thread_num, IF(parent=num,1,0) AS op,
+    timestamp, NULL, preview AS preview_orig, preview_w, preview_h, media AS media_orig, media_w, 
+  	media_h, media_size, media_hash, media_filename, spoiler, deleted, capcode, email, name, trip, title,
+  	comment, delpass, sticky, poster_hash, 0 AS exif');
 
 // load class that manages CLI parameters
 include 'resources/parameters.php';
@@ -277,7 +278,7 @@ foreach($json as $shortname => $board)
 	}
 	
 	/*
-	| PHASE 2: (partial) database alteration
+	| PHASE 2: database alteration
 	*/
 	
 	if(!$args->passed('--phase') || $args->get_full_passed('--phase') == 2)
@@ -287,37 +288,52 @@ foreach($json as $shortname => $board)
 		// what if the board was already InnoDB but doesn't have the extra media_id row?
 		// just try it and ignore the error!
 		echo 'Testing if `' . $shortname . '` table needs for alterations. If it does, this will take a bit.' . PHP_EOL;
-		$db->query('
-			ALTER TABLE `' . $shortname . '` 
-			ADD COLUMN media_id int unsigned NOT NULL DEFAULT \'0\' AFTER doc_id,
-			ADD INDEX media_id_index(media_id),
-			CHANGE media_filename orig_filename varchar(20),
-			ADD INDEX orig_filename_index(orig_filename)
-		');
-		if ($db->error) echo 'No alteration necessary.' . PHP_EOL;
+		$board_alterations = array(
+			'CHANGE media_filename media_orig varchar(20)',
+			'CHANGE media media_filename varchar(20)',
+			'CHANGE preview preview_orig varchar(20)',
+			'CHANGE id poster_id decimal(39,0)',
+			'CHANGE parent thread_num decimal(39,0)',
+			'ADD COLUMN media_id int unsigned NOT NULL DEFAULT \'0\' AFTER doc_id',
+			'ADD COLUMN op bool NOT NULL DEFAULT \'0\' AFTER thread_num',
+			'ADD COLUMN timestamp_expired int(10) unsigned DEFAULT NULL AFTER timestamp',
+			'ADD COLUMN poster_hash varchar(20)',
+			'ADD COLUMN exif text',
+			'DROP INDEX id_index',
+			'ADD INDEX poster_id_index(poster_id)',
+			'ADD INDEX media_id_index(media_id)',
+			'ADD INDEX timestamp_expired_index(timestamp_expired)',
+			'ADD INDEX media_orig_index(media_orig)',
+		);
+		$db->query('ALTER TABLE `' . $shortname . '` ' . implode(', ', $board_alterations));
 		// make sure it happened
-		$db->query('ALTER TABLE `' . $shortname . '` ADD COLUMN media_id int unsigned NOT NULL DEFAULT \'0\' AFTER doc_id');
-		$db->query('ALTER TABLE `' . $shortname . '` ADD INDEX media_id_index(media_id)');
-		$db->query('ALTER TABLE `' . $shortname . '` CHANGE media_filename orig_filename varchar(20)');
-		$db->query('ALTER TABLE `' . $shortname . '` ADD INDEX orig_filename_index(orig_filename)');
-	
+		foreach($board_alterations as $alteration)
+		{
+			$db->query('ALTER TABLE `' . $shortname . '` '. $alteration);
+		}
 		// this shouldn't be a problem considering that it only affects statistics for the time being
 		echo 'Altering `' . $shortname . '_images` table.' . PHP_EOL;
-		$db->query('
-			ALTER TABLE '.$shortname.'_images 
-			DROP PRIMARY KEY,
-			ADD COLUMN media_id int unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST,
-			ADD media_filename varchar(20) AFTER media_hash,
-			ADD preview_op varchar(20) AFTER media_filename, 
-			ADD preview_reply varchar(20) AFTER preview_op,
-			ADD banned smallint unsigned NOT NULL DEFAULT \'0\' AFTER total,
-			ADD UNIQUE INDEX media_hash_index(media_hash),
-			DROP COLUMN num,
-			DROP COLUMN parent,
-			DROP COLUMN subnum,
-			DROP COLUMN preview
-		');
+		$images_alterations = array(
+			'DROP PRIMARY KEY',
+			'ADD COLUMN media_id int unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST',
+			'ADD media varchar(20) AFTER media_hash',
+			'ADD preview_op varchar(20) AFTER media_filename',
+			'ADD preview_reply varchar(20) AFTER preview_op',
+			'ADD banned smallint unsigned NOT NULL DEFAULT \'0\' AFTER total',
+			'ADD UNIQUE INDEX media_hash_index(media_hash)',
+			'DROP COLUMN num',
+			'DROP COLUMN parent',
+			'DROP COLUMN subnum',
+			'DROP COLUMN preview',
+		);
+		foreach($images_alterations as $alteration)
+		{
+			$db->query('ALTER TABLE '.$shortname.'_images ' . implode(', ', $image_alterations));
+		}
+		
 		// make sure everything is done
+		array_shift($images_alterations);
+		array_shift($images_alterations);
 		$db->query('ALTER TABLE '.$shortname.'_images ADD COLUMN media_id int unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST');
 		if ($db->error && strpos($db->error, 'it must be defined as a key') !== FALSE)
 		{
@@ -325,35 +341,45 @@ foreach($json as $shortname => $board)
 			$db->query('ALTER TABLE '.$shortname.'_images DROP PRIMARY KEY');
 			$db->query('ALTER TABLE '.$shortname.'_images ADD COLUMN media_id int unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST');
 		}		
-		$db->query('ALTER TABLE '.$shortname.'_images ADD media_filename varchar(20) AFTER media_hash');
-		$db->query('ALTER TABLE '.$shortname.'_images ADD preview_op varchar(20) AFTER media_filename');
-		$db->query('ALTER TABLE '.$shortname.'_images ADD preview_reply varchar(20) AFTER preview_op');
-		$db->query('ALTER TABLE '.$shortname.'_images ADD banned smallint unsigned NOT NULL DEFAULT \'0\' AFTER total');
-		$db->query('ALTER TABLE '.$shortname.'_images ADD UNIQUE INDEX media_hash_index(media_hash)');
-		$db->query('ALTER TABLE '.$shortname.'_images DROP COLUMN num');
-		$db->query('ALTER TABLE '.$shortname.'_images DROP COLUMN parent');
-		$db->query('ALTER TABLE '.$shortname.'_images DROP COLUMN subnum');
-		$db->query('ALTER TABLE '.$shortname.'_images DROP COLUMN preview');
-		
-		//if ($db->error && !$disable_db_errors) die('[database error] ' . $db->error . PHP_EOL . 'You can ignore errors with the --ignore-db-errors argument. Use the --help argument to know more.' . PHP_EOL);
 
+		foreach($images_alterations as $alteration)
+		{
+			$db->query('ALTER TABLE '.$shortname.'_images ' . $alteration);
+		}
+		
 		// this is actually going to lock everything
 		// takes just 1-2 minutes seemingly
-		$db->query('
-			ALTER TABLE '.$shortname.'_threads 
-			DROP COLUMN doc_id_p,
-			DROP INDEX parent_index,
-			ADD PRIMARY KEY (parent),			
-			ADD INDEX time_op_index(time_op),
-			ADD INDEX time_bump_index(time_bump)
-		');			
+		$threads_alterations = array(
+			'DROP COLUMN doc_id_p',
+			'DROP INDEX parent_index',
+			'ADD PRIMARY KEY (parent)',	
+			'ADD INDEX time_op_index(time_op)',
+			'ADD INDEX time_bump_index(time_bump)',
+		);
+		$db->query('ALTER TABLE '.$shortname.'_threads ' . implode(', ', $threads_alterations));			
 		// make sure it's all done even if the user blocked the system
-		$db->query('ALTER TABLE '.$shortname.'_threads DROP COLUMN doc_id_p');
-		$db->query('ALTER TABLE '.$shortname.'_threads DROP INDEX parent_index');
-		$db->query('ALTER TABLE '.$shortname.'_threads ADD PRIMARY KEY (parent)');
-		$db->query('ALTER TABLE '.$shortname.'_threads ADD INDEX time_op_index(time_op)');
-		$db->query('ALTER TABLE '.$shortname.'_threads ADD INDEX time_bump_index(time_bump)');
-		//if ($db->error && !$disable_db_errors) die('[database error] ' . $db->error . PHP_EOL . 'You can ignore errors with the --ignore-db-errors argument. Use the --help argument to know more.' . PHP_EOL);
+		foreach($threads_alterations as $alteration)
+		{
+			$db->query('ALTER TABLE '.$shortname.'_images ' . $alteration);
+		}
+		
+		// alter the users table
+		echo 'Altering the ' . $shortname . '_users table.' . PHP_EOL;
+		$db->query('
+		    ALTER TABLE `' . $shortname . '_users`
+		    DROP PRIMARY INDEX,
+		    ADD COLUMN user_id int unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST,
+            ADD UNIQUE INDEX name_trip_index(name, trip)
+        ');
+        
+        // make sure everything is done
+        $db->query('ALTER TABLE '.$shortname.'_users ADD COLUMN user_id int unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST');
+        if ($db->error && strpos($db->error, 'it must be defined as a key') !== FALSE)
+        {
+            $db->query('ALTER TABLE '.$shortname.'_users DROP PRIMARY INDEX');
+            $db->query('ALTER TABLE '.$shortname.'_users ADD COLUMN user_id int unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST');
+        }
+        $db->query('ALTER TABLE '.$shortname.'_users ADD UNIQUE INDEX name_trip_index(name, trip)');
 		
 		// at this point we're set to update the triggers
 		$triggers_sql = file_get_contents('resources/triggers.sql');
@@ -371,41 +397,6 @@ foreach($json as $shortname => $board)
 		//$db->query('UPDATE `' . $shortname . '` AS board SET media_id = (SELECT media_id FROM ' . $shortname . '_images WHERE media_hash = board.media_hash) WHERE board.media_hash IS NOT NULL;');
 		if ($db->error && !$disable_db_errors) die('[database error] ' . $db->error . PHP_EOL . 'You can ignore errors with the --ignore-db-errors argument. Use the --help argument to know more.' . PHP_EOL);
 		
-		
-		
-		// alter the users table
-		echo 'Altering the ' . $shortname . '_users table.' . PHP_EOL;
-		$db->query('
-		    ALTER TABLE `' . $shortname . '_users`
-		    DROP PRIMARY INDEX,
-		    ADD COLUMN user_id int unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST,
-            ADD UNIQUE INDEX name_trip_index(name, trip)
-        ');
-        
-        /*
-        // make sure everything is done
-        $db->query('ALTER TABLE '.$shortname.'_threads ADD COLUMN user_id int unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST');
-        if ($db->error && strpos($db->error, 'it must be defined as a key') !== FALSE)
-        {
-            $db->query('ALTER TABLE '.$shortname.'_threads DROP PRIMARY INDEX');
-            $db->query('ALTER TABLE '.$shortname.'_threads ADD COLUMN user_id int unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST');
-        }
-        $db->query('ALTER TABLE '.$shortname.'_threads ADD UNIQUE INDEX name_trip_index(name, trip)');
-        
-        // update with latest names to match new updating pattern
-        echo 'Updating the ' . $shortname . '_users table to show the latest usernames.' . PHP_EOL;
-        $db->query('
-            UPDATE IGNORE `' . $shortname . '_users` SET name = (
-                SELECT COALESCE(gg.name, \'\') FROM (
-                    SELECT timestamp`' . $shortname . '` 
-                    WHERE `' . $shortname . '`.trip = `' . $shortname . '_users`.trip 
-                    ORDER BY `' . $shortname . '`.timestamp DESC 
-                    LIMIT 1
-                ) AS gg
-            ) 
-            WHERE trip <> \'\'
-        ');
-		*/
 		// This allows to run Asagi before starting phase 3
 		// rename the images folder, and if your site supports the _old table you will still have visible images
 		$old_path = $path . '/' . $shortname . '_old';
@@ -445,7 +436,7 @@ foreach($json as $shortname => $board)
 				media_id int unsigned NOT NULL DEFAULT \'0\',
 				preview_op varchar(20),
 				preview_reply varchar(20),
-				media_filename varchar(20),
+				media varchar(20),
 				
 				PRIMARY KEY (media_id)
 			)
@@ -504,7 +495,7 @@ foreach($json as $shortname => $board)
 				WHERE doc_id < ' . $offset . ' AND doc_id >= ' . ($offset - 100000) . '
 					AND brd.media_hash IS NOT NULL 
 					AND (IF(brd.parent = 0, img.preview_op, img.preview_reply) IS NULL
-						' . ((!$full_images)?:'OR img.media_filename IS NULL') . ' )
+						' . ((!$full_images)?:'OR img.media IS NULL') . ' )
 			');
 			if ($db->error && !$disable_db_errors) die('[database error] ' . $db->error . PHP_EOL . 'You can ignore errors with the --ignore-db-errors argument. Use the --help argument to know more.' . PHP_EOL);
 			
@@ -562,9 +553,9 @@ foreach($json as $shortname => $board)
 							copy($old_full_image_path, $new_full_image_path);
 							
 						$db->query('INSERT INTO `' . $shortname .  '_images_tmp`
-							(media_id, media_filename) 
+							(media_id, media) 
 							VALUES (\'' . $row->media_id . '\', \'' . $db->real_escape_string(str_replace('s.', '.', $row->preview)) . '\')
-							ON DUPLICATE KEY UPDATE media_filename = VALUES(media_filename)
+							ON DUPLICATE KEY UPDATE media = VALUES(media)
 						');
 						if ($db->error && !$disable_db_errors) die('[database error] ' . $db->error . PHP_EOL . 'You can ignore errors with the --ignore-db-errors argument. Use the --help argument to know more.' . PHP_EOL);
 					}
@@ -594,7 +585,7 @@ foreach($json as $shortname => $board)
 				UPDATE ' . $shortname . '_images img, ' . $shortname . '_images_tmp temp
 				SET img.preview_op = COALESCE(temp.preview_op, img.preview_op),
 					img.preview_reply = COALESCE(temp.preview_reply, img.preview_reply)' .
-					((!$full_images)?:', img.media_filename = COALESCE(temp.media_filename, img.media_filename)') .
+					((!$full_images)?:', img.media = COALESCE(temp.media, img.media)') .
 				' WHERE img.media_id = temp.media_id
 			');
 			
