@@ -117,7 +117,8 @@ BEGIN
         name = COALESCE(p_name, '')
       WHERE trip = p_trip;
   ELSE
-    INSERT INTO %%BOARD%%_users VALUES(COALESCE(p_name,''), COALESCE(p_trip,''), p_timestamp, 1)
+    INSERT INTO %%BOARD%%_users VALUES(
+    NULL, COALESCE(p_name,''), COALESCE(p_trip,''), p_timestamp, 1)
     ON DUPLICATE KEY UPDATE postcount=postcount+1,
       firstseen = LEAST(VALUES(firstseen), firstseen),
       name = COALESCE(p_name, '');
