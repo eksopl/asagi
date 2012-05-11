@@ -48,15 +48,15 @@ public abstract class SQL implements DB {
         if(this.insertQuery == null) {
             this.insertQuery = String.format(
                     "INSERT INTO %s" +
-                    " (id, num, subnum, parent, timestamp, preview, preview_w, preview_h, media, " +
-                    " media_w, media_h, media_size, media_hash, orig_filename, spoiler, deleted, " +
-                    " capcode, email, name, trip, title, comment, delpass, sticky) " +
-                    "  SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? " +
+                    " (poster_ip, num, subnum, thread_num, op, timestamp, timestamp_expired, preview_orig, preview_w, preview_h, media_orig, " +
+                    " media_w, media_h, media_size, media_hash, media_filename, spoiler, deleted, " +
+                    " capcode, email, name, trip, title, comment, delpass, sticky, poster_hash, exif) " +
+                    "  SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? " +
                     "  WHERE NOT EXISTS (SELECT 1 FROM %s WHERE num=? and subnum=?)", 
                     this.table, this.table);
         }
         this.updateQuery = 
-                String.format("UPDATE %s SET comment = ?, deleted = ?, media = COALESCE(?, media)," +
+                String.format("UPDATE %s SET comment = ?, deleted = ?, media_filename = COALESCE(?, media_filename)," +
                         "  sticky = (? OR sticky) WHERE num=? and subnum=?", table);
       
         String updateDeletedQuery = String.format("UPDATE %s SET deleted = ? WHERE num = ? and subnum = ?", 
@@ -171,27 +171,29 @@ public abstract class SQL implements DB {
                 int c = 1;
                 updateStmt.setString(c++, post.getComment());
                 updateStmt.setBoolean(c++, post.isDeleted());
-                updateStmt.setString(c++,post.getMedia());
+                updateStmt.setString(c++,post.getMediaFilename());
                 updateStmt.setBoolean(c++, post.isSticky());
                 updateStmt.setInt(c++, post.getNum());
                 updateStmt.setInt(c++, post.getSubnum());
                 updateStmt.addBatch();
 
                 c = 1;
-                insertStmt.setInt(c++, post.getId());
+                insertStmt.setInt(c++, post.getPosterIp());
                 insertStmt.setInt(c++, post.getNum());
                 insertStmt.setInt(c++, post.getSubnum());
-                insertStmt.setInt(c++, post.getParent());
+                insertStmt.setInt(c++, post.getThreadNum());
+                insertStmt.setBoolean(c++, post.isOp());
                 insertStmt.setInt(c++, post.getDate());
-                insertStmt.setString(c++, post.getPreview());
+                insertStmt.setInt(c++, post.getDateExpired());
+                insertStmt.setString(c++, post.getPreviewOrig());
                 insertStmt.setInt(c++, post.getPreviewW());
                 insertStmt.setInt(c++, post.getPreviewH());
-                insertStmt.setString(c++,post.getMedia());
+                insertStmt.setString(c++,post.getMediaFilename());
                 insertStmt.setInt(c++, post.getMediaW());
                 insertStmt.setInt(c++, post.getMediaH());
                 insertStmt.setInt(c++, post.getMediaSize());
                 insertStmt.setString(c++, post.getMediaHash());
-                insertStmt.setString(c++, post.getOrigFilename());
+                insertStmt.setString(c++, post.getMediaOrig());
                 insertStmt.setBoolean(c++, post.isSpoiler());
                 insertStmt.setBoolean(c++, post.isDeleted());
                 insertStmt.setString(c++, (post.getCapcode() != null) ? post.getCapcode() : "N");
@@ -202,6 +204,8 @@ public abstract class SQL implements DB {
                 insertStmt.setString(c++, post.getComment());
                 insertStmt.setString(c++, post.getDelpass());
                 insertStmt.setBoolean(c++, post.isSticky());
+                insertStmt.setString(c++, post.getPosterHash());
+                insertStmt.setString(c++, post.getExif());
                 
                 insertStmt.setInt(c++, post.getNum());
                 insertStmt.setInt(c++, post.getSubnum());
@@ -276,7 +280,7 @@ public abstract class SQL implements DB {
                 media = new Media(
                     mediaRs.getInt("media_id"),
                     mediaRs.getString("media_hash"), 
-                    mediaRs.getString("media_filename"),
+                    mediaRs.getString("media"),
                     mediaRs.getString("preview_op"),
                     mediaRs.getString("preview_reply"),
                     mediaRs.getInt("total"),

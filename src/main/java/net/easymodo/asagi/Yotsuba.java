@@ -140,14 +140,20 @@ public class Yotsuba extends WWW {
     public Post newYotsubaPost(String link, String mediaFilename, boolean spoiler,
             String filesize, int width, int height, String filename, int twidth,
             int theight, String md5base64, int num, String title, String email,
-            String name, String trip, String capcode, String date, boolean sticky,
-            String comment, boolean omitted, int parent) throws ContentParseException 
+            String name, String trip, String capcode, String date, boolean sticky, 
+            String posterHash, String comment, boolean omitted, int threadNum) throws ContentParseException 
     {
         String type = "";
-        String media = null;
-        String preview = null;
+        String mediaOrig = null;
+        String previewOrig = null;
         String md5 = null;
         
+        // TODO add the following variables
+        String exif = null;
+        int timeStampExpired = 0;
+        
+        boolean op = (threadNum == num);
+
         if(name.equals("")) name = null;
         if(comment.equals("")) comment = null;
         if(title.equals("")) title = null;
@@ -161,12 +167,12 @@ public class Yotsuba extends WWW {
             type = mat.group(2);
             
             if(filename != null) {
-                media = filename;
+                mediaOrig = filename;
             } else {
-                media = number + "." + type;
+                mediaOrig = number + "." + type;
             }
             
-            preview = number + "s.jpg";
+            previewOrig = number + "s.jpg";
           
             md5 = md5base64;
         }
@@ -183,27 +189,31 @@ public class Yotsuba extends WWW {
         Post post = new Post();
         post.setLink(link);
         post.setType(type);
-        post.setMedia(media);
+        post.setMediaOrig(mediaOrig);
         post.setMediaHash(md5);
-        post.setOrigFilename(mediaFilename);
+        post.setMediaFilename(mediaFilename);
         post.setMediaSize(mediaSize);
         post.setMediaW(width);
         post.setMediaH(height);
-        post.setPreview(preview);
+        post.setPreviewOrig(previewOrig);
         post.setPreviewW(twidth);
         post.setPreviewH(theight);
+        post.setExif(exif);
         post.setNum(num);
-        post.setParent(parent);
+        post.setThreadNum(threadNum);
+        post.setOp(op);
         post.setTitle(this.cleanSimple(title));
         post.setEmail(email);
         post.setName(this.cleanSimple(name));
         post.setTrip(trip);
         post.setDate(timeStamp);
+        post.setDateExpired(timeStampExpired);
         post.setComment(this.doClean(comment));
         post.setSpoiler(spoiler);
         post.setDeleted(false);
         post.setSticky(sticky);
         post.setCapcode(capcode);
+        post.setPosterHash(posterHash);
         post.setOmitted(omitted);
         
         return post;
@@ -255,72 +265,72 @@ public class Yotsuba extends WWW {
         // it can collect all of the substring.
         // This is very wasteful when it comes to memory, so we force creating
         // new strings for the regex matches through the String constructor.
-        String link     = (mat.group(1) != null) ? new String(mat.group(1)) : null;
-        String mediaFn  = (mat.group(2) != null) ?  new String(mat.group(2)) : null;
-        boolean spoiler = (mat.group(3) != null);
-        String fileSize = (mat.group(4) != null) ? new String(mat.group(4)) : null;
-        int width       = (mat.group(5) != null) ? Integer.parseInt(mat.group(5)) : 0;
-        int height      = (mat.group(6) != null) ? Integer.parseInt(mat.group(6)) : 0;
-        String fileName = (mat.group(7) != null) ? new String(mat.group(7)) : null;
-        int tWidth      = (mat.group(8) != null) ? Integer.parseInt(mat.group(8)) : 0;
-        int tHeight     = (mat.group(9) != null) ? Integer.parseInt(mat.group(9)): 0;
-        String md5b64   = (mat.group(10) != null) ? new String(mat.group(10)) : null;
-        int num         = Integer.parseInt(mat.group(11));
-        String title    = new String(mat.group(12));
-        String email    = (mat.group(13) != null) ? new String(mat.group(13)) : null;
-        String name     = new String(mat.group(14));
-        String trip     = (mat.group(15) != null) ? new String(mat.group(15)) : null;
-        String capcode  = (mat.group(16) == null) ? 
-                          ((mat.group(17) != null) ? new String(mat.group(17)) : null) : 
-                          new String(mat.group(16));
-        //String uid = mat.group(18);
-        String date     = (mat.group(19) != null) ? new String(mat.group(19)) : null;
-        boolean sticky  = (mat.group(20) != null);
-        String comment  = new String(mat.group(21));
-        boolean omitted = (mat.group(22) != null);
-        int omPosts     = (mat.group(23) != null) ? Integer.parseInt(mat.group(23)) : 0;
-        int omImages    = (mat.group(24) != null) ? Integer.parseInt(mat.group(24)) : 0;
+        String link       = (mat.group(1) != null) ? new String(mat.group(1)) : null;
+        String mediaFn    = (mat.group(2) != null) ?  new String(mat.group(2)) : null;
+        boolean spoiler   = (mat.group(3) != null);
+        String fileSize   = (mat.group(4) != null) ? new String(mat.group(4)) : null;
+        int width         = (mat.group(5) != null) ? Integer.parseInt(mat.group(5)) : 0;
+        int height        = (mat.group(6) != null) ? Integer.parseInt(mat.group(6)) : 0;
+        String fileName   = (mat.group(7) != null) ? new String(mat.group(7)) : null;
+        int tWidth        = (mat.group(8) != null) ? Integer.parseInt(mat.group(8)) : 0;
+        int tHeight       = (mat.group(9) != null) ? Integer.parseInt(mat.group(9)): 0;
+        String md5b64     = (mat.group(10) != null) ? new String(mat.group(10)) : null;
+        int num           = Integer.parseInt(mat.group(11));
+        String title      = new String(mat.group(12));
+        String email      = (mat.group(13) != null) ? new String(mat.group(13)) : null;
+        String name       = new String(mat.group(14));
+        String trip       = (mat.group(15) != null) ? new String(mat.group(15)) : null;
+        String capcode    = (mat.group(16) == null) ? 
+                          	((mat.group(17) != null) ? new String(mat.group(17)) : null) : 
+                          	new String(mat.group(16));
+        String posterHash = (mat.group(18) != null) ? new String(mat.group(18)) : null;
+        String date       = (mat.group(19) != null) ? new String(mat.group(19)) : null;
+        boolean sticky    = (mat.group(20) != null);
+        String comment    = new String(mat.group(21));
+        boolean omitted   = (mat.group(22) != null);
+        int omPosts       = (mat.group(23) != null) ? Integer.parseInt(mat.group(23)) : 0;
+        int omImages      = (mat.group(24) != null) ? Integer.parseInt(mat.group(24)) : 0;
         
         Topic thread = new Topic(num, omPosts, omImages);
         Post op = this.newYotsubaPost(link, mediaFn, spoiler, fileSize, width, height, fileName, tWidth, 
-                tHeight, md5b64, num, title, email, name, trip, capcode, date, sticky, comment, omitted, 0);
+                tHeight, md5b64, num, title, email, name, trip, capcode, date, sticky, posterHash, comment, omitted, num);
         thread.addPost(op);
         
         return thread;
     }
     
-    public Post parsePost(String text, int parent) throws ContentParseException {
+    public Post parsePost(String text, int threadNum) throws ContentParseException {
         Matcher mat = postParsePattern.matcher(text);
         
         if(!mat.find()) {
             throw new ContentParseException("Could not parse post (post regex failed)");
         }        
-        int num         = Integer.parseInt(mat.group(1));
-        String title    = new String(mat.group(2));
-        String email    = (mat.group(3) != null) ? new String(mat.group(3)) : null;
-        String name     = new String(mat.group(4));
-        String trip     = (mat.group(5) != null) ? new String(mat.group(5)) : null;
-        String capcode  = (mat.group(6) == null) ? 
-                          ((mat.group(7) != null) ? new String(mat.group(7)) : null) : 
-                          new String(mat.group(6));
-        //String uid    = mat.group(8);
-        String date     = (mat.group(9) != null) ? new String(mat.group(9)) : null;
-        String link     = (mat.group(10) != null) ? new String(mat.group(10)) : null;
-        String mediaFn  = (mat.group(11) != null) ? new String(mat.group(11)) : null;
-        boolean spoiler = (mat.group(12) != null);
-        String fileSize = (mat.group(13) != null) ? new String(mat.group(13)) : null;
-        int width       = (mat.group(14) != null) ? Integer.parseInt(mat.group(14)) : 0;
-        int height      = (mat.group(15) != null) ? Integer.parseInt(mat.group(15)) : 0;
-        String fileName = (mat.group(16) != null) ? new String(mat.group(16)) : null;
-        int tWidth      = (mat.group(17) != null) ? Integer.parseInt(mat.group(17)) : 0;
-        int tHeight     = (mat.group(18) != null) ? Integer.parseInt(mat.group(18)) : 0;
-        String md5b64   = (mat.group(19) != null) ? new String(mat.group(19)) : null;
-        String comment  = new String(mat.group(20));
-        boolean omitted = (mat.group(21) != null);
-        boolean sticky  = false;
+        int num           = Integer.parseInt(mat.group(1));
+        String title      = new String(mat.group(2));
+        String email      = (mat.group(3) != null) ? new String(mat.group(3)) : null;
+        String name       = new String(mat.group(4));
+        String trip       = (mat.group(5) != null) ? new String(mat.group(5)) : null;
+        String capcode    = (mat.group(6) == null) ? 
+                            ((mat.group(7) != null) ? new String(mat.group(7)) : null) : 
+                            new String(mat.group(6));
+        String posterHash = (mat.group(8) != null) ? new String(mat.group(8)) : null;
+        String date       = (mat.group(9) != null) ? new String(mat.group(9)) : null;
+        String link       = (mat.group(10) != null) ? new String(mat.group(10)) : null;
+        String mediaFn    = (mat.group(11) != null) ? new String(mat.group(11)) : null;
+        boolean spoiler   = (mat.group(12) != null);
+        String fileSize   = (mat.group(13) != null) ? new String(mat.group(13)) : null;
+        int width         = (mat.group(14) != null) ? Integer.parseInt(mat.group(14)) : 0;
+        int height        = (mat.group(15) != null) ? Integer.parseInt(mat.group(15)) : 0;
+        String fileName   = (mat.group(16) != null) ? new String(mat.group(16)) : null;
+        int tWidth        = (mat.group(17) != null) ? Integer.parseInt(mat.group(17)) : 0;
+        int tHeight       = (mat.group(18) != null) ? Integer.parseInt(mat.group(18)) : 0;
+        String md5b64     = (mat.group(19) != null) ? new String(mat.group(19)) : null;
+        String comment    = new String(mat.group(20));
+        boolean omitted   = (mat.group(21) != null);
+        boolean sticky    = false;
        
         Post post = this.newYotsubaPost(link, mediaFn, spoiler, fileSize, width, height, fileName, tWidth, 
-                tHeight, md5b64, num, title, email, name, trip, capcode, date, sticky, comment, omitted, parent);
+                tHeight, md5b64, num, title, email, name, trip, capcode, date, sticky, posterHash, comment, omitted, threadNum);
         
         return post;
     }
