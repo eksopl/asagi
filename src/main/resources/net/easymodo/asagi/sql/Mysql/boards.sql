@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS %%BOARD%% ( 
   doc_id int unsigned NOT NULL auto_increment, 
   media_id int unsigned NOT NULL DEFAULT '0', 
-  poster_id decimal(39,0) unsigned NOT NULL DEFAULT '0', 
+  poster_ip decimal(39,0) unsigned NOT NULL DEFAULT '0', 
   num int unsigned NOT NULL, 
   subnum int unsigned NOT NULL, 
   thread_num int unsigned NOT NULL DEFAULT '0', 
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS %%BOARD%% (
   
   PRIMARY KEY (doc_id), 
   UNIQUE num_subnum_index (num, subnum), 
-  INDEX poster_id_index(poster_id), 
+  INDEX poster_ip_index(poster_ip), 
   INDEX media_id_index(media_id),
   INDEX num_index(num), 
   INDEX subnum_index(subnum),
