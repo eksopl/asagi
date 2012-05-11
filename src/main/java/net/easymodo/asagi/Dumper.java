@@ -194,11 +194,11 @@ public class Dumper {
                 
                 for(Post post : posts) {
                     try {
-                        MediaPost mediaPost = new MediaPost(post.getNum(), post.getParent() == 0, 
-                                post.getPreview(), post.getOrigFilename(), post.getMediaHash());
+                        MediaPost mediaPost = new MediaPost(post.getNum(), post.isOp(), 
+                                post.getPreviewOrig(), post.getMediaFilename(), post.getMediaHash());
 
-                        if(post.getPreview() != null) mediaPreviewUpdates.put(mediaPost);
-                        if(post.getOrigFilename() != null && fullMedia) mediaUpdates.put(mediaPost);
+                        if(post.getPreviewOrig() != null) mediaPreviewUpdates.put(mediaPost);
+                        if(post.getMediaFilename() != null && fullMedia) mediaUpdates.put(mediaPost);
                     } catch(InterruptedException e) { }
                 }
                 newTopic.purgePosts();
@@ -334,7 +334,7 @@ public class Dumper {
                             if(newPost.isOmitted()) mustRefresh = true;
                             
                             // We have to refresh to get the image filename, sadly
-                            if(newPost.getMedia() != null) mustRefresh = true;
+                            if(newPost.getMediaOrig() != null) mustRefresh = true;
                         }
                         
                         // Update the time we last hit this thread

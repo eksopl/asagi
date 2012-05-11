@@ -192,7 +192,7 @@ public class Local extends Board {
         if(h.getMediaFilename() == null) return;
         Media mediaRow = db.getMedia(h); 
         if(mediaRow.getBanned() == 1) return;
-        String filename = mediaRow.getMediaFilename();
+        String filename = mediaRow.getMedia();
         
         // Preview filename is enough for us here, we just need the first part of the string
         String mediaDir = makeDir(filename, DIR_MEDIA);
