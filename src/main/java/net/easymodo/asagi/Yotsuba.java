@@ -180,6 +180,7 @@ public class Yotsuba extends WWW {
         int timeStampExpired = 0;
         String posterHash = null;
         
+        if(threadNum == 0) threadNum = num;
         boolean op = (threadNum == num);
 
         if(name.equals("")) name = null;
@@ -196,8 +197,7 @@ public class Yotsuba extends WWW {
             
             //mediaOrig = number + "." + type;
             filename = (filename != null) ? filename : (number + "." + type);
-            //if(mediaOrig == null) 
-            mediaOrig = number + "." + type;
+            if(mediaOrig == null) mediaOrig = number + "." + type;
             previewOrig = number + "s.jpg";
         }
         

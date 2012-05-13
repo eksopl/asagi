@@ -37,6 +37,7 @@ public abstract class SQL implements DB {
     protected PreparedStatement insertStmt = null;
     protected PreparedStatement updateDeletedStmt = null;
     protected PreparedStatement selectMediaStmt = null;
+    protected PreparedStatement updateMediaStmt = null;
         
     public synchronized void init(String connStr, String path, BoardSettings info) throws BoardInitException {
         this.table = info.getTable();
@@ -64,6 +65,9 @@ public abstract class SQL implements DB {
         String selectMediaQuery = String.format("SELECT * FROM %s_images WHERE media_hash = ?", 
                 this.table);
         
+        String updateMediaQuery = String.format("UPDATE %s_images SET media = ? WHERE media_hash = ? AND media IS NULL", 
+                this.table);
+        
         try {
             conn = DriverManager.getConnection(connStr);
             conn.setAutoCommit(false);
@@ -87,6 +91,7 @@ public abstract class SQL implements DB {
             updateStmt = conn.prepareStatement(updateQuery);
             updateDeletedStmt = conn.prepareStatement(updateDeletedQuery);
             selectMediaStmt = conn.prepareStatement(selectMediaQuery);
+            updateMediaStmt = conn.prepareStatement(updateMediaQuery);
        } catch (SQLException e) {
            throw new BoardInitException(e);
        }
@@ -302,6 +307,31 @@ public abstract class SQL implements DB {
             // Getting here means something isn't right with our transaction isolation mode
             // (Or maybe the DB we're using just sucks)
             throw new ContentGetException("Media hash " + post.getMediaHash() + " not found in media DB table");
+        }
+        
+        // update media when it's null if we actually have it
+        if(media.getMedia() == null && post.getMediaFilename() != null)
+        {
+        	try {
+                updateMediaStmt.setString(1, post.getMediaFilename());
+                updateMediaStmt.setString(2, post.getMediaHash());
+                updateMediaStmt.executeUpdate();
+            } catch(SQLException e) {
+                throw new ContentGetException(e);
+            }
+        	
+        	try {
+                conn.commit();
+                media.setMedia(post.getMediaFilename());
+            } catch(SQLException e) {
+                try {
+                    conn.rollback();
+                } catch(SQLException e1) {
+                    e1.setNextException(e);
+                    throw new ContentGetException(e1);
+                }
+                throw new ContentGetException(e);
+            }
         }
         
         // If this happens, we have inconsistent data stored.
