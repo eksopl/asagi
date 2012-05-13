@@ -332,9 +332,6 @@ public class Dumper {
                             // Comment too long. Click here to view the full text.
                             // This means we have to refresh the full thread
                             if(newPost.isOmitted()) mustRefresh = true;
-                            
-                            // We have to refresh to get the image filename, sadly
-                            if(newPost.getMediaOrig() != null) mustRefresh = true;
                         }
                         
                         // Update the time we last hit this thread
