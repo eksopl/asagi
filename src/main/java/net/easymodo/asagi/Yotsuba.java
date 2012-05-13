@@ -31,6 +31,7 @@ public class Yotsuba extends WWW {
     private static final Pattern commentPattern;
     private static final Pattern stickyPattern;
     private static final Pattern omittedPattern;
+    private static final Pattern oldCapPattern;
     
     private static final Pattern omPostsPattern;
     private static final Pattern omImagesPattern;
@@ -65,6 +66,7 @@ public class Yotsuba extends WWW {
         String commentPatString = "<blockquote \\s class=\"postMessage\" [^>]*>(.*?)</blockquote>";
         String stickyPatString = "<img [^>]* \\s* alt=\"Sticky\" \\s* title=\"Sticky\" \\s */>";
         String omittedPatString = "<span \\s class=\"abbr\">Comment \\s too \\s long";
+        String oldCapPatString = "<span \\s class=\"commentpostername\"><span [^>]*>\\#\\# \\s (.)[^<]*</span></span>";
         
         String omPostsPatString = "<span \\s class=\"info\">\\s*<strong>([0-9]*) \\s posts \\s omitted";
         String omImagesPatString = "<em>\\(([0-9]*) \\s have \\s images\\)</em>";
@@ -75,6 +77,8 @@ public class Yotsuba extends WWW {
         commentPattern = Pattern.compile(commentPatString, Pattern.COMMENTS | Pattern.DOTALL);
         stickyPattern = Pattern.compile(stickyPatString, Pattern.COMMENTS | Pattern.DOTALL);
         omittedPattern = Pattern.compile(omittedPatString, Pattern.COMMENTS | Pattern.DOTALL);
+        oldCapPattern = Pattern.compile(oldCapPatString, Pattern.COMMENTS | Pattern.DOTALL);
+
         
         omPostsPattern = Pattern.compile(omPostsPatString, Pattern.COMMENTS | Pattern.DOTALL);
         omImagesPattern = Pattern.compile(omImagesPatString, Pattern.COMMENTS | Pattern.DOTALL);
@@ -318,6 +322,11 @@ public class Yotsuba extends WWW {
                             ((mat.group(5) != null) ? new String(mat.group(5)) : null) : 
                             new String(mat.group(4));
          //String uid = mat.group(6);
+                            
+         mat = oldCapPattern.matcher(text);
+         if(mat.find()) {
+             capcode = (mat.group(1) != null) ? new String(mat.group(1)) : null;
+         }
                 
          mat = datePattern.matcher(text);
          if(!mat.find()) {
