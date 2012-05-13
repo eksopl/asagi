@@ -143,6 +143,7 @@ public class Yotsuba extends WWW {
             String name, String trip, String capcode, String date, boolean sticky, 
             String posterHash, String comment, boolean omitted, int threadNum) throws ContentParseException 
     {
+    	
         String type = "";
         String mediaOrig = null;
         String previewOrig = null;
@@ -152,7 +153,7 @@ public class Yotsuba extends WWW {
         String exif = null;
         int timeStampExpired = 0;
         
-        boolean op = threadNum == num;
+        boolean op = (threadNum == num);
 
         if(name.equals("")) name = null;
         if(comment.equals("")) comment = null;
@@ -166,11 +167,11 @@ public class Yotsuba extends WWW {
             String number = mat.group(1);
             type = mat.group(2);
             
-            if(filename != null) {
-                mediaOrig = filename;
-            } else {
+            //if(filename != null) {
+            //    mediaOrig = filename;
+            //} else {
                 mediaOrig = number + "." + type;
-            }
+            //}
             
             previewOrig = number + "s.jpg";
           
@@ -191,7 +192,7 @@ public class Yotsuba extends WWW {
         post.setType(type);
         post.setMediaOrig(mediaOrig);
         post.setMediaHash(md5);
-        post.setMediaFilename(mediaFilename);
+        post.setMediaFilename(filename);
         post.setMediaSize(mediaSize);
         post.setMediaW(width);
         post.setMediaH(height);
@@ -293,7 +294,7 @@ public class Yotsuba extends WWW {
         
         Topic thread = new Topic(num, omPosts, omImages);
         Post op = this.newYotsubaPost(link, mediaFn, spoiler, fileSize, width, height, fileName, tWidth, 
-                tHeight, md5b64, num, title, email, name, trip, capcode, date, sticky, posterHash, comment, omitted, 0);
+                tHeight, md5b64, num, title, email, name, trip, capcode, date, sticky, posterHash, comment, omitted, num);
         thread.addPost(op);
         
         return thread;
