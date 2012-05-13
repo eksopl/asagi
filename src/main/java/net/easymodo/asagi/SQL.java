@@ -304,6 +304,10 @@ public abstract class SQL implements DB {
             throw new ContentGetException("Media hash " + post.getMediaHash() + " not found in media DB table");
         }
         
+        // If this happens, we have inconsistent data stored.
+        if(media.getMedia() == null)
+            throw new ContentGetException("Media filename is null. _images table is inconsistent.");
+        
         return media;
     }
 }
