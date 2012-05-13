@@ -61,7 +61,7 @@ public class Yotsuba extends WWW {
         
         String numPatString = "<div \\s id=\"p([^\"]*)\" \\s class=\"post \\s [^\"]*\">";
         String titlePatString = "<span \\s class=\"subject\">([^<]*)</span>";
-        String datePatString = "<span \\s class=\"dateTime\">([^<]*)</span>";
+        String datePatString = "<span \\s class=\"dateTime\" [^>]*>([^<]*)</span>";
         String commentPatString = "<blockquote \\s class=\"postMessage\" [^>]*>(.*?)</blockquote>";
         String stickyPatString = "<img [^>]* \\s* alt=\"Sticky\" \\s* title=\"Sticky\" \\s */>";
         String omittedPatString = "<span \\s class=\"abbr\">Comment \\s too \\s long";
