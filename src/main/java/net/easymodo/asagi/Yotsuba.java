@@ -61,7 +61,7 @@ public class Yotsuba extends WWW {
         
         String numPatString = "<div \\s id=\"p([^\"]*)\" \\s class=\"post \\s [^\"]*\">";
         String titlePatString = "<span \\s class=\"subject\">([^<]*)</span>";
-        String datePatString = "<span \\s class=\"dateTime\">([^<]*)</span>";
+        String datePatString = "<span \\s class=\"dateTime\" [^>]*>([^<]*)</span>";
         String commentPatString = "<blockquote \\s class=\"postMessage\" [^>]*>(.*?)</blockquote>";
         String stickyPatString = "<img [^>]* \\s* alt=\"Sticky\" \\s* title=\"Sticky\" \\s */>";
         String omittedPatString = "<span \\s class=\"abbr\">Comment \\s too \\s long";
@@ -165,7 +165,7 @@ public class Yotsuba extends WWW {
         return (int) (v * sizeMultipliers.get(m));
     }
     
-    public Post newYotsubaPost(String link, String mediaFilename, boolean spoiler,
+    public Post newYotsubaPost(String link, String mediaOrig, boolean spoiler,
             String filesize, int width, int height, String filename, int tWidth,
             int tHeight, String md5, int num, String title, String email,
             String name, String trip, String capcode, String date, boolean sticky,
@@ -173,7 +173,6 @@ public class Yotsuba extends WWW {
     {
     	
         String type = "";
-        String mediaOrig = null;
         String previewOrig = null;
         
         // TODO add the following variables
@@ -196,8 +195,9 @@ public class Yotsuba extends WWW {
             type = mat.group(2);
             
             //mediaOrig = number + "." + type;
-            mediaOrig = (filename != null) ? filename : (number + "." + type);
-            if(mediaFilename == null) mediaFilename = number + "." + type;
+            filename = (filename != null) ? filename : (number + "." + type);
+            //if(mediaOrig == null) 
+            mediaOrig = number + "." + type;
             previewOrig = number + "s.jpg";
         }
         
