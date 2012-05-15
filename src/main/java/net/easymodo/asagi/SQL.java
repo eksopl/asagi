@@ -37,6 +37,7 @@ public abstract class SQL implements DB {
     protected PreparedStatement insertStmt = null;
     protected PreparedStatement updateDeletedStmt = null;
     protected PreparedStatement selectMediaStmt = null;
+    protected PreparedStatement updateMediaStmt = null;
         
     public synchronized void init(String connStr, String path, BoardSettings info) throws BoardInitException {
         this.table = info.getTable();
@@ -48,8 +49,8 @@ public abstract class SQL implements DB {
         if(this.insertQuery == null) {
             this.insertQuery = String.format(
                     "INSERT INTO %s" +
-                    " (poster_ip, num, subnum, thread_num, op, timestamp, timestamp_expired, preview_orig, preview_w, preview_h, media_orig, " +
-                    " media_w, media_h, media_size, media_hash, media_filename, spoiler, deleted, " +
+                    " (poster_ip, num, subnum, thread_num, op, timestamp, timestamp_expired, preview_orig, preview_w, preview_h, media_filename, " +
+                    " media_w, media_h, media_size, media_hash, media_orig, spoiler, deleted, " +
                     " capcode, email, name, trip, title, comment, delpass, sticky, poster_hash, exif) " +
                     "  SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? " +
                     "  WHERE NOT EXISTS (SELECT 1 FROM %s WHERE num=? and subnum=?)", 
@@ -62,6 +63,9 @@ public abstract class SQL implements DB {
         String updateDeletedQuery = String.format("UPDATE %s SET deleted = ? WHERE num = ? and subnum = ?", 
                 this.table);
         String selectMediaQuery = String.format("SELECT * FROM %s_images WHERE media_hash = ?", 
+                this.table);
+        
+        String updateMediaQuery = String.format("UPDATE %s_images SET media = ? WHERE media_hash = ? AND media IS NULL", 
                 this.table);
         
         try {
@@ -87,6 +91,7 @@ public abstract class SQL implements DB {
             updateStmt = conn.prepareStatement(updateQuery);
             updateDeletedStmt = conn.prepareStatement(updateDeletedQuery);
             selectMediaStmt = conn.prepareStatement(selectMediaQuery);
+            updateMediaStmt = conn.prepareStatement(updateMediaQuery);
        } catch (SQLException e) {
            throw new BoardInitException(e);
        }
@@ -303,6 +308,35 @@ public abstract class SQL implements DB {
             // (Or maybe the DB we're using just sucks)
             throw new ContentGetException("Media hash " + post.getMediaHash() + " not found in media DB table");
         }
+        
+        // update media when it's null if we actually have it
+        if(media.getMedia() == null && post.getMediaFilename() != null)
+        {
+        	try {
+                updateMediaStmt.setString(1, post.getMediaFilename());
+                updateMediaStmt.setString(2, post.getMediaHash());
+                updateMediaStmt.executeUpdate();
+            } catch(SQLException e) {
+                throw new ContentGetException(e);
+            }
+        	
+        	try {
+                conn.commit();
+                media.setMedia(post.getMediaFilename());
+            } catch(SQLException e) {
+                try {
+                    conn.rollback();
+                } catch(SQLException e1) {
+                    e1.setNextException(e);
+                    throw new ContentGetException(e1);
+                }
+                throw new ContentGetException(e);
+            }
+        }
+        
+        // If this happens, we have inconsistent data stored.
+        if(media.getMedia() == null)
+            throw new ContentGetException("Media filename is null. _images table is inconsistent.");
         
         return media;
     }

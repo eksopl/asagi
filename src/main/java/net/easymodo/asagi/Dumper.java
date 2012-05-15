@@ -195,10 +195,10 @@ public class Dumper {
                 for(Post post : posts) {
                     try {
                         MediaPost mediaPost = new MediaPost(post.getNum(), post.isOp(), 
-                                post.getPreviewOrig(), post.getMediaFilename(), post.getMediaHash());
+                                post.getPreviewOrig(), post.getMediaOrig(), post.getMediaHash());
 
                         if(post.getPreviewOrig() != null) mediaPreviewUpdates.put(mediaPost);
-                        if(post.getMediaFilename() != null && fullMedia) mediaUpdates.put(mediaPost);
+                        if(post.getMediaOrig() != null && fullMedia) mediaUpdates.put(mediaPost);
                     } catch(InterruptedException e) { }
                 }
                 newTopic.purgePosts();
@@ -332,9 +332,6 @@ public class Dumper {
                             // Comment too long. Click here to view the full text.
                             // This means we have to refresh the full thread
                             if(newPost.isOmitted()) mustRefresh = true;
-                            
-                            // We have to refresh to get the image filename, sadly
-                            if(newPost.getMediaOrig() != null) mustRefresh = true;
                         }
                         
                         // Update the time we last hit this thread
@@ -546,6 +543,8 @@ public class Dumper {
             bSet.setUsername(defSet.getUsername());
         if(bSet.getPassword() == null)
             bSet.setPassword(defSet.getPassword());
+        if(bSet.getCharset() == null)
+            bSet.setCharset(defSet.getCharset());
         if(bSet.getPath() == null)
             bSet.setPath(defSet.getPath() + "/" + boardName + "/");
         if(bSet.getWebserverGroup() == null)

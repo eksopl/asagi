@@ -151,6 +151,8 @@ public class Local extends Board {
         if(mediaRow.getBanned() == 1) return;
         String filename = h.isOp() ?  mediaRow.getPreviewOp() : mediaRow.getPreviewReply();
         
+        if(filename == null) return;
+        
         String thumbDir = makeDir(filename, DIR_THUMB);
         
         // Construct the path and back down if the file already exists
@@ -193,6 +195,8 @@ public class Local extends Board {
         Media mediaRow = db.getMedia(h); 
         if(mediaRow.getBanned() == 1) return;
         String filename = mediaRow.getMedia();
+        
+        if(filename == null) return;
         
         // Preview filename is enough for us here, we just need the first part of the string
         String mediaDir = makeDir(filename, DIR_MEDIA);
