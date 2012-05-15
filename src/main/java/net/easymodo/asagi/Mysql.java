@@ -12,20 +12,22 @@ public class Mysql extends SQL {
         String dbHost = info.getHost();
         String dbUsername = info.getUsername();
         String dbPassword = info.getPassword();
+        String dbCharset = info.getCharset();
         
-        String extraArgs = "rewriteBatchedStatements=true&allowMultiQueries=true";
+        String extraArgs = "rewriteBatchedStatements=true&allowMultiQueries=true&autoReconnect=true";
         
         String connStr = String.format("jdbc:mysql://%s/%s?user=%s&password=%s&%s",
                 dbHost, dbName, dbUsername, dbPassword, extraArgs);
         
-        // TODO: Let user specify charset
-        this.charset = "utf8mb4";
+        this.charset = dbCharset;
+        
         this.insertQuery = String.format(
                 "INSERT INTO %s" +
-                " (id, num, subnum, parent, timestamp, preview, preview_w, preview_h, media, " +
-                " media_w, media_h, media_size, media_hash, orig_filename, spoiler, deleted, " +
-                " capcode, email, name, trip, title, comment, delpass, sticky) " +
-                "  SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? FROM DUAL " +
+                " (poster_ip, num, subnum, thread_num, op, timestamp, timestamp_expired, " +
+                " preview_orig, preview_w, preview_h, media_filename, " +
+                " media_w, media_h, media_size, media_hash, media_orig, spoiler, deleted, " +
+                " capcode, email, name, trip, title, comment, delpass, sticky, poster_hash, exif) " +
+                "  SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? FROM DUAL " +
                 "  WHERE NOT EXISTS (SELECT 1 FROM %s WHERE num=? and subnum=?)", 
                 info.getTable(), info.getTable());
         this.tableCheckQuery = "SHOW TABLES LIKE ?";

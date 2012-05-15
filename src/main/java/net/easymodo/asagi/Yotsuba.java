@@ -114,7 +114,7 @@ public class Yotsuba extends WWW {
         // Comment too long, also EXIF tag toggle
         text = text.replaceAll("<span class=\"abbr\">.*?</span>", "");
         // Banned/Warned text
-        text = text.replaceAll("<(?:b|strong) style=\"color:red;\">(.*?)</(?:b|strong)>", "[banned]$1[/banned]");
+        text = text.replaceAll("<(?:b|strong) style=\"color:\\s*red;\">(.*?)</(?:b|strong)>", "[banned]$1[/banned]");
         // moot text
         text = text.replaceAll("<div style=\"padding: 5px;margin-left: \\.5em;border-color: #faa;border: 2px dashed rgba\\(255,0,0,\\.1\\);border-radius: 2px\">(.*?)</div>", "[moot]$1[/moot]");
         // bold text
@@ -169,16 +169,24 @@ public class Yotsuba extends WWW {
         return (int) (v * sizeMultipliers.get(m));
     }
     
-    public Post newYotsubaPost(String link, String mediaFilename, boolean spoiler,
+    public Post newYotsubaPost(String link, String mediaOrig, boolean spoiler,
             String filesize, int width, int height, String filename, int tWidth,
             int tHeight, String md5, int num, String title, String email,
             String name, String trip, String capcode, String date, boolean sticky,
-            String comment, boolean omitted, int parent) throws ContentParseException 
+            String comment, boolean omitted, int threadNum) throws ContentParseException 
     {
+    	
         String type = "";
-        String media = null;
-        String preview = null;
+        String previewOrig = null;
         
+        // TODO add the following variables
+        String exif = null;
+        int timeStampExpired = 0;
+        String posterHash = null;
+        
+        if(threadNum == 0) threadNum = num;
+        boolean op = (threadNum == num);
+
         if(name.equals("")) name = null;
         if(comment.equals("")) comment = null;
         if(title.equals("")) title = null;
@@ -191,9 +199,10 @@ public class Yotsuba extends WWW {
             String number = mat.group(1);
             type = mat.group(2);
             
-            media = (filename != null) ? filename : (number + "." + type);
-            if(mediaFilename == null) mediaFilename = number + "." + type;
-            preview = number + "s.jpg";
+            //mediaOrig = number + "." + type;
+            filename = (filename != null) ? filename : (number + "." + type);
+            if(mediaOrig == null) mediaOrig = number + "." + type;
+            previewOrig = number + "s.jpg";
         }
         
         if(spoiler) {
@@ -213,27 +222,31 @@ public class Yotsuba extends WWW {
         Post post = new Post();
         post.setLink(link);
         post.setType(type);
-        post.setMedia(media);
+        post.setMediaOrig(mediaOrig);
         post.setMediaHash(md5);
-        post.setOrigFilename(mediaFilename);
+        post.setMediaFilename(filename);
         post.setMediaSize(mediaSize);
         post.setMediaW(width);
         post.setMediaH(height);
-        post.setPreview(preview);
+        post.setPreviewOrig(previewOrig);
         post.setPreviewW(tWidth);
         post.setPreviewH(tHeight);
+        post.setExif(exif);
         post.setNum(num);
-        post.setParent(parent);
+        post.setThreadNum(threadNum);
+        post.setOp(op);
         post.setTitle(this.cleanSimple(title));
         post.setEmail(email);
         post.setName(this.cleanSimple(name));
         post.setTrip(trip);
         post.setDate(timeStamp);
+        post.setDateExpired(timeStampExpired);
         post.setComment(this.doClean(comment));
         post.setSpoiler(spoiler);
         post.setDeleted(false);
         post.setSticky(sticky);
         post.setCapcode(capcode);
+        post.setPosterHash(posterHash);
         post.setOmitted(omitted);
         
         return post;
@@ -280,7 +293,7 @@ public class Yotsuba extends WWW {
         int omImages = 0;
         mat = omImagesPattern.matcher(text);
         if(mat.find()) omImages = Integer.parseInt(mat.group(1));
-        
+    
         Post op = this.parsePost(text, 0);
         Topic thread = new Topic(op.getNum(), omPosts, omImages);
         thread.addPost(op);
@@ -288,7 +301,8 @@ public class Yotsuba extends WWW {
         return thread;
     }
     
-    public Post parsePost(String text, int parent) throws ContentParseException {
+
+    public Post parsePost(String text, int threadNum) throws ContentParseException {
         // Java's substring methods actually just return a new string that
         // points to the original string.
         // In our case, Java will keep the entire page HTML on its heap until
@@ -371,7 +385,7 @@ public class Yotsuba extends WWW {
          if(mat.find()) omitted  = true;
        
         Post post = this.newYotsubaPost(link, null, spoiler, fileSize, width, height, fileName, tWidth, 
-                tHeight, md5b64, num, title, email, name, trip, capcode, date, sticky, comment, omitted, parent);
+                tHeight, md5b64, num, title, email, name, trip, capcode, date, sticky, comment, omitted, threadNum);
         
         return post;
     }
