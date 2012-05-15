@@ -3,17 +3,17 @@ package net.easymodo.asagi;
 public class Media {
 	private int mediaId;
     private String mediaHash;
-    private String mediaFilename;
+    private String media;
     private String previewOp;
     private String previewReply;
     private int total;
     private int banned;
     
-    public Media(int mediaId, String mediaHash, String mediaFilename, 
+    public Media(int mediaId, String mediaHash, String media, 
             String previewOp, String previewReply, int total, int banned) {
     	setMediaId(mediaId);
     	setMediaHash(mediaHash);
-    	setMediaFilename(mediaFilename);
+    	setMedia(media);
     	setPreviewOp(previewOp);
     	setPreviewReply(previewReply);
     	setTotal(total);
@@ -36,12 +36,12 @@ public class Media {
     	this.mediaHash = mediaHash;
     }
     
-    public String getMediaFilename() {
-    	return mediaFilename;
+    public String getMedia() {
+    	return media;
     }
     
-    public void setMediaFilename(String mediaFilename) {
-    	this.mediaFilename = mediaFilename;
+    public void setMedia(String media) {
+    	this.media = media;
     }
     
     public String getPreviewOp() {

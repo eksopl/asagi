@@ -5,6 +5,7 @@
     "host": "localhost",
     "username": "root",
     "password": "1234",
+    "charset": "utf8mb4",
     "path": "/Users/eksi/asagi/",
     "webserverGroup": "_www",
     "thumbThreads": 5,

@@ -1,21 +1,23 @@
 package net.easymodo.asagi;
 
 public class Post {
-    private int id;
+    private int posterIp;
     private int num;
     private int subnum;
-    private int parent;
+    private int threadNum;
+    private boolean op;
     private int date;
-    private String preview;
+    private int dateExpired;
+    private String previewOrig;
     private int previewW;
     private int previewH;
     private int mediaId;
-    private String media;
+    private String mediaOrig;
     private int mediaW;
     private int mediaH;
     private int mediaSize;
     private String mediaHash;
-    private String origFilename;
+    private String mediaFilename;
     private boolean spoiler;
     private boolean deleted;
     private String capcode;
@@ -26,17 +28,19 @@ public class Post {
     private String comment;
     private String delpass;
     private boolean sticky;
+    private String posterHash;
+    private String exif;
     
     private String link;
     private String type;
     private boolean omitted;
 
-    public int getId() {
-        return id;
+    public int getPosterIp() {
+        return posterIp;
     }
 
-    public void setId(int id) {
-        this.id = id;
+    public void setPosterIp(int posterIp) {
+        this.posterIp = posterIp;
     }
 
     public int getNum() {
@@ -55,12 +59,20 @@ public class Post {
         this.subnum = subnum;
     }
 
-    public int getParent() {
-        return parent;
+    public int getThreadNum() {
+        return threadNum;
     }
 
-    public void setParent(int parent) {
-        this.parent = parent;
+    public void setThreadNum(int threadNum) {
+        this.threadNum = threadNum;
+    }
+    
+    public boolean isOp() {
+        return op;
+    }
+
+    public void setOp(boolean op) {
+        this.op = op;
     }
 
     public int getDate() {
@@ -70,13 +82,21 @@ public class Post {
     public void setDate(int date) {
         this.date = date;
     }
-
-    public String getPreview() {
-        return preview;
+    
+    public int getDateExpired() {
+        return dateExpired;
     }
 
-    public void setPreview(String preview) {
-        this.preview = preview;
+    public void setDateExpired(int dateExpired) {
+        this.dateExpired = dateExpired;
+    }
+
+    public String getPreviewOrig() {
+        return previewOrig;
+    }
+
+    public void setPreviewOrig(String previewOrig) {
+        this.previewOrig = previewOrig;
     }
 
     public int getPreviewW() {
@@ -103,12 +123,12 @@ public class Post {
     	this.mediaId = mediaId;
     }
 
-    public String getMedia() {
-        return media;
+    public String getMediaOrig() {
+        return mediaOrig;
     }
 
-    public void setMedia(String media) {
-        this.media = media;
+    public void setMediaOrig(String mediaOrig) {
+        this.mediaOrig = mediaOrig;
     }
 
     public int getMediaW() {
@@ -143,12 +163,12 @@ public class Post {
         this.mediaHash = mediaHash;
     }
 
-    public String getOrigFilename() {
-        return origFilename;
+    public String getMediaFilename() {
+        return mediaFilename;
     }
 
-    public void setOrigFilename(String origFilename) {
-        this.origFilename = origFilename;
+    public void setMediaFilename(String mediaFilename) {
+        this.mediaFilename = mediaFilename;
     }
 
     public boolean isSpoiler() {
@@ -221,6 +241,22 @@ public class Post {
 
     public void setSticky(boolean sticky) {
         this.sticky = sticky;
+    }
+    
+    public String getPosterHash() {
+        return posterHash;
+    }
+
+    public void setPosterHash(String posterHash) {
+        this.posterHash = posterHash;
+    }
+    
+    public String getExif() {
+        return exif;
+    }
+
+    public void setExif(String exif) {
+        this.exif = exif;
     }
 
     public String getLink() {

@@ -8,6 +8,7 @@ public class BoardSettings {
     private String host;
     private String username;
     private String password;
+    private String charset;
     private String table;
     private String path;
     private String webserverGroup;
@@ -47,6 +48,12 @@ public class BoardSettings {
     }
     public void setPassword(String password) {
         this.password = password;
+    }
+    public String getCharset() {
+        return charset;
+    }
+    public void setCharset(String charset) {
+        this.charset = charset;
     }
     public String getTable() {
         return table;

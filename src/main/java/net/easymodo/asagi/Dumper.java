@@ -194,11 +194,11 @@ public class Dumper {
                 
                 for(Post post : posts) {
                     try {
-                        MediaPost mediaPost = new MediaPost(post.getNum(), post.getParent() == 0, 
-                                post.getPreview(), post.getOrigFilename(), post.getMediaHash());
+                        MediaPost mediaPost = new MediaPost(post.getNum(), post.isOp(), 
+                                post.getPreviewOrig(), post.getMediaOrig(), post.getMediaHash());
 
-                        if(post.getPreview() != null) mediaPreviewUpdates.put(mediaPost);
-                        if(post.getOrigFilename() != null && fullMedia) mediaUpdates.put(mediaPost);
+                        if(post.getPreviewOrig() != null) mediaPreviewUpdates.put(mediaPost);
+                        if(post.getMediaOrig() != null && fullMedia) mediaUpdates.put(mediaPost);
                     } catch(InterruptedException e) { }
                 }
                 newTopic.purgePosts();
@@ -543,6 +543,8 @@ public class Dumper {
             bSet.setUsername(defSet.getUsername());
         if(bSet.getPassword() == null)
             bSet.setPassword(defSet.getPassword());
+        if(bSet.getCharset() == null)
+            bSet.setCharset(defSet.getCharset());
         if(bSet.getPath() == null)
             bSet.setPath(defSet.getPath() + "/" + boardName + "/");
         if(bSet.getWebserverGroup() == null)
