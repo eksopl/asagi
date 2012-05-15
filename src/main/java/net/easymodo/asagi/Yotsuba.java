@@ -114,7 +114,7 @@ public class Yotsuba extends WWW {
         // Comment too long, also EXIF tag toggle
         text = text.replaceAll("<span class=\"abbr\">.*?</span>", "");
         // Banned/Warned text
-        text = text.replaceAll("<(?:b|strong) style=\"color:red;\">(.*?)</(?:b|strong)>", "[banned]$1[/banned]");
+        text = text.replaceAll("<(?:b|strong) style=\"color:\\s*red;\">(.*?)</(?:b|strong)>", "[banned]$1[/banned]");
         // moot text
         text = text.replaceAll("<div style=\"padding: 5px;margin-left: \\.5em;border-color: #faa;border: 2px dashed rgba\\(255,0,0,\\.1\\);border-radius: 2px\">(.*?)</div>", "[moot]$1[/moot]");
         // bold text
