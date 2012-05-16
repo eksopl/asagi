@@ -92,7 +92,6 @@ public abstract class SQL implements DB {
                 this.table);
         this.selectMediaQuery = String.format("SELECT * FROM %s_images WHERE media_hash = ?", 
                 this.table);
-        
         this.updateMediaQuery = String.format("UPDATE %s_images SET media = ? WHERE media_hash = ? AND media IS NULL", 
                 this.table);
 
@@ -340,9 +339,9 @@ public abstract class SQL implements DB {
         }
         
         // update media when it's null if we actually have it
-        if(media.getMedia() == null && post.getMediaFilename() != null) {
+        if(media.getMedia() == null && post.getMedia() != null) {
         	try {
-                updateMediaStmt.setString(1, post.getMediaFilename());
+                updateMediaStmt.setString(1, post.getMedia());
                 updateMediaStmt.setString(2, post.getMediaHash());
                 updateMediaStmt.executeUpdate();
             } catch(SQLException e) {
@@ -351,7 +350,7 @@ public abstract class SQL implements DB {
         	
         	try {
                 conn.commit();
-                media.setMedia(post.getMediaFilename());
+                media.setMedia(post.getMedia());
             } catch(SQLException e) {
                 try {
                     conn.rollback();

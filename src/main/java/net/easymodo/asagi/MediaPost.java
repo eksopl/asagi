@@ -3,15 +3,15 @@ package net.easymodo.asagi;
 public class MediaPost {
     private int num;
     private boolean op;
-    private String previewFilename;
-    private String mediaFilename;
+    private String preview;
+    private String media;
     private String mediaHash;
 
-    public MediaPost(int num, boolean op, String previewFilename, String mediaFilename, String mediaHash) {
+    public MediaPost(int num, boolean op, String preview, String media, String mediaHash) {
         this.num = num;
         this.op = op;
-        this.previewFilename = previewFilename;
-        this.mediaFilename = mediaFilename;
+        this.preview = preview;
+        this.media = media;
         this.mediaHash = mediaHash;
     }
     
@@ -21,17 +21,17 @@ public class MediaPost {
     public void setNum(int num) {
         this.num = num;
     }
-    public String getPreviewFilename() {
-        return previewFilename;
+    public String getPreview() {
+        return preview;
     }
-    public void setPreviewFilename(String previewFilename) {
-        this.previewFilename = previewFilename;
+    public void setPreview(String preview) {
+        this.preview = preview;
     }
-    public String getMediaFilename() {
-        return mediaFilename;
+    public String getMedia() {
+        return media;
     }
-    public void setMediaFilename(String mediaFilename) {
-        this.mediaFilename = mediaFilename;
+    public void setMedia(String media) {
+        this.media = media;
     }
     public String getMediaHash() {
         return mediaHash;

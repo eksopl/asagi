@@ -254,13 +254,13 @@ public class Yotsuba extends WWW {
     
     @Override
     public InputStream getMediaPreview(MediaPost h) throws ContentGetException {
-        if(h.getPreviewFilename() == null)
+        if(h.getPreview() == null)
             return null;
         
         InputStream inStream = null;
         try {
             inStream = this.wget(this.boardLinks.get("previewLink") + "/thumb/"
-                + h.getPreviewFilename() + "?" + System.currentTimeMillis()).getEntity().getContent();
+                + h.getPreview() + "?" + System.currentTimeMillis()).getEntity().getContent();
         } catch(IOException e) {
             throw new ContentGetException(e);
         }
@@ -270,13 +270,13 @@ public class Yotsuba extends WWW {
     
     @Override
     public InputStream getMedia(MediaPost h) throws ContentGetException {
-        if(h.getMediaFilename() == null)
+        if(h.getMedia() == null)
             return null;
         
         InputStream inStream = null;
         try {
             inStream = this.wget(this.boardLinks.get("imgLink") + "/src/"
-                + h.getMediaFilename() + "?" + System.currentTimeMillis()).getEntity().getContent();
+                + h.getMedia() + "?" + System.currentTimeMillis()).getEntity().getContent();
         } catch(IOException e) {
             throw new ContentGetException(e);
         }

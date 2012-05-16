@@ -150,7 +150,7 @@ public class Local extends Board {
     }
     
     public void insertMediaPreview(MediaPost h, Board source) throws ContentGetException, ContentStoreException {
-        if(h.getPreviewFilename() == null) return;
+        if(h.getPreview() == null) return;
         
         Media mediaRow = null;
         try {
@@ -167,7 +167,7 @@ public class Local extends Board {
         String thumbDir = makeDir(filename, DIR_THUMB);
         
         // Construct the path and back down if the file already exists
-        File thumbFile = new File(thumbDir + "/" + h.getPreviewFilename());
+        File thumbFile = new File(thumbDir + "/" + h.getPreview());
         if(thumbFile.exists()) return;
         
         InputStream inStream = source.getMediaPreview(h);
@@ -202,7 +202,7 @@ public class Local extends Board {
     }
     
     public void insertMedia(MediaPost h, Board source) throws ContentGetException, ContentStoreException {
-        if(h.getMediaFilename() == null) return;
+        if(h.getMedia() == null) return;
         
         Media mediaRow = null;
         try {
