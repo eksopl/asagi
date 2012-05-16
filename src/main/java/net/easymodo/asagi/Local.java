@@ -137,17 +137,28 @@ public class Local extends Board {
         return this.getDir(filename, dirType);
     }
     
-    public void insert(Topic topic) throws ContentStoreException {
+    public void insert(Topic topic) throws ContentStoreException, DBConnectionException {
         this.db.insert(topic);
     }
     
     public void markDeleted(int post) throws ContentStoreException {
-        this.db.markDeleted(post);
+        try{
+            this.db.markDeleted(post);
+        } catch(DBConnectionException e) {
+            throw new ContentStoreException("Lost connection to database, can't reconnect", e);
+        }
     }
     
     public void insertMediaPreview(MediaPost h, Board source) throws ContentGetException, ContentStoreException {
         if(h.getPreviewFilename() == null) return;
-        Media mediaRow = db.getMedia(h);
+        
+        Media mediaRow = null;
+        try {
+            mediaRow = db.getMedia(h);
+        } catch(DBConnectionException e) { 
+            throw new ContentStoreException("Lost connection to database, can't reconnect", e);
+        }
+        
         if(mediaRow.getBanned() == 1) return;
         String filename = h.isOp() ?  mediaRow.getPreviewOp() : mediaRow.getPreviewReply();
         
@@ -192,7 +203,13 @@ public class Local extends Board {
     
     public void insertMedia(MediaPost h, Board source) throws ContentGetException, ContentStoreException {
         if(h.getMediaFilename() == null) return;
-        Media mediaRow = db.getMedia(h); 
+        
+        Media mediaRow = null;
+        try {
+            mediaRow = db.getMedia(h);
+        } catch(DBConnectionException e) { 
+            throw new ContentStoreException("Lost connection to database, can't reconnect", e);
+        }
         if(mediaRow.getBanned() == 1) return;
         String filename = mediaRow.getMedia();
         

@@ -6,6 +6,7 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLRecoverableException;
 import java.sql.Statement;
 
 import org.apache.http.annotation.ThreadSafe;
@@ -16,6 +17,7 @@ import com.google.common.io.Resources;
 import net.easymodo.asagi.exception.BoardInitException;
 import net.easymodo.asagi.exception.ContentGetException;
 import net.easymodo.asagi.exception.ContentStoreException;
+import net.easymodo.asagi.exception.DBConnectionException;
 import net.easymodo.asagi.settings.BoardSettings;
 
 @ThreadSafe
@@ -23,13 +25,14 @@ public abstract class SQL implements DB {
     protected String table = null;
     protected String charset = null;
 
+    protected String connectionString = null;
+    
     protected String tableCheckQuery = null;
     protected String insertQuery = null;
     protected String updateQuery = null;
-    
-    protected String commonSqlRes = null;
-    protected String boardSqlRes = null;
-    protected String triggersSqlRes = null;
+    protected String updateDeletedQuery = null;
+    protected String selectMediaQuery = null;
+    protected String updateMediaQuery = null;
     
     protected Connection conn = null;
     protected PreparedStatement tableChkStmt = null;
@@ -38,9 +41,34 @@ public abstract class SQL implements DB {
     protected PreparedStatement updateDeletedStmt = null;
     protected PreparedStatement selectMediaStmt = null;
     protected PreparedStatement updateMediaStmt = null;
+    
+    protected String commonSqlRes = null;
+    protected String boardSqlRes = null;
+    protected String triggersSqlRes = null;
+    
+    private void reconnect() throws DBConnectionException {
+        try {
+            this.connect();
+        } catch(SQLException e) {
+            throw new DBConnectionException(e);
+        }
+    }
+    
+    private void connect() throws SQLException {
+        conn = DriverManager.getConnection(connectionString);
+        conn.setAutoCommit(false);
+        conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
         
+        insertStmt = conn.prepareStatement(insertQuery);
+        updateStmt = conn.prepareStatement(updateQuery);
+        updateDeletedStmt = conn.prepareStatement(updateDeletedQuery);
+        selectMediaStmt = conn.prepareStatement(selectMediaQuery);
+        updateMediaStmt = conn.prepareStatement(updateMediaQuery);
+    }
+    
     public synchronized void init(String connStr, String path, BoardSettings info) throws BoardInitException {
         this.table = info.getTable();
+        this.connectionString = connStr;
         
         this.commonSqlRes = "net/easymodo/asagi/sql/" + info.getEngine() + "/common.sql";
         this.boardSqlRes = "net/easymodo/asagi/sql/" + info.getEngine() + "/boards.sql";
@@ -60,41 +88,27 @@ public abstract class SQL implements DB {
                 String.format("UPDATE %s SET comment = ?, deleted = ?, media_filename = COALESCE(?, media_filename)," +
                         "  sticky = (? OR sticky) WHERE num=? and subnum=?", table);
       
-        String updateDeletedQuery = String.format("UPDATE %s SET deleted = ? WHERE num = ? and subnum = ?", 
+        this.updateDeletedQuery = String.format("UPDATE %s SET deleted = ? WHERE num = ? and subnum = ?", 
                 this.table);
-        String selectMediaQuery = String.format("SELECT * FROM %s_images WHERE media_hash = ?", 
-                this.table);
-        
-        String updateMediaQuery = String.format("UPDATE %s_images SET media = ? WHERE media_hash = ? AND media IS NULL", 
+        this.selectMediaQuery = String.format("SELECT * FROM %s_images WHERE media_hash = ?", 
                 this.table);
         
+        this.updateMediaQuery = String.format("UPDATE %s_images SET media = ? WHERE media_hash = ? AND media IS NULL", 
+                this.table);
+
         try {
-            conn = DriverManager.getConnection(connStr);
-            conn.setAutoCommit(false);
-            conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
-            
+            this.connect();
             tableChkStmt = conn.prepareStatement(tableCheckQuery);
-  
             try {
                 this.createTables();
             } catch(BoardInitException e) {
                 conn.commit();
                 throw e;
-            } catch(SQLException e) {
-                conn.rollback();
-                throw e;
-            }
-            
+            } 
             tableChkStmt.close();
-            
-            insertStmt = conn.prepareStatement(insertQuery);
-            updateStmt = conn.prepareStatement(updateQuery);
-            updateDeletedStmt = conn.prepareStatement(updateDeletedQuery);
-            selectMediaStmt = conn.prepareStatement(selectMediaQuery);
-            updateMediaStmt = conn.prepareStatement(updateMediaQuery);
-       } catch (SQLException e) {
-           throw new BoardInitException(e);
-       }
+        } catch(SQLException e) {
+            throw new BoardInitException(e);
+        }   
     }
     
     public synchronized void createTables() throws BoardInitException, SQLException {
@@ -170,8 +184,8 @@ public abstract class SQL implements DB {
         }
     }
     
-    public synchronized void insert(Topic topic) throws ContentStoreException {    
-        try{
+    public synchronized void insert(Topic topic) throws ContentStoreException, DBConnectionException {
+        while(true) { try {
             for(Post post : topic.getPosts()) {
                 int c = 1;
                 updateStmt.setString(c++, post.getComment());
@@ -219,24 +233,34 @@ public abstract class SQL implements DB {
             insertStmt.executeBatch();
             updateStmt.executeBatch();
             conn.commit();
+            return;
         } catch(SQLException e) {
+            if(e.getCause() instanceof SQLRecoverableException) {
+                this.reconnect();
+                continue;
+            }
+            
             try {
                 conn.rollback();
             } catch(SQLException e1) {
-                e1.setNextException(e);
+                e1.setNextException(e1);
                 throw new ContentStoreException(e1);
             }
             throw new ContentStoreException(e);
-        }
+        }}
     }
     
-    public synchronized void markDeleted(int post) throws ContentStoreException {    
-        try {
+    public synchronized void markDeleted(int post) throws ContentStoreException, DBConnectionException {    
+        while(true) { try {
             updateDeletedStmt.setBoolean(1, true);
             updateDeletedStmt.setInt(2, post);
             updateDeletedStmt.setInt(3, 0);
             updateDeletedStmt.execute();
             conn.commit();
+            return;
+        } catch(SQLRecoverableException e) {
+            this.reconnect();
+            continue;
         } catch(SQLException e) {
             try {
                 conn.rollback();
@@ -245,18 +269,24 @@ public abstract class SQL implements DB {
                 throw new ContentStoreException(e1);
             }
             throw new ContentStoreException(e);
-        }
+        } } 
     }
     
-    public synchronized Media getMedia(MediaPost post) throws ContentGetException {
+    public synchronized Media getMedia(MediaPost post) throws ContentGetException, DBConnectionException {
         Media media = null;
         ResultSet mediaRs = null;
         
-        try {
-            selectMediaStmt.setString(1, post.getMediaHash());
-            mediaRs = selectMediaStmt.executeQuery();
-        } catch(SQLException e) {
-            throw new ContentGetException(e);
+        while(true) {
+            try {
+                selectMediaStmt.setString(1, post.getMediaHash());
+                mediaRs = selectMediaStmt.executeQuery();
+                break;
+            } catch(SQLRecoverableException e) {
+                this.reconnect();
+                continue;
+            } catch(SQLException e) {                
+                throw new ContentGetException(e);
+            }
         }
         
         try {
@@ -310,8 +340,7 @@ public abstract class SQL implements DB {
         }
         
         // update media when it's null if we actually have it
-        if(media.getMedia() == null && post.getMediaFilename() != null)
-        {
+        if(media.getMedia() == null && post.getMediaFilename() != null) {
         	try {
                 updateMediaStmt.setString(1, post.getMediaFilename());
                 updateMediaStmt.setString(2, post.getMediaHash());

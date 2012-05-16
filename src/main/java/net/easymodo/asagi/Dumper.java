@@ -123,7 +123,7 @@ public class Dumper {
                 MediaPost mediaPrevPost = null;
                 
                 try {
-                mediaPrevPost = mediaPreviewUpdates.take();
+                    mediaPrevPost = mediaPreviewUpdates.take();
                 } catch(InterruptedException e) { } 
                 
                 try {
@@ -183,6 +183,11 @@ public class Dumper {
                             ": " + e.getMessage());
                     
                     newTopic.lock.writeLock().unlock();
+                    continue;
+                } catch(DBConnectionException e) {
+                    debug(ERROR, "Database connection error while inserting topic: " + newTopic.getNum()
+                            + ". Lost connection to database, can't reconnect. Reason: "
+                            + e.getMessage());
                     continue;
                 }
                 
