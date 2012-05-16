@@ -233,7 +233,7 @@ public abstract class SQL implements DB {
             insertStmt.executeBatch();
             updateStmt.executeBatch();
             conn.commit();
-            return;
+            break;
         } catch(SQLException e) {
             if(e.getCause() instanceof SQLRecoverableException) {
                 this.reconnect();
@@ -243,7 +243,7 @@ public abstract class SQL implements DB {
             try {
                 conn.rollback();
             } catch(SQLException e1) {
-                e1.setNextException(e1);
+                e1.setNextException(e);
                 throw new ContentStoreException(e1);
             }
             throw new ContentStoreException(e);
@@ -257,7 +257,7 @@ public abstract class SQL implements DB {
             updateDeletedStmt.setInt(3, 0);
             updateDeletedStmt.execute();
             conn.commit();
-            return;
+            break;
         } catch(SQLRecoverableException e) {
             this.reconnect();
             continue;
