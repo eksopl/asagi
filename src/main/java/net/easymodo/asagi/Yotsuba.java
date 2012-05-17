@@ -28,6 +28,7 @@ public class Yotsuba extends WWW {
     private static final Pattern numPattern;
     private static final Pattern titlePattern;
     private static final Pattern datePattern;
+    private static final Pattern emailPattern;
     private static final Pattern commentPattern;
     private static final Pattern stickyPattern;
     private static final Pattern omittedPattern;
@@ -62,6 +63,7 @@ public class Yotsuba extends WWW {
         
         String numPatString = "<div \\s id=\"p([^\"]*)\" \\s class=\"post \\s [^\"]*\">";
         String titlePatString = "<span \\s class=\"subject\">([^<]*)</span>";
+        String emailPatString = "<a \\s href=\"mailto:([^\"]*)\" \\s class=\"useremail\">";
         String datePatString = "<span \\s class=\"dateTime\" [^>]*>([^<]*)</span>";
         String commentPatString = "<blockquote \\s class=\"postMessage\" [^>]*>(.*?)</blockquote>";
         String stickyPatString = "<img [^>]* \\s* alt=\"Sticky\" \\s* title=\"Sticky\" \\s */>";
@@ -73,6 +75,7 @@ public class Yotsuba extends WWW {
         
         numPattern = Pattern.compile(numPatString, Pattern.COMMENTS | Pattern.DOTALL);
         titlePattern = Pattern.compile(titlePatString, Pattern.COMMENTS | Pattern.DOTALL);
+        emailPattern = Pattern.compile(emailPatString, Pattern.COMMENTS | Pattern.DOTALL);
         datePattern = Pattern.compile(datePatString, Pattern.COMMENTS | Pattern.DOTALL);
         commentPattern = Pattern.compile(commentPatString, Pattern.COMMENTS | Pattern.DOTALL);
         stickyPattern = Pattern.compile(stickyPatString, Pattern.COMMENTS | Pattern.DOTALL);
@@ -325,21 +328,26 @@ public class Yotsuba extends WWW {
         }
         String title = new String(mat.group(1));
         
+        String email = null;
+        mat = emailPattern.matcher(text);
+        if(mat.find()) {
+            email = new String(mat.group(1));
+        }
+                
         mat = postParsePattern1.matcher(text);
         if(!mat.find()) {
             throw new ContentParseException("Could not parse thread (post info block regex failed)");
         }
-        String email   = (mat.group(1) != null) ? new String(mat.group(1)) : null;
-        String name    = new String(mat.group(2));
-        String trip    = (mat.group(3) != null) ? new String(mat.group(3)) : null;
-        String capcode = (mat.group(4) == null) ? 
-                            ((mat.group(5) != null) ? new String(mat.group(5)) : null) : 
-                            new String(mat.group(4));
-         //String uid = mat.group(6);
+        String name    = new String(mat.group(1));
+        String trip    = (mat.group(2) != null) ? new String(mat.group(2)) : null;
+        String capcode = (mat.group(3) == null) ? 
+                            ((mat.group(4) != null) ? new String(mat.group(4)) : null) : 
+                            new String(mat.group(3));
+         //String uid = mat.group(5);
                             
          mat = oldCapPattern.matcher(text);
          if(mat.find()) {
-             capcode = (mat.group(1) != null) ? new String(mat.group(1)) : null;
+             capcode =  new String(mat.group(1));
          }
                 
          mat = datePattern.matcher(text);
