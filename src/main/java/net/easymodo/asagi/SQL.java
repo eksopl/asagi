@@ -33,6 +33,8 @@ public abstract class SQL implements DB {
     protected String updateDeletedQuery = null;
     protected String selectMediaQuery = null;
     protected String updateMediaQuery = null;
+    protected String updatePreviewOpQuery = null;
+    protected String updatePreviewReplyQuery = null;
     
     protected Connection conn = null;
     protected PreparedStatement tableChkStmt = null;
@@ -41,6 +43,8 @@ public abstract class SQL implements DB {
     protected PreparedStatement updateDeletedStmt = null;
     protected PreparedStatement selectMediaStmt = null;
     protected PreparedStatement updateMediaStmt = null;
+    protected PreparedStatement updatePreviewOpStmt = null;
+    protected PreparedStatement updatePreviewReplyStmt = null;
     
     protected String commonSqlRes = null;
     protected String boardSqlRes = null;
@@ -64,6 +68,8 @@ public abstract class SQL implements DB {
         updateDeletedStmt = conn.prepareStatement(updateDeletedQuery);
         selectMediaStmt = conn.prepareStatement(selectMediaQuery);
         updateMediaStmt = conn.prepareStatement(updateMediaQuery);
+        updatePreviewOpStmt = conn.prepareStatement(updatePreviewOpQuery);
+        updatePreviewReplyStmt = conn.prepareStatement(updatePreviewReplyQuery);
     }
     
     public synchronized void init(String connStr, String path, BoardSettings info) throws BoardInitException {
@@ -92,7 +98,11 @@ public abstract class SQL implements DB {
                 this.table);
         this.selectMediaQuery = String.format("SELECT * FROM %s_images WHERE media_hash = ?", 
                 this.table);
-        this.updateMediaQuery = String.format("UPDATE %s_images SET media = ? WHERE media_hash = ? AND media IS NULL", 
+        this.updateMediaQuery = String.format("UPDATE %s_images SET media = ? WHERE media_hash = ?", 
+               this.table);
+        this.updatePreviewOpQuery = String.format("UPDATE %s_images SET preview_op = ? WHERE media_hash = ?", 
+                this.table);
+        this.updatePreviewReplyQuery = String.format("UPDATE %s_images SET preview_reply = ? WHERE media_hash = ?", 
                 this.table);
 
         try {
@@ -271,42 +281,29 @@ public abstract class SQL implements DB {
         } } 
     }
     
-    public synchronized Media getMedia(MediaPost post) throws ContentGetException, DBConnectionException {
+    public synchronized Media getMedia(MediaPost post) throws ContentGetException, ContentStoreException, DBConnectionException {
         Media media = null;
         ResultSet mediaRs = null;
         
+        // Get the media row from the _images table associated with this image
         while(true) {
             try {
                 selectMediaStmt.setString(1, post.getMediaHash());
                 mediaRs = selectMediaStmt.executeQuery();
+                conn.commit();
                 break;
             } catch(SQLRecoverableException e) {
                 this.reconnect();
                 continue;
-            } catch(SQLException e) {                
-                throw new ContentGetException(e);
-            }
-        }
-        
-        try {
-            conn.commit();
-        } catch(SQLException e) {
-            try {
-                conn.rollback();
-            } catch(SQLException e1) {
-                e1.setNextException(e);
-                throw new ContentGetException(e1);
-            } finally {
-                // throw new XzibitException.
-                // Since I'm cleaning all my resources like a good boy, I really
-                // have no other choice but to do this.
+            } catch(SQLException e) {             
                 try {
+                    conn.rollback();
                     mediaRs.close();
                 } catch(SQLException e1) {
-                    throw new ContentGetException(e1);
+                    e.setNextException(e1);
                 }
+                throw new ContentGetException(e);
             }
-            throw new ContentGetException(e);
         }
         
         try {
@@ -318,8 +315,7 @@ public abstract class SQL implements DB {
                     mediaRs.getString("preview_op"),
                     mediaRs.getString("preview_reply"),
                     mediaRs.getInt("total"),
-                    mediaRs.getInt("banned")
-                );
+                    mediaRs.getInt("banned"));
             }
         } catch(SQLException e) {
             throw new ContentGetException(e);
@@ -338,33 +334,38 @@ public abstract class SQL implements DB {
             throw new ContentGetException("Media hash " + post.getMediaHash() + " not found in media DB table");
         }
         
-        // update media when it's null if we actually have it
-        if(media.getMedia() == null && post.getMedia() != null) {
+        boolean mediaUpdate = media.getMedia() == null;
+        boolean previewOpUpdate = media.getPreviewOp() == null && post.isOp();
+        boolean previewReplyUpdate = media.getPreviewReply() == null && !post.isOp();
+        
+        // Update media row in _images table when any of its entries are null and we actually have it
+        if(mediaUpdate || previewOpUpdate || previewReplyUpdate) {
         	try {
-                updateMediaStmt.setString(1, post.getMedia());
-                updateMediaStmt.setString(2, post.getMediaHash());
-                updateMediaStmt.executeUpdate();
-            } catch(SQLException e) {
-                throw new ContentGetException(e);
-            }
-        	
-        	try {
+        	    if(mediaUpdate) {
+        	        updateMediaStmt.setString(1, post.getMedia());
+                    updateMediaStmt.setString(2, post.getMediaHash());
+                    updateMediaStmt.executeUpdate();
+        	    }
+        	    if(previewOpUpdate) {
+                    updatePreviewOpStmt.setString(1, post.getPreview());
+                    updatePreviewOpStmt.setString(2, post.getMediaHash());
+                    updatePreviewOpStmt.executeUpdate();
+        	    }
+        	    if(previewReplyUpdate) {
+                    updatePreviewReplyStmt.setString(1, post.getPreview());
+                    updatePreviewReplyStmt.setString(2, post.getMediaHash());
+                    updatePreviewReplyStmt.executeUpdate();
+        	    }
                 conn.commit();
-                media.setMedia(post.getMedia());
             } catch(SQLException e) {
                 try {
                     conn.rollback();
                 } catch(SQLException e1) {
-                    e1.setNextException(e);
-                    throw new ContentGetException(e1);
+                    e.setNextException(e1);
                 }
-                throw new ContentGetException(e);
+                throw new ContentStoreException(e);
             }
         }
-        
-        // If this happens, we have inconsistent data stored.
-        if(media.getMedia() == null)
-            throw new ContentGetException("Media filename is null. _images table is inconsistent.");
         
         return media;
     }
