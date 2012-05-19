@@ -444,7 +444,7 @@ public class Dumper {
                    debug(WARN, newTopic + ": error: " + e.getMessage());
                    continue;
                } catch(ContentParseException e) {
-                   debug(ERROR, newTopic + e.getMessage());
+                   debug(ERROR, newTopic + ": " + e.getMessage());
                    continue;
                }
                
