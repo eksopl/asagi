@@ -210,6 +210,7 @@ public class Local extends Board {
         } catch(DBConnectionException e) { 
             throw new ContentStoreException("Lost connection to database, can't reconnect", e);
         }
+        
         if(mediaRow.getBanned() == 1) return;
         String filename = mediaRow.getMedia();
         

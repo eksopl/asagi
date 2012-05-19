@@ -64,7 +64,7 @@ public class Yotsuba extends WWW {
         String numPatString = "<div \\s id=\"p([^\"]*)\" \\s class=\"post \\s [^\"]*\">";
         String titlePatString = "<span \\s class=\"subject\">([^<]*)</span>";
         String emailPatString = "<a \\s href=\"mailto:([^\"]*)\" \\s class=\"useremail\">";
-        String datePatString = "<span \\s class=\"dateTime\" [^>]*>([^<]*)</span>";
+        String datePatString = "<span \\s class=\"dateTime\" \\s data-utc=\"([0-9]+)\">([^<]*)</span>";
         String commentPatString = "<blockquote \\s class=\"postMessage\" [^>]*>(.*?)</blockquote>";
         String stickyPatString = "<img [^>]* \\s* alt=\"Sticky\" \\s* title=\"Sticky\" \\s */>";
         String omittedPatString = "<span \\s class=\"abbr\">Comment \\s too \\s long";
@@ -157,6 +157,12 @@ public class Yotsuba extends WWW {
         return (int) (dtDate.getMillis() / 1000);
     }
     
+    public int parseDate(int dateUtc) {
+        DateTime dtDate = new DateTime(dateUtc * 1000L);
+        DateTime dtEst = dtDate.withZone(DateTimeZone.forID("America/New_York"));
+        return (int) (dtEst.withZoneRetainFields(DateTimeZone.UTC).getMillis() / 1000);
+    }
+    
     public int parseFilesize(String text) {
         if(text == null) return 0;
         
@@ -175,7 +181,7 @@ public class Yotsuba extends WWW {
     public Post newYotsubaPost(String link, String mediaOrig, boolean spoiler,
             String filesize, int width, int height, String filename, int tWidth,
             int tHeight, String md5, int num, String title, String email,
-            String name, String trip, String capcode, String date, boolean sticky,
+            String name, String trip, String capcode, int dateUtc, boolean sticky,
             String comment, boolean omitted, int threadNum) throws ContentParseException 
     {
     	
@@ -216,7 +222,7 @@ public class Yotsuba extends WWW {
         int timeStamp;
         int mediaSize;
         try {
-            timeStamp = this.parseDate(date);
+            timeStamp = this.parseDate(dateUtc);
             mediaSize = this.parseFilesize(filesize);
         } catch(IllegalArgumentException e) {
             throw new ContentParseException("Could not create post " + num , e);
@@ -354,7 +360,7 @@ public class Yotsuba extends WWW {
          if(!mat.find()) {
              throw new ContentParseException("Could not parse thread (post timestamp regex failed)");
          }
-         String date = new String(mat.group(1));
+         int dateUtc = Integer.parseInt(mat.group(1));
          
          mat = postParsePattern2.matcher(text);
          String link = null;
@@ -393,7 +399,7 @@ public class Yotsuba extends WWW {
          if(mat.find()) omitted  = true;
        
         Post post = this.newYotsubaPost(link, null, spoiler, fileSize, width, height, fileName, tWidth, 
-                tHeight, md5b64, num, title, email, name, trip, capcode, date, sticky, comment, omitted, threadNum);
+                tHeight, md5b64, num, title, email, name, trip, capcode, dateUtc, sticky, comment, omitted, threadNum);
         
         return post;
     }
