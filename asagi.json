@@ -13,10 +13,10 @@
     "newThreadsThreads": 5,
     "threadRefreshRate": 3,
     "pageSettings": [
-      {"delay": 30, "pages": [0, 1, 2]},
-      {"delay": 120, "pages": [3, 4, 5, 6, 7, 8, 9, 
-                              10, 11, 12]},
-      {"delay": 30, "pages": [13, 14, 15]}
+      {"delay": 30, "pages": [0, 1]},
+      {"delay": 500, "pages": [2, 3, 4, 5, 6, 7, 8, 9, 
+                              10, 11, 12, 14]},
+      {"delay": 30, "pages": [14, 15]}
     ]
   },
   "a": {},
