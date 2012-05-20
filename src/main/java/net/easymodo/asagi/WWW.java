@@ -12,6 +12,8 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.params.ClientPNames;
+import org.apache.http.client.params.CookiePolicy;
 import org.apache.http.conn.ClientConnectionManager;
 import org.apache.http.impl.client.ContentEncodingHttpClient;
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
@@ -40,6 +42,7 @@ public abstract class WWW extends Board {
         HttpClient hc = new ContentEncodingHttpClient();
         ClientConnectionManager ccm = hc.getConnectionManager();
         HttpParams params = hc.getParams();
+        params.setParameter(ClientPNames.COOKIE_POLICY, CookiePolicy.IGNORE_COOKIES);
         
         ThreadSafeClientConnManager tsccm = new ThreadSafeClientConnManager(ccm.getSchemeRegistry());
         tsccm.setDefaultMaxPerRoute(20);
