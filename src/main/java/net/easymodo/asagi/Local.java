@@ -150,59 +150,17 @@ public class Local extends Board {
     }
     
     public void insertMediaPreview(MediaPost h, Board source) throws ContentGetException, ContentStoreException {
-        if(h.getPreview() == null) return;
-        
-        Media mediaRow = null;
-        try {
-            mediaRow = db.getMedia(h);
-        } catch(DBConnectionException e) { 
-            throw new ContentStoreException("Lost connection to database, can't reconnect", e);
-        }
-        
-        if(mediaRow.getBanned() == 1) return;
-        String filename = h.isOp() ?  mediaRow.getPreviewOp() : mediaRow.getPreviewReply();
-        
-        if(filename == null) return;
-        
-        String thumbDir = makeDir(filename, DIR_THUMB);
-        
-        // Construct the path and back down if the file already exists
-        File thumbFile = new File(thumbDir + "/" + h.getPreview());
-        if(thumbFile.exists()) return;
-        
-        InputStream inStream = source.getMediaPreview(h);
-        
-        OutputStream outFile = null;
-        try {
-            outFile = new BufferedOutputStream(new FileOutputStream(thumbFile));
-        } catch(FileNotFoundException e) {
-            throw new ContentStoreException(e);
-        }
-        
-        try{
-            ByteStreams.copy(inStream, outFile);
-            inStream.close();
-            
-            if(this.webGroupId != 0) {
-                posix.chmod(thumbFile.getCanonicalPath(), 0664);
-                posix.chown(thumbFile.getCanonicalPath(), -1, this.webGroupId);
-            }
-        } catch(FileNotFoundException e) {
-            throw new ContentStoreException(e);
-        } catch(IOException e) {
-            throw new ContentStoreException(e);
-        } finally {
-            try {
-                inStream.close();
-                outFile.close();
-            } catch(IOException e) {
-                throw new ContentStoreException(e);
-            }
-        }
+        this.insertMedia(h, source, true);
     }
     
     public void insertMedia(MediaPost h, Board source) throws ContentGetException, ContentStoreException {
-        if(h.getMedia() == null) return;
+        this.insertMedia(h, source, false);
+    }
+    
+    public void insertMedia(MediaPost h, Board source, boolean preview) throws ContentGetException, ContentStoreException {
+        // Post has no media
+        if((preview && h.getPreview() == null) || (!preview && h.getMedia() == null))
+            return;
         
         Media mediaRow = null;
         try {
@@ -211,38 +169,56 @@ public class Local extends Board {
             throw new ContentStoreException("Lost connection to database, can't reconnect", e);
         }
         
+        // Media is banned from archiving
         if(mediaRow.getBanned() == 1) return;
-        String filename = mediaRow.getMedia();
+        
+        // Get the proper filename for the file type we're outputting
+        String filename = preview ? (h.isOp() ?  mediaRow.getPreviewOp() : mediaRow.getPreviewReply()) :
+                mediaRow.getMedia();
         
         if(filename == null) return;
         
-        // Preview filename is enough for us here, we just need the first part of the string
-        String mediaDir = makeDir(filename, DIR_MEDIA);
+        // Create the dir structure (if necessary) and return the path to where we're outputting our file
+        // Filename is enough for us here, we just need the first part of the string
+        String outputDir = makeDir(filename, preview ? DIR_THUMB : DIR_MEDIA);
 
         // Construct the path and back down if the file already exists
-        File mediaFile = new File(mediaDir + "/" + filename);
-        if(mediaFile.exists()) return;
+        File outputFile = new File(outputDir + "/" + filename);
+        if(outputFile.exists()) return;
+        
+        String tempFilePath = outputDir + "/" + filename + ".tmp";
+        // Open a temp file for writing
+        File tempFile = new File(tempFilePath);
         
         // Throws ContentGetException on failure
-        InputStream inStream = source.getMedia(h);
+        InputStream inStream = preview ? source.getMediaPreview(h) : source.getMedia(h);
         
         OutputStream outFile = null;
         try {
-            outFile = new BufferedOutputStream(new FileOutputStream(mediaFile));
+            outFile = new BufferedOutputStream(new FileOutputStream(tempFile));
         } catch(FileNotFoundException e) {
             throw new ContentStoreException(e);
         }
         
         try{
+            // Copy the network input stream to our local file
+            // In case the connection is cut off or something similar happens, an IOException
+            // will be thrown.
             ByteStreams.copy(inStream, outFile);
             
+            // Move the temporary file into place
+            if(!tempFile.renameTo(outputFile))
+                throw new ContentStoreException("Unable to move temporary file " + tempFilePath + " into place");
+            
             if(this.webGroupId != 0) {
-                posix.chmod(mediaFile.getCanonicalPath(), 0664);
-                posix.chown(mediaFile.getCanonicalPath(), -1, this.webGroupId);
+                posix.chmod(outputFile.getCanonicalPath(), 0664);
+                posix.chown(outputFile.getCanonicalPath(), -1, this.webGroupId);
             }
         } catch(FileNotFoundException e) {
             throw new ContentStoreException(e);
         } catch(IOException e) {
+            if(!tempFile.delete())
+                throw new ContentStoreException("Aditionally, temporary file " + tempFilePath + "could not be deleted.", e);
             throw new ContentStoreException(e);
         } finally {
             try {
