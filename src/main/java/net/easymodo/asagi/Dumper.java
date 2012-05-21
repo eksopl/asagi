@@ -570,6 +570,9 @@ public class Dumper {
         if(bSet.getTable() == null)
             bSet.setTable(boardName);
         
+        if(bSet.getUseOldDirectoryStructure() == null)
+            bSet.setUseOldDirectoryStructure(false);
+        
         boolean fullMedia = (bSet.getMediaThreads() != 0);
         
         Yotsuba sourceBoard = new Yotsuba(boardName);
