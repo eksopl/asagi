@@ -7,6 +7,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.http.annotation.ThreadSafe;
 
@@ -21,15 +23,18 @@ import net.easymodo.asagi.posix.*;
 @ThreadSafe
 public class Local extends Board {
     private final String path;
+    private final boolean useOldDirectoryStructure;
     private final int webGroupId;
-    
+        
     private final static int DIR_THUMB = 1;
     private final static int DIR_MEDIA = 2;
     
     private final static Posix posix;
     private DB db;
     
-    static {
+    private final static Pattern oldDirectoryMatchingPattern = Pattern.compile("(\\d+?)(\\d{2})\\d{0,3}$");
+    
+    static {        
         if(Platform.isWindows()) {
           posix = null;
         } else {
@@ -39,6 +44,7 @@ public class Local extends Board {
     
     public Local(String path, BoardSettings info, DB db) {
         this.path = path;
+        this.useOldDirectoryStructure = info.getUseOldDirectoryStructure();
         this.db = db;
         
         // getgrnam is thread-safe on sensible OSes, but it's not thread safe
@@ -83,15 +89,23 @@ public class Local extends Board {
     }
     
     public String[] getSubdirs(String filename) {
-    	String subdir = filename.substring(0, 4);
-    	String subdir2 = filename.substring(4, 6);
+        String subdir = filename.substring(0, 4);
+        String subdir2 = filename.substring(4, 6);
         
         return new String[] {subdir, subdir2};
     }
     
-    public String getDir(String filename, int dirType) {
-        String[] subdirs = getSubdirs(filename);
+    public String[] getSubdirs(MediaPost h) {
+        Matcher mat = oldDirectoryMatchingPattern.matcher(Integer.toString(h.getNum()));
+        mat.find();
+            
+        String subdir = String.format("%04d", Integer.parseInt(mat.group(1)));
+        String subdir2 = String.format("%02d", Integer.parseInt(mat.group(2)));
         
+        return new String[] {subdir, subdir2};
+    }
+    
+    public String getDir(String[] subdirs, int dirType) {
         if(dirType == DIR_THUMB) {
             return String.format("%s/thumb/%s/%s", this.path, subdirs[0], subdirs[1]);
         } else if(dirType == DIR_MEDIA) {
@@ -102,12 +116,16 @@ public class Local extends Board {
     }
     
     public String makeDir(String filename, int dirType) throws ContentStoreException {
-        return this.makeDir(filename, this.path, dirType);
+        String[] subdirs = this.getSubdirs(filename);
+        return this.makeDir(subdirs, this.path, dirType);
     }
     
-    public String makeDir(String filename, String path, int dirType) throws ContentStoreException {
-        String[] subdirs = this.getSubdirs(filename);
-        
+    public String makeDir(MediaPost h, int dirType) throws ContentStoreException {
+        String[] subdirs = this.getSubdirs(h);
+        return this.makeDir(subdirs, this.path, dirType);
+    }
+    
+    public String makeDir(String[] subdirs, String path, int dirType) throws ContentStoreException {
         String dir;
         if(dirType == DIR_THUMB) {
             dir = "thumb";
@@ -134,7 +152,7 @@ public class Local extends Board {
             }
         }
                 
-        return this.getDir(filename, dirType);
+        return this.getDir(subdirs, dirType);
     }
     
     public void insert(Topic topic) throws ContentStoreException, DBConnectionException {
@@ -180,7 +198,11 @@ public class Local extends Board {
         
         // Create the dir structure (if necessary) and return the path to where we're outputting our file
         // Filename is enough for us here, we just need the first part of the string
-        String outputDir = makeDir(filename, preview ? DIR_THUMB : DIR_MEDIA);
+        String outputDir;
+        if(this.useOldDirectoryStructure)
+            outputDir = makeDir(h, preview ? DIR_THUMB : DIR_MEDIA);
+        else
+            outputDir = makeDir(filename, preview ? DIR_THUMB : DIR_MEDIA);
 
         // Construct the path and back down if the file already exists
         File outputFile = new File(outputDir + "/" + filename);
@@ -230,3 +252,4 @@ public class Local extends Board {
         }        
     }
 }
+

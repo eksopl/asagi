@@ -552,6 +552,8 @@ public class Dumper {
             bSet.setCharset(defSet.getCharset());
         if(bSet.getPath() == null)
             bSet.setPath(defSet.getPath() + "/" + boardName + "/");
+        if(bSet.getUseOldDirectoryStructure() == null)
+            bSet.setUseOldDirectoryStructure(defSet.getUseOldDirectoryStructure());
         if(bSet.getWebserverGroup() == null)
             bSet.setWebserverGroup(defSet.getWebserverGroup());
         if(bSet.getThumbThreads() == null)
