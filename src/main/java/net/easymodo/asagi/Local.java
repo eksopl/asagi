@@ -236,7 +236,7 @@ public class Local extends Board {
             throw new ContentStoreException(e);
         } catch(IOException e) {
             if(!tempFile.delete())
-                throw new ContentStoreException("Aditionally, temporary file " + tempFilePath + "could not be deleted.", e);
+                throw new ContentStoreException("Additionally, temporary file " + tempFilePath + "could not be deleted.", e);
             throw new ContentStoreException(e);
         } finally {
             try {
