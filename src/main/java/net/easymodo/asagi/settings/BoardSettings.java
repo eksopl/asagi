@@ -11,6 +11,7 @@ public class BoardSettings {
     private String charset;
     private String table;
     private String path;
+    private Boolean useOldDirectoryStructure;
     private String webserverGroup;
     private Boolean fullMedia;
     private Integer thumbThreads;
@@ -66,6 +67,12 @@ public class BoardSettings {
     }
     public void setPath(String path) {
         this.path = path;
+    }
+    public Boolean getUseOldDirectoryStructure() {
+        return useOldDirectoryStructure;
+    }
+    public void setUseOldDirectoryStructure(Boolean useOldDirectoryStructure) {
+        this.useOldDirectoryStructure = useOldDirectoryStructure;
     }
     public Boolean getFullMedia() {
         return fullMedia;
