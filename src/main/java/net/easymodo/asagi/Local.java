@@ -191,7 +191,11 @@ public class Local extends Board {
         if(mediaRow.getBanned() == 1) return;
         
         // Get the proper filename for the file type we're outputting
-        String filename = preview ? (h.isOp() ?  mediaRow.getPreviewOp() : mediaRow.getPreviewReply()) :
+        String filename;
+        if(this.useOldDirectoryStructure)
+            filename =  preview ? h.getPreview() : h.getMedia();
+        else
+            filename = preview ? (h.isOp() ?  mediaRow.getPreviewOp() : mediaRow.getPreviewReply()) :
                 mediaRow.getMedia();
         
         if(filename == null) return;
@@ -240,7 +244,7 @@ public class Local extends Board {
             throw new ContentStoreException(e);
         } catch(IOException e) {
             if(!tempFile.delete())
-                throw new ContentStoreException("Aditionally, temporary file " + tempFilePath + "could not be deleted.", e);
+                throw new ContentStoreException("Additionally, temporary file " + tempFilePath + "could not be deleted.", e);
             throw new ContentStoreException(e);
         } finally {
             try {
