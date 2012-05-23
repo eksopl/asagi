@@ -1,5 +1,6 @@
 package net.easymodo.asagi;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -13,6 +14,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import org.joda.time.DateTime;
+import org.joda.time.LocalTime;
 
 import net.easymodo.asagi.settings.*;
 import net.easymodo.asagi.exception.*;
@@ -26,6 +28,7 @@ public class Dumper {
     private final String boardName;
     private final int debugLevel;
     
+    private static final String DEBUG_FILE = "./debug.log";
     private static final String SETTINGS_FILE = "./asagi.json";
 
     protected final int pageLimbo;
@@ -45,6 +48,8 @@ public class Dumper {
     public static final int TALK  = 3;
     public static final int INFO  = 4;
     
+    private static BufferedWriter debugOut;
+    
     public Dumper(String boardName, Local topicLocalBoard, Local mediaLocalBoard,
             Board sourceBoard, boolean fullMedia) {
         this.boardName = boardName;
@@ -63,7 +68,7 @@ public class Dumper {
     }
     
     public void debug(int level, String ... args){
-        String output = "[" +
+        String preOutput = "[" +
                         boardName + " " +
                         topics.size() + " " +
                         newTopics.size() + " " +
@@ -71,12 +76,28 @@ public class Dumper {
                         mediaUpdates.size() + " " +
                         mediaPreviewUpdates.size() +
                         "] ";
+        
+        String output = "";
                 
         for(String arg : args)
             output = output.concat(arg);
         
-        if (level <= debugLevel)
-            System.out.println(output);
+        if (level <= debugLevel) {
+            System.out.println(preOutput + output);
+        }
+        if(debugOut != null && level == ERROR) {
+            LocalTime time = new LocalTime();
+            
+            try {
+                debugOut.write("["+time.getHourOfDay()+":"+
+                        time.getMinuteOfHour()+":"+time.getSecondOfMinute()+"]");
+                debugOut.write("["+boardName+"] ");
+                debugOut.write(output + '\n');
+                debugOut.flush();
+            } catch(IOException e) {
+                System.err.println("WARN: Cannot write to debug file");
+            }
+        }
     }
     
    
@@ -532,6 +553,21 @@ public class Dumper {
             }
         }
     }
+    
+    public static class DumperUncaughtExceptionHandler implements Thread.UncaughtExceptionHandler {        
+        @Override
+        public void uncaughtException(Thread t, Throwable e) {
+            System.err.print("Exception in thread: \"" + t.getName() + "\" ");
+            e.printStackTrace();
+            if(e instanceof OutOfMemoryError) {
+                System.err.println("Terminating due to out of memory error. Raise VM max heap size? (-Xmx)");
+            } else {
+                System.err.println("Terminating dumper due to unexpected exception.");
+                System.err.println("Please report this issue if you believe it is a bug.");
+            }
+            System.exit(-1);
+        } 
+    }
 
     
     private static void spawnBoard(String boardName, Settings settings) throws BoardInitException {
@@ -631,41 +667,49 @@ public class Dumper {
         Local mediaLocalBoard = new Local(bSet.getPath(), bSet, mediaDb);
         
         Dumper dumper = new Dumper(boardName, topicLocalBoard, mediaLocalBoard, sourceBoard, fullMedia);
+        Thread.UncaughtExceptionHandler exHandler = new Dumper.DumperUncaughtExceptionHandler();
         
         for(int i = 0; i < bSet.getThumbThreads() ; i++) {
             Thread thumbFetcher = new Thread(dumper.new ThumbFetcher());
             thumbFetcher.setName("Thumb fetcher #" + i + " - " + boardName);
+            thumbFetcher.setUncaughtExceptionHandler(exHandler);
             thumbFetcher.start();
         }
         
         for(int i = 0; i < bSet.getMediaThreads() ; i++) {
             Thread mediaFetcher = new Thread(dumper.new MediaFetcher());
             mediaFetcher.setName("Media fetcher #" + i + " - " + boardName);
+            mediaFetcher.setUncaughtExceptionHandler(exHandler);
             mediaFetcher.start();
         }
         
         for(int i = 0; i < bSet.getNewThreadsThreads() ; i++) {
             Thread topicFetcher = new Thread(dumper.new TopicFetcher());
             topicFetcher.setName("Topic fetcher #" + i + " - " + boardName);
+            topicFetcher.setUncaughtExceptionHandler(exHandler);
             topicFetcher.start();
         }
     
         for(PageSettings pageSet : bSet.getPageSettings()) {            
             Thread pageScanner = new Thread(dumper.new PageScanner(pageSet.getDelay(), pageSet.getPages()));
             pageScanner.setName("Page scanner " + pageSet.getPages().get(0) + " - " + boardName);
+            pageScanner.setUncaughtExceptionHandler(exHandler);
             pageScanner.start();
         }
         
         Thread topicInserter = new Thread(dumper.new TopicInserter());
         topicInserter.setName("Topic inserter" + " - " + boardName);
+        topicInserter.setUncaughtExceptionHandler(exHandler);
         topicInserter.start();
         
         Thread postDeleter = new Thread(dumper.new PostDeleter());
         postDeleter.setName("Post deleter" + " - " + boardName);
+        postDeleter.setUncaughtExceptionHandler(exHandler);
         postDeleter.start();
         
         Thread topicRebuilder = new Thread(dumper.new TopicRebuilder(bSet.getThreadRefreshRate()));
         topicRebuilder.setName("Topic rebuilder" + " - " + boardName);
+        topicRebuilder.setUncaughtExceptionHandler(exHandler);
         topicRebuilder.start();
     }
     
@@ -674,19 +718,27 @@ public class Dumper {
         String settingsJson;
         Gson gson = new Gson();
         
+        File debugFile = new File(DEBUG_FILE);
+        try {
+            debugOut = new BufferedWriter(Files.newWriterSupplier(debugFile, Charsets.UTF_8, true).getOutput());
+        } catch(IOException e1) {
+            System.err.println("WARN: Cannot write to debug file");
+            debugOut = null;
+        }
+        
         File settingsFile = new File(SETTINGS_FILE);
 
         try {
             settingsJson = Files.toString(settingsFile, Charsets.UTF_8);
         } catch(IOException e) {
-            System.out.println("ERROR: Can't find settings file ("+ SETTINGS_FILE + ")");
+            System.err.println("ERROR: Can't find settings file ("+ SETTINGS_FILE + ")");
             return;
         }
         
         try {
             fullSettings = gson.fromJson(settingsJson, Settings.class);
         } catch(JsonSyntaxException e) {
-            System.out.println("ERROR: Settings file is malformed!");
+            System.err.println("ERROR: Settings file is malformed!");
             return;
         }
         
@@ -695,9 +747,9 @@ public class Dumper {
             try {
                 spawnBoard(boardName, fullSettings);
             } catch(BoardInitException e) {
-                System.out.println("ERROR: Error creating database connection for /" + boardName + "/:");
-                System.out.println("  " + e.getMessage());
+                System.err.println("ERROR: Error initializing dumper for /" + boardName + "/:");
+                System.err.println("  " + e.getMessage());
             }
-        }
+        }        
     }
 }
