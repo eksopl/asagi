@@ -1,8 +1,11 @@
 package net.easymodo.asagi;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -20,6 +23,7 @@ import net.easymodo.asagi.settings.*;
 import net.easymodo.asagi.exception.*;
 
 import com.google.common.base.Charsets;
+import com.google.common.io.CharStreams;
 import com.google.common.io.Files;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
@@ -717,6 +721,13 @@ public class Dumper {
         Settings fullSettings;
         String settingsJson;
         Gson gson = new Gson();
+        String settingsFileName = SETTINGS_FILE;
+        
+        for(int i = 0; i < args.length; ++i) {
+            if(args[i].equals("--config") && ++i < args.length) {
+                settingsFileName = args[i];
+            }
+        }
         
         File debugFile = new File(DEBUG_FILE);
         try {
@@ -726,12 +737,23 @@ public class Dumper {
             debugOut = null;
         }
         
-        File settingsFile = new File(SETTINGS_FILE);
+        BufferedReader settingsReader;
+        if(settingsFileName.equals("-")) {
+            settingsReader = new BufferedReader(new InputStreamReader(System.in, Charsets.UTF_8));
+        } else {
+            File settingsFile = new File(settingsFileName);
+            try {
+                settingsReader = Files.newReader(settingsFile, Charsets.UTF_8);
+            } catch(FileNotFoundException e) {
+                System.err.println("ERROR: Can't find settings file ("+ settingsFile + ")");
+                return;
+            }     
+        }
 
         try {
-            settingsJson = Files.toString(settingsFile, Charsets.UTF_8);
+            settingsJson = CharStreams.toString(settingsReader);
         } catch(IOException e) {
-            System.err.println("ERROR: Can't find settings file ("+ SETTINGS_FILE + ")");
+            System.err.println("ERROR: Error while reading settings file");
             return;
         }
         
