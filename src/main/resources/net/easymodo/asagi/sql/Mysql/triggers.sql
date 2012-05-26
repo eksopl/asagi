@@ -8,33 +8,33 @@ BEGIN
     op.time_last = (
       COALESCE(GREATEST(
         op.time_op,
-        (SELECT MAX(timestamp) FROM `%%BOARD%%` re FORCE INDEX(thread_num_index) WHERE
+        (SELECT MAX(timestamp) FROM `%%BOARD%%` re FORCE INDEX(thread_num_subnum_index) WHERE
           re.thread_num = tnum AND re.subnum = 0)
         ), op.time_op)
       ),
       op.time_bump = (
         COALESCE(GREATEST(
           op.time_op,
-          (SELECT MAX(timestamp) FROM `%%BOARD%%` re FORCE INDEX(thread_num_index) WHERE
+          (SELECT MAX(timestamp) FROM `%%BOARD%%` re FORCE INDEX(thread_num_subnum_index) WHERE
             re.thread_num = tnum AND (re.email <> 'sage' OR re.email IS NULL)
             AND re.subnum = 0)
         ), op.time_op)
       ),
       op.time_ghost = (
-        SELECT MAX(timestamp) FROM `%%BOARD%%` re FORCE INDEX(thread_num_index) WHERE
+        SELECT MAX(timestamp) FROM `%%BOARD%%` re FORCE INDEX(thread_num_subnum_index) WHERE
           re.thread_num = tnum AND re.subnum <> 0
       ),
       op.time_ghost_bump = (
-        SELECT MAX(timestamp) FROM `%%BOARD%%` re FORCE INDEX(thread_num_index) WHERE
+        SELECT MAX(timestamp) FROM `%%BOARD%%` re FORCE INDEX(thread_num_subnum_index) WHERE
           re.thread_num = tnum AND re.subnum <> 0 AND (re.email <> 'sage' OR
             re.email IS NULL)
       ),
       op.nreplies = (
-        SELECT COUNT(*) FROM `%%BOARD%%` re FORCE INDEX(thread_num_index) WHERE
+        SELECT COUNT(*) FROM `%%BOARD%%` re FORCE INDEX(thread_num_subnum_index) WHERE
           re.thread_num = tnum
       ),
       op.nimages = (
-        SELECT COUNT(media_hash) FROM `%%BOARD%%` re FORCE INDEX(thread_num_index) WHERE
+        SELECT COUNT(media_hash) FROM `%%BOARD%%` re FORCE INDEX(thread_num_subnum_index) WHERE
           re.thread_num = tnum
       )
     WHERE op.thread_num = tnum;
