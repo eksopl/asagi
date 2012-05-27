@@ -463,6 +463,7 @@ public class Yotsuba extends WWW {
             if(type.equals("opContainer")) {
                 if(t == null) {
                     t = this.parseThread(text);
+                    t.setLastMod(newLastMod);
                 } else {
                     throw new ContentParseException("Two OP posts in thread in " + threadNum);
                 }
@@ -475,7 +476,6 @@ public class Yotsuba extends WWW {
             }
         }
         
-        t.setLastMod(newLastMod);
         return t;
     }
 }

@@ -461,7 +461,7 @@ public class Dumper {
                        continue;
                    } else {
                        // We got some funky error
-                       debug(WARN, newTopic + ": got HTTP status" + e.getHttpStatus());
+                       debug(WARN, newTopic + ": got HTTP status " + e.getHttpStatus());
                        continue;
                    }
                } catch(ContentGetException e) {
