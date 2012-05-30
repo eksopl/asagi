@@ -298,7 +298,8 @@ public abstract class SQL implements DB {
             } catch(SQLException e) {             
                 try {
                     conn.rollback();
-                    mediaRs.close();
+                    if(mediaRs != null)
+                        mediaRs.close();
                 } catch(SQLException e1) {
                     e.setNextException(e1);
                 }
