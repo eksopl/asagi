@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS `%%BOARD%%_images` (
 
   PRIMARY KEY (`media_id`),
   UNIQUE media_hash_index (`media_hash`),
-  INDEX total_index (`total`)
+  INDEX total_index (`total`),
   INDEX banned_index (`banned`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
