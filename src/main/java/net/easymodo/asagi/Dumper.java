@@ -10,6 +10,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
@@ -352,13 +353,21 @@ public class Dumper {
                             newPosts++;
                          }
                         
-                        for(Post newPost : newTopic.getPosts()) {                            
+                        for(Iterator<Post> it = newTopic.getPosts().iterator(); it.hasNext();) {
+                            Post newPost = it.next();
+                            
                             // This post was already in topics map. Next post
-                            if(fullTopic.findPost(newPost.getNum())) { oldPosts++; continue; }
+                            if(fullTopic.findPost(newPost.getNum())) {
+                                if(newPost.isOmitted()) it.remove();
+                                oldPosts++; 
+                                continue; 
+                            }
                             
                             // Looks like it's new
-                            fullTopic.addPost(newPost); newPosts++;
-                            
+                            // Add the post's num to the full topic, we'll
+                            // update it for real with newTopic.
+                            fullTopic.addPost(newPost.getNum()); newPosts++;
+
                             // Comment too long. Click here to view the full text.
                             // This means we have to refresh the full thread
                             if(newPost.isOmitted()) mustRefresh = true;

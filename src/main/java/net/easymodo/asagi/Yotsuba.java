@@ -182,16 +182,14 @@ public class Yotsuba extends WWW {
             String filesize, int width, int height, String filename, int tWidth,
             int tHeight, String md5, int num, String title, String email,
             String name, String trip, String capcode, int dateUtc, boolean sticky,
-            String comment, boolean omitted, int threadNum) throws ContentParseException 
+            String comment, boolean omitted, int threadNum, String posterHash) throws ContentParseException 
     {
-    	
         String type = "";
         String previewOrig = null;
         
-        // TODO add the following variables
+        // TODO: add the following variables
         String exif = null;
         int timeStampExpired = 0;
-        String posterHash = null;
         
         if(threadNum == 0) threadNum = num;
         boolean op = (threadNum == num);
@@ -203,15 +201,14 @@ public class Yotsuba extends WWW {
         if(link != null) {
             Pattern pat = Pattern.compile("/src/(\\d+)\\.(\\w+)");
             Matcher mat = pat.matcher(link);
-            mat.find();
+            if(mat.find()) {
+                String number = mat.group(1);
+                type = mat.group(2);
             
-            String number = mat.group(1);
-            type = mat.group(2);
-            
-            //mediaOrig = number + "." + type;
-            filename = (filename != null) ? filename : (number + "." + type);
-            if(mediaOrig == null) mediaOrig = number + "." + type;
-            previewOrig = number + "s.jpg";
+                filename = (filename != null) ? filename : (number + "." + type);
+                if(mediaOrig == null) mediaOrig = number + "." + type;
+                previewOrig = number + "s.jpg";
+            }
         }
         
         if(spoiler) {
@@ -349,7 +346,7 @@ public class Yotsuba extends WWW {
         String capcode = (mat.group(3) == null) ? 
                             ((mat.group(4) != null) ? new String(mat.group(4)) : null) : 
                             new String(mat.group(3));
-         //String uid = mat.group(5);
+         String uid = mat.group(5);
                             
          mat = oldCapPattern.matcher(text);
          if(mat.find()) {
@@ -398,8 +395,9 @@ public class Yotsuba extends WWW {
          mat = omittedPattern.matcher(text);
          if(mat.find()) omitted  = true;
        
-        Post post = this.newYotsubaPost(link, null, spoiler, fileSize, width, height, fileName, tWidth, 
-                tHeight, md5b64, num, title, email, name, trip, capcode, dateUtc, sticky, comment, omitted, threadNum);
+        Post post = this.newYotsubaPost(link, null, spoiler, fileSize, width,
+                height, fileName, tWidth, tHeight, md5b64, num, title, email,
+                name, trip, capcode, dateUtc, sticky, comment, omitted, threadNum, uid);
         
         return post;
     }

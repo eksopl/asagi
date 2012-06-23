@@ -69,6 +69,10 @@ public class Topic {
         this.posts.add(post);
     }
     
+    public void addPost(int num) {
+        this.allPosts.add(num);
+    }
+    
     public void purgePosts() {
         posts.clear();
     }

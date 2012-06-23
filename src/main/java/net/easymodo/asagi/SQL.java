@@ -196,8 +196,6 @@ public abstract class SQL implements DB {
     public synchronized void insert(Topic topic) throws ContentStoreException, DBConnectionException {
         while(true) { try {
             for(Post post : topic.getPosts()) {
-                if(post.isOmitted()) continue;
-                
                 int c = 1;
                 updateStmt.setString(c++, post.getComment());
                 updateStmt.setBoolean(c++, post.isDeleted());
