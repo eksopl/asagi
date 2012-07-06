@@ -347,7 +347,7 @@ public class Yotsuba extends WWW {
         String trip    = (mat.group(2) != null) ? new String(mat.group(2)) : null;
         String capcode = (mat.group(3) == null) ? 
                             ((mat.group(4) != null) ? new String(mat.group(4)) : null) : 
-                            new String(mat.group(4));
+                            new String(mat.group(3));
         String uid = mat.group(5);
         String country = (mat.group(6) != null) ? new String(mat.group(6)) : null;
                      
