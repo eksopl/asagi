@@ -85,8 +85,8 @@ public abstract class SQL implements DB {
                     "INSERT INTO %s" +
                     " (poster_ip, num, subnum, thread_num, op, timestamp, timestamp_expired, preview_orig, preview_w, preview_h, media_filename, " +
                     " media_w, media_h, media_size, media_hash, media_orig, spoiler, deleted, " +
-                    " capcode, email, name, trip, title, comment, delpass, sticky, poster_hash, exif) " +
-                    "  SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? " +
+                    " capcode, email, name, trip, title, comment, delpass, sticky, poster_hash, poster_country, exif) " +
+                    "  SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? " +
                     "  WHERE NOT EXISTS (SELECT 1 FROM %s WHERE num=? and subnum=?)", 
                     this.table, this.table);
         }
@@ -233,6 +233,7 @@ public abstract class SQL implements DB {
                 insertStmt.setString(c++, post.getDelpass());
                 insertStmt.setBoolean(c++, post.isSticky());
                 insertStmt.setString(c++, post.getPosterHash());
+                insertStmt.setString(c++, post.getPosterCountry());
                 insertStmt.setString(c++, post.getExif());
                 
                 insertStmt.setInt(c++, post.getNum());
@@ -341,22 +342,22 @@ public abstract class SQL implements DB {
         
         // Update media row in _images table when any of its entries are null and we actually have it
         if(mediaUpdate || previewOpUpdate || previewReplyUpdate) {
-        	try {
-        	    if(mediaUpdate) {
-        	        updateMediaStmt.setString(1, post.getMedia());
+            try {
+                if(mediaUpdate) {
+                    updateMediaStmt.setString(1, post.getMedia());
                     updateMediaStmt.setString(2, post.getMediaHash());
                     updateMediaStmt.executeUpdate();
-        	    }
-        	    if(previewOpUpdate) {
+                }
+                if(previewOpUpdate) {
                     updatePreviewOpStmt.setString(1, post.getPreview());
                     updatePreviewOpStmt.setString(2, post.getMediaHash());
                     updatePreviewOpStmt.executeUpdate();
-        	    }
-        	    if(previewReplyUpdate) {
+                }
+                if(previewReplyUpdate) {
                     updatePreviewReplyStmt.setString(1, post.getPreview());
                     updatePreviewReplyStmt.setString(2, post.getMediaHash());
                     updatePreviewReplyStmt.executeUpdate();
-        	    }
+                }
                 conn.commit();
             } catch(SQLException e) {
                 try {

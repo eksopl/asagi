@@ -3,4 +3,5 @@
 (?:<strong \s class="capcode [^"]*">\#\# \s (.)[^<]*</strong>)? \s*
 (?:</a>)? \s*
 (?:<span \s class="posteruid">\(ID: \s (?: <span [^>]*>(.)[^)]* 
-    | ([^)]*))\)</span>)?
+    | ([^)]*))\)</span>)? \s*
+(?:<img \s src="[^"]*" \s alt="(\w+)")?

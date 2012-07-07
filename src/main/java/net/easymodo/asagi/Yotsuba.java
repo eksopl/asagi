@@ -182,7 +182,7 @@ public class Yotsuba extends WWW {
             String filesize, int width, int height, String filename, int tWidth,
             int tHeight, String md5, int num, String title, String email,
             String name, String trip, String capcode, int dateUtc, boolean sticky,
-            String comment, boolean omitted, int threadNum, String posterHash) throws ContentParseException 
+            String comment, boolean omitted, int threadNum, String posterHash, String posterCountry) throws ContentParseException 
     {
         String type = "";
         String previewOrig = null;
@@ -197,6 +197,7 @@ public class Yotsuba extends WWW {
         if(name.equals("")) name = null;
         if(comment.equals("")) comment = null;
         if(title.equals("")) title = null;
+        if(posterCountry != null && (posterCountry.equals("XX") || posterCountry.equals("A1"))) posterCountry = null;
         
         if(link != null) {
             Pattern pat = Pattern.compile("/src/(\\d+)\\.(\\w+)");
@@ -253,6 +254,7 @@ public class Yotsuba extends WWW {
         post.setSticky(sticky);
         post.setCapcode(capcode);
         post.setPosterHash(posterHash);
+        post.setPosterCountry(posterCountry);
         post.setOmitted(omitted);
         
         return post;
@@ -346,8 +348,10 @@ public class Yotsuba extends WWW {
         String capcode = (mat.group(3) == null) ? 
                             ((mat.group(4) != null) ? new String(mat.group(4)) : null) : 
                             new String(mat.group(3));
-         String uid = mat.group(5);
-                            
+        String uid = mat.group(5);
+        String country = (mat.group(6) != null) ? new String(mat.group(6)) : null;
+                     
+
          mat = oldCapPattern.matcher(text);
          if(mat.find()) {
              capcode =  new String(mat.group(1));
@@ -397,7 +401,7 @@ public class Yotsuba extends WWW {
        
         Post post = this.newYotsubaPost(link, null, spoiler, fileSize, width,
                 height, fileName, tWidth, tHeight, md5b64, num, title, email,
-                name, trip, capcode, dateUtc, sticky, comment, omitted, threadNum, uid);
+                name, trip, capcode, dateUtc, sticky, comment, omitted, threadNum, uid, country);
         
         return post;
     }

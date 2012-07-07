@@ -29,6 +29,7 @@ public class Post {
     private String delpass;
     private boolean sticky;
     private String posterHash;
+    private String posterCountry;
     private String exif;
     
     private String link;
@@ -116,11 +117,11 @@ public class Post {
     }
     
     public int getMediaId() {
-    	return mediaId;
+        return mediaId;
     }
     
     public void setMediaId(int mediaId) {
-    	this.mediaId = mediaId;
+        this.mediaId = mediaId;
     }
 
     public String getMediaOrig() {
@@ -249,6 +250,14 @@ public class Post {
 
     public void setPosterHash(String posterHash) {
         this.posterHash = posterHash;
+    }
+    
+    public String getPosterCountry() {
+        return posterCountry;
+    }
+
+    public void setPosterCountry(String posterCountry) {
+        this.posterCountry = posterCountry;
     }
     
     public String getExif() {
