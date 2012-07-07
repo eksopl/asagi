@@ -406,7 +406,19 @@ public class Dumper {
         }
     }
     
-    public class TopicFetcher implements Runnable {        
+    public class TopicFetcher implements Runnable {
+        private void pingTopic(Topic topic) {
+            if(topic == null) return;
+            
+            topic.lock.writeLock().lock();
+            try {
+                topic.setLastHit(DateTime.now().getMillis());
+                topic.setBusy(false);
+            } finally {
+                topic.lock.writeLock().unlock();
+            }
+        }
+        
         @Override
         public void run() {
             while(true) {
@@ -437,12 +449,7 @@ public class Dumper {
                    if(e.getHttpStatus() == 304) {
                        // If the old topic exists, update its lastHit timestamp
                        // The old topic should always exist at this point.
-                       if(oldTopic != null) {
-                           oldTopic.lock.writeLock().lock();
-                           oldTopic.setLastHit(DateTime.now().getMillis());
-                           oldTopic.setBusy(false);
-                           oldTopic.lock.writeLock().unlock();
-                       }
+                       pingTopic(oldTopic);
                        debug(TALK, newTopic + ": wasn't modified");
                        continue;
                    } else if(e.getHttpStatus() == 404) {
@@ -470,14 +477,17 @@ public class Dumper {
                        continue;
                    } else {
                        // We got some funky error
+                       pingTopic(oldTopic);
                        debug(WARN, newTopic + ": got HTTP status " + e.getHttpStatus());
                        continue;
                    }
                } catch(ContentGetException e) {
                    // We got an even funkier, non-HTTP error
+                   pingTopic(oldTopic);
                    debug(WARN, newTopic + ": error: " + e.getMessage());
                    continue;
                } catch(ContentParseException e) {
+                   pingTopic(oldTopic);
                    debug(ERROR, newTopic + ": " + e.getMessage());
                    continue;
                }
