@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS %%BOARD%% ( 
+CREATE TABLE IF NOT EXISTS %%BOARD%% (
   `doc_id` int unsigned NOT NULL auto_increment, 
   `media_id` int unsigned NOT NULL DEFAULT '0', 
   `poster_ip` decimal(39,0) unsigned NOT NULL DEFAULT '0', 
@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS %%BOARD%% (
   `comment` text,
   `delpass` tinytext, 
   `sticky` bool NOT NULL DEFAULT '0', 
-  `poster_hash` varchar(8), 
+  `poster_hash` varchar(8),
+  `poster_country` varchar(2),
   `exif` text, 
   
   PRIMARY KEY (`doc_id`),
