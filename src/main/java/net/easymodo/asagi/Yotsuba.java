@@ -268,7 +268,7 @@ public class Yotsuba extends WWW {
         InputStream inStream = null;
         try {
             inStream = this.wget(this.boardLinks.get("previewLink") + "/thumb/"
-                + h.getPreview() + "?" + System.currentTimeMillis()).getEntity().getContent();
+                + h.getPreview()).getEntity().getContent();
         } catch(IOException e) {
             throw new ContentGetException(e);
         }
@@ -284,7 +284,7 @@ public class Yotsuba extends WWW {
         InputStream inStream = null;
         try {
             inStream = this.wget(this.boardLinks.get("imgLink") + "/src/"
-                + h.getMedia() + "?" + System.currentTimeMillis()).getEntity().getContent();
+                + h.getMedia()).getEntity().getContent();
         } catch(IOException e) {
             throw new ContentGetException(e);
         }
