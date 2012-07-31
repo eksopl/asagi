@@ -56,7 +56,7 @@ public class Dumper {
     private static BufferedWriter debugOut;
     
     public Dumper(String boardName, Local topicLocalBoard, Local mediaLocalBoard,
-            Board sourceBoard, boolean fullMedia) {
+            Board sourceBoard, boolean fullMedia, int pageLimbo) {
         this.boardName = boardName;
         this.sourceBoard = sourceBoard;
         this.topicLocalBoard = topicLocalBoard;
@@ -69,7 +69,7 @@ public class Dumper {
         this.newTopics = new LinkedBlockingQueue<Integer>();
         this.fullMedia = fullMedia;
         this.debugLevel = TALK;
-        this.pageLimbo = 13;
+        this.pageLimbo = pageLimbo;
     }
     
     public void debug(int level, String ... args){
@@ -625,13 +625,16 @@ public class Dumper {
             bSet.setThreadRefreshRate(defSet.getThreadRefreshRate());
         if(bSet.getPageSettings() == null)
             bSet.setPageSettings(defSet.getPageSettings());
-        
+        if(bSet.getDeletedThreadsThresholdPage() == null)
+            bSet.setDeletedThreadsThresholdPage(defSet.getDeletedThreadsThresholdPage());
+
         if(bSet.getTable() == null)
             bSet.setTable(boardName);
         
         if(bSet.getUseOldDirectoryStructure() == null)
             bSet.setUseOldDirectoryStructure(false);
         
+		int pageLimbo = bSet.getDeletedThreadsThresholdPage();
         boolean fullMedia = (bSet.getMediaThreads() != 0);
         
         Yotsuba sourceBoard = new Yotsuba(boardName);
@@ -689,7 +692,7 @@ public class Dumper {
         Local topicLocalBoard = new Local(bSet.getPath(), bSet, topicDb);
         Local mediaLocalBoard = new Local(bSet.getPath(), bSet, mediaDb);
         
-        Dumper dumper = new Dumper(boardName, topicLocalBoard, mediaLocalBoard, sourceBoard, fullMedia);
+        Dumper dumper = new Dumper(boardName, topicLocalBoard, mediaLocalBoard, sourceBoard, fullMedia, pageLimbo);
         Thread.UncaughtExceptionHandler exHandler = new Dumper.DumperUncaughtExceptionHandler();
         
         for(int i = 0; i < bSet.getThumbThreads() ; i++) {

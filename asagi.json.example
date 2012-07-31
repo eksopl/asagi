@@ -13,6 +13,7 @@
     "mediaThreads": 5,
     "newThreadsThreads": 5,
     "threadRefreshRate": 3,
+    "deletedThreadsThresholdPage": 8,
     "pageSettings": [
       {"delay": 30, "pages": [0, 1]},
       {"delay": 500, "pages": [2, 3, 4, 5, 6, 7, 8, 9, 

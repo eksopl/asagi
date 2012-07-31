@@ -12,6 +12,7 @@ public class BoardSettings {
     private String table;
     private String path;
     private Boolean useOldDirectoryStructure;
+    private Integer deletedThreadsThresholdPage;
     private String webserverGroup;
     private Boolean fullMedia;
     private Integer thumbThreads;
@@ -109,6 +110,12 @@ public class BoardSettings {
     }
     public void setPageSettings(List<PageSettings> pageSettings) {
         this.pageSettings = pageSettings;
+    }
+    public Integer getDeletedThreadsThresholdPage() {
+        return deletedThreadsThresholdPage;
+    }
+    public void setDeletedThreadsThresholdPage(Integer deletedThreadsThresholdPage) {
+        this.deletedThreadsThresholdPage = deletedThreadsThresholdPage;
     }
     public String getWebserverGroup() {
         return webserverGroup;
