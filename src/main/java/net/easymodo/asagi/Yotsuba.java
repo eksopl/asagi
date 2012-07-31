@@ -106,6 +106,10 @@ public class Yotsuba extends WWW {
         return super.doClean(text);
     }
     
+    public String cleanLink(String text) {
+        return super.doCleanLink(super.doClean(text));
+    }
+    
     public String doClean(String text) {
         if(text == null) return null;
         
@@ -243,7 +247,7 @@ public class Yotsuba extends WWW {
         post.setThreadNum(threadNum);
         post.setOp(op);
         post.setTitle(this.cleanSimple(title));
-        post.setEmail(this.cleanSimple(email));
+        post.setEmail(this.cleanLink(email));
         post.setName(this.cleanSimple(name));
         post.setTrip(trip);
         post.setDate(timeStamp);

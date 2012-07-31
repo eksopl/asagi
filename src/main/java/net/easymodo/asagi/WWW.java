@@ -2,6 +2,7 @@ package net.easymodo.asagi;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -142,4 +143,13 @@ public abstract class WWW extends Board {
         return text;
     }
 
+    public String doCleanLink(String link) {
+        if(link == null) return null;
+
+        try {
+            link = URLDecoder.decode(link, "UTF-8");
+        } catch(UnsupportedEncodingException e) {}
+        
+        return link;
+    }
 }
