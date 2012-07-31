@@ -634,7 +634,7 @@ public class Dumper {
         if(bSet.getUseOldDirectoryStructure() == null)
             bSet.setUseOldDirectoryStructure(false);
         
-		int pageLimbo = bSet.getDeletedThreadsThresholdPage();
+        int pageLimbo = bSet.getDeletedThreadsThresholdPage();
         boolean fullMedia = (bSet.getMediaThreads() != 0);
         
         Yotsuba sourceBoard = new Yotsuba(boardName);

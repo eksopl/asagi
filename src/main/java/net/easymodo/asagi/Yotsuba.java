@@ -243,7 +243,7 @@ public class Yotsuba extends WWW {
         post.setThreadNum(threadNum);
         post.setOp(op);
         post.setTitle(this.cleanSimple(title));
-        post.setEmail(email);
+        post.setEmail(this.cleanSimple(email));
         post.setName(this.cleanSimple(name));
         post.setTrip(trip);
         post.setDate(timeStamp);
