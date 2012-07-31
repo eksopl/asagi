@@ -82,7 +82,7 @@ public abstract class SQL implements DB {
 
         if(this.insertQuery == null) {
             this.insertQuery = String.format(
-                    "INSERT INTO %s" +
+                    "INSERT IGNORE INTO %s" +
                     " (poster_ip, num, subnum, thread_num, op, timestamp, timestamp_expired, preview_orig, preview_w, preview_h, media_filename, " +
                     " media_w, media_h, media_size, media_hash, media_orig, spoiler, deleted, " +
                     " capcode, email, name, trip, title, comment, delpass, sticky, poster_hash, poster_country, exif) " +
