@@ -232,6 +232,9 @@ public class Local extends Board {
             // will be thrown.
             ByteStreams.copy(inStream, outFile);
             
+            // Keep Windows happy when renaming files
+            outFile.close();
+            
             // Move the temporary file into place
             if(!tempFile.renameTo(outputFile))
                 throw new ContentStoreException("Unable to move temporary file " + tempFilePath + " into place");
