@@ -116,6 +116,8 @@ public class Yotsuba extends WWW {
         // SOPA spoilers
         //text = text.replaceAll("<span class=\"spoiler\"[^>]*>(.*?)</spoiler>(</span>)?", "$1");
     
+        // Admin-Mod-Dev quotelinks
+        text = text.replaceAll("<span style=\"font-size: smaller;\"><span style=\"font-weight: bold;\">(?:Administrator|Moderator|Developer) Repl(?:y|ies):</span>.*?</span>", "");
         // Non-public tags
         text = text.replaceAll("\\[(banned|moot)\\]", "[$1:lit]");
         // Comment too long, also EXIF tag toggle
