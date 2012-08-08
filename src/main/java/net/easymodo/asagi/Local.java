@@ -212,9 +212,10 @@ public class Local extends Board {
         File outputFile = new File(outputDir + "/" + filename);
         if(outputFile.exists()) return;
         
-        String tempFilePath = outputDir + "/" + filename + ".tmp";
         // Open a temp file for writing
+        String tempFilePath = outputDir + "/" + filename + ".tmp";
         File tempFile = new File(tempFilePath);
+        if(tempFile.exists()) return;
         
         // Throws ContentGetException on failure
         InputStream inStream = preview ? source.getMediaPreview(h) : source.getMedia(h);
@@ -222,24 +223,12 @@ public class Local extends Board {
         OutputStream outFile = null;
         try {
             outFile = new BufferedOutputStream(new FileOutputStream(tempFile));
-        } catch(FileNotFoundException e) {
-            throw new ContentStoreException(e);
-        }
-        
-        try{
+     
             // Copy the network input stream to our local file
             // In case the connection is cut off or something similar happens, an IOException
             // will be thrown.
             ByteStreams.copy(inStream, outFile);
             
-            // Move the temporary file into place
-            if(!tempFile.renameTo(outputFile))
-                throw new ContentStoreException("Unable to move temporary file " + tempFilePath + " into place");
-            
-            if(this.webGroupId != 0) {
-                posix.chmod(outputFile.getCanonicalPath(), 0664);
-                posix.chown(outputFile.getCanonicalPath(), -1, this.webGroupId);
-            }
         } catch(FileNotFoundException e) {
             throw new ContentStoreException(e);
         } catch(IOException e) {
@@ -248,11 +237,26 @@ public class Local extends Board {
             throw new ContentStoreException(e);
         } finally {
             try {
+                if(outFile != null) outFile.close();
                 inStream.close();
-                outFile.close();
             } catch(IOException e) {
                 throw new ContentStoreException(e);
             }
+        }
+            
+        try {            
+            // Move the temporary file into place
+            if(!tempFile.renameTo(outputFile))
+                throw new ContentStoreException("Unable to move temporary file " + tempFilePath + " into place");
+            
+            if(this.webGroupId != 0) {
+                posix.chmod(outputFile.getCanonicalPath(), 0664);
+                posix.chown(outputFile.getCanonicalPath(), -1, this.webGroupId);
+            }
+        } catch(IOException e) {
+            throw new ContentStoreException(e);
+        } finally {
+
         }        
     }
 }
