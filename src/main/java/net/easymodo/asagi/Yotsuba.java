@@ -61,7 +61,7 @@ public class Yotsuba extends WWW {
         postParsePattern2 = Pattern.compile(postParsePatternString2, Pattern.COMMENTS | Pattern.DOTALL);
         postGetPattern = Pattern.compile(postGetPatternString, Pattern.COMMENTS | Pattern.DOTALL);
         
-        String numPatString = "<div \\s id=\"p([^\"]*)\" \\s class=\"post \\s [^\"]*\">";
+        String numPatString = "<div \\s id=\"p(\\d+)\" \\s class=\"post \\s [^\"]*\">";
         String titlePatString = "<span \\s class=\"subject\">([^<]*)</span>";
         String emailPatString = "<a \\s href=\"mailto:([^\"]*)\" \\s class=\"useremail\">";
         String datePatString = "<span \\s class=\"dateTime\" \\s data-utc=\"([0-9]+)\">([^<]*)</span>";
@@ -70,8 +70,8 @@ public class Yotsuba extends WWW {
         String omittedPatString = "<span \\s class=\"abbr\">Comment \\s too \\s long";
         String oldCapPatString = "<span \\s class=\"commentpostername\"><span [^>]*>\\#\\# \\s (.)[^<]*</span></span>";
         
-        String omPostsPatString = "<span \\s class=\"info\">\\s*<strong>([0-9]*) \\s posts \\s omitted";
-        String omImagesPatString = "<em>\\(([0-9]*) \\s have \\s images\\)</em>";
+        String omPostsPatString = "<span \\s class=\"info\">\\s*<strong>(\\d*) \\s posts \\s omitted";
+        String omImagesPatString = "<em>\\((\\d*) \\s have \\s images\\)</em>";
         
         numPattern = Pattern.compile(numPatString, Pattern.COMMENTS | Pattern.DOTALL);
         titlePattern = Pattern.compile(titlePatString, Pattern.COMMENTS | Pattern.DOTALL);
