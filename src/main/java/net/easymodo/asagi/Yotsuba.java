@@ -117,7 +117,7 @@ public class Yotsuba extends WWW {
         //text = text.replaceAll("<span class=\"spoiler\"[^>]*>(.*?)</spoiler>(</span>)?", "$1");
     
         // Admin-Mod-Dev quotelinks
-        text = text.replaceAll("<span style=\"font-size: smaller;\"><span style=\"font-weight: bold;\">(?:Administrator|Moderator|Developer) Repl(?:y|ies):</span>.*?</span>", "");
+        text = text.replaceAll("<span class=\"capcodeReplies\"><span style=\"font-size: smaller;\"><span style=\"font-weight: bold;\">(?:Administrator|Moderator|Developer) Repl(?:y|ies):</span>.*?</span><br></span>", "");
         // Non-public tags
         text = text.replaceAll("\\[(banned|moot)\\]", "[$1:lit]");
         // Comment too long, also EXIF tag toggle
@@ -351,11 +351,9 @@ public class Yotsuba extends WWW {
         }
         String name    = new String(mat.group(1));
         String trip    = (mat.group(2) != null) ? new String(mat.group(2)) : null;
-        String capcode = (mat.group(3) == null) ? 
-                            ((mat.group(4) != null) ? new String(mat.group(4)) : null) : 
-                            new String(mat.group(3));
-        String uid = mat.group(5);
-        String country = (mat.group(6) != null) ? new String(mat.group(6)) : null;
+        String capcode = (mat.group(3) != null) ? new String(mat.group(3)) : null;
+        String uid     = mat.group(4);
+        String country = (mat.group(5) != null) ? new String(mat.group(5)) : null;
                      
 
          mat = oldCapPattern.matcher(text);
@@ -380,15 +378,17 @@ public class Yotsuba extends WWW {
          int tHeight = 0;
          int tWidth = 0;
          if(mat.find()) {
-             link     = (mat.group(1) != null) ? new String(mat.group(1)) : null;
-             spoiler  = (mat.group(2) != null);
-             fileSize = (mat.group(3) != null) ? new String(mat.group(3)) : null;
-             width    = (mat.group(4) != null) ? Integer.parseInt(mat.group(4)) : 0;
-             height   = (mat.group(5) != null) ? Integer.parseInt(mat.group(5)) : 0;
-             fileName = (mat.group(6) != null) ? new String(mat.group(6)) : null;
-             md5b64   = (mat.group(7) != null) ? new String(mat.group(7)) : null;
-             tHeight  = (mat.group(8) != null) ? Integer.parseInt(mat.group(8)) : 0;
-             tWidth   = (mat.group(9) != null) ? Integer.parseInt(mat.group(9)) : 0;
+             link     = (mat.group(2) != null) ? new String(mat.group(2)) : null;
+             spoiler  = (mat.group(3) != null);
+             fileSize = (mat.group(4) != null) ? new String(mat.group(4)) : null;
+             width    = (mat.group(5) != null) ? Integer.parseInt(mat.group(5)) : 0;
+             height   = (mat.group(6) != null) ? Integer.parseInt(mat.group(6)) : 0;
+             fileName = (mat.group(7) == null) ?
+                           ((mat.group(1) != null) ? new String(mat.group(1)) : null) :
+                           new String(mat.group(7));
+             md5b64   = (mat.group(8) != null) ? new String(mat.group(8)) : null;
+             tHeight  = (mat.group(9) != null) ? Integer.parseInt(mat.group(9)) : 0;
+             tWidth   = (mat.group(10) != null) ? Integer.parseInt(mat.group(10)) : 0;
          }
          
          mat = commentPattern.matcher(text);
