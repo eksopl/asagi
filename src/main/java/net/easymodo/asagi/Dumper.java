@@ -157,7 +157,6 @@ public class Dumper {
 				} catch(ContentGetException e) {
                     debug(ERROR, "Couldn't fetch preview of post " + 
                             mediaPrevPost.getNum() + ": " + e.getMessage());
-                    continue;
                 } catch(ContentStoreException e) {
                     debug(ERROR, "Couldn't save preview of post " + 
                             mediaPrevPost.getNum() + ": " + e.getMessage());
@@ -181,11 +180,9 @@ public class Dumper {
                 } catch(ContentGetException e) {
                     debug(ERROR, "Couldn't fetch media of post " + 
                             mediaPost.getNum() + ": " + e.getMessage());
-                    continue;
                 } catch(ContentStoreException e) {
                     debug(ERROR, "Couldn't save media of post " + 
                             mediaPost.getNum() + ": " + e.getMessage());
-                    continue;
                 }
             } 
         }
@@ -207,13 +204,13 @@ public class Dumper {
                 } catch(ContentStoreException e) {
                     debug(ERROR, "Couldn't insert topic " + newTopic.getNum() +
                             ": " + e.getMessage());
-                    
                     newTopic.lock.writeLock().unlock();
                     continue;
                 } catch(DBConnectionException e) {
                     debug(ERROR, "Database connection error while inserting topic: " + newTopic.getNum()
                             + ". Lost connection to database, can't reconnect. Reason: "
                             + e.getMessage());
+                    newTopic.lock.writeLock().unlock();
                     continue;
                 }
                 
@@ -493,6 +490,7 @@ public class Dumper {
                }
                
                if(topic == null) { 
+                   pingTopic(oldTopic);
                    debug(WARN, newTopic + ": topic has no posts");
                    continue; 
                }
