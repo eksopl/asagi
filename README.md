@@ -4,14 +4,10 @@ Asagi is a reimplementation of Fuuka's dumper side in Java. It allows you to dum
 
 To provide a frontend for said data (providing a web interface to use it as an archive is the usual reason to use a program like this to begin with), you'll have to use [fuuka](/eksopl/fuuka) or even [foolfuuka](/FoOlRulez/FoOlFuuka). 
 
-A first goal is to reach feature parity with Fuuka's dumper. New features and enhancements are to follow next.
+The first goal was to reach feature parity with Fuuka's dumper. New features and enhancements are to follow next.
 
 <hr>
-Asagi is not ready for public consumption yet. An early alpha/developer preview/whatever is coming soon.
-
-The very brave can pull the code and start messing with it (it's in a functional state already), but please do not do so unless you actually know what you're doing.
-
-Asagi is storing image files and thumbnails according to a new directory configuration that doesn't save duplicates, but that isn't currently supported by neither foolfuuka nor fuuka, so it won't be of any use for you if you just want a functioning archive with a web frontend.
+Asagi is now mostly ready for public consumption. However, Asagi is storing image files and thumbnails according to a new directory configuration that doesn't save duplicates, so it's only currently compatible with foolfuuka, not vanilla fuuka, because fuuka's database schema is still behind. You can [download release 0.2 here](/eksopl/asagi/downloads) (released Aug 30 2012).
 <hr>
 
 Its short term goals are to:
