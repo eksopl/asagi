@@ -66,7 +66,7 @@ public class Yotsuba extends WWW {
         String emailPatString = "<a \\s href=\"mailto:([^\"]*)\" \\s class=\"useremail\">";
         String datePatString = "<span \\s class=\"dateTime\" \\s data-utc=\"([0-9]+)\">([^<]*)</span>";
         String commentPatString = "<blockquote \\s class=\"postMessage\" [^>]*>(.*?)</blockquote>";
-        String stickyPatString = "<img [^>]* \\s* alt=\"Sticky\" \\s* title=\"Sticky\" \\s */>";
+        String stickyPatString = "<img \\s src=\"[^\"]*\" \\s alt=\"Sticky\" \\s title=\"Sticky\"[^>]*>";
         String omittedPatString = "<span \\s class=\"abbr\">Comment \\s too \\s long";
         String oldCapPatString = "<span \\s class=\"commentpostername\"><span [^>]*>\\#\\# \\s (.)[^<]*</span></span>";
         
@@ -117,7 +117,7 @@ public class Yotsuba extends WWW {
         //text = text.replaceAll("<span class=\"spoiler\"[^>]*>(.*?)</spoiler>(</span>)?", "$1");
     
         // Admin-Mod-Dev quotelinks
-        text = text.replaceAll("<span class=\"capcodeReplies\"><span style=\"font-size: smaller;\"><span style=\"font-weight: bold;\">(?:Administrator|Moderator|Developer) Repl(?:y|ies):</span>.*?</span><br></span>", "");
+        text = text.replaceAll("<span class=\"capcodeReplies\"><span class=\"smaller\"><span class=\"bold\">(?:Administrator|Moderator|Developer) Repl(?:y|ies):</span>.*?</span><br></span>", "");
         // Non-public tags
         text = text.replaceAll("\\[(banned|moot)\\]", "[$1:lit]");
         // Comment too long, also EXIF tag toggle
