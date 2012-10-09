@@ -44,9 +44,9 @@ public class Yotsuba extends WWW {
         sizeMuls.put("MB", 1024*1024);
         sizeMultipliers = Collections.unmodifiableMap(sizeMuls);
         
-        String postParsePatternString1 = null; 
-        String postParsePatternString2 = null;
-        String postGetPatternString = null;
+        String postParsePatternString1;
+        String postParsePatternString2;
+        String postGetPatternString;
         try {
             postParsePatternString1 = Resources.toString(Resources.getResource("net/easymodo/asagi/defs/Yotsuba/post_parse_1.regex"), Charsets.UTF_8);
             postParsePatternString2 = Resources.toString(Resources.getResource("net/easymodo/asagi/defs/Yotsuba/post_parse_2.regex"), Charsets.UTF_8);    
@@ -68,7 +68,7 @@ public class Yotsuba extends WWW {
         String commentPatString = "<blockquote \\s class=\"postMessage\" [^>]*>(.*?)</blockquote>";
         String stickyPatString = "<img [^>]* \\s* alt=\"Sticky\" \\s* title=\"Sticky\" \\s */>";
         String omittedPatString = "<span \\s class=\"abbr\">Comment \\s too \\s long";
-        String oldCapPatString = "<span \\s class=\"commentpostername\"><span [^>]*>\\#\\# \\s (.)[^<]*</span></span>";
+        String oldCapPatString = "<span \\s class=\"commentpostername\"><span [^>]*>## \\s (.)[^<]*</span></span>";
         
         String omPostsPatString = "<span \\s class=\"info\">\\s*<strong>(\\d*) \\s posts \\s omitted";
         String omImagesPatString = "<em>\\((\\d*) \\s have \\s images\\)</em>";
@@ -271,7 +271,7 @@ public class Yotsuba extends WWW {
         if(h.getPreview() == null)
             return null;
         
-        InputStream inStream = null;
+        InputStream inStream;
         try {
             inStream = this.wget(this.boardLinks.get("previewLink") + "/thumb/"
                 + h.getPreview()).getEntity().getContent();
@@ -287,7 +287,7 @@ public class Yotsuba extends WWW {
         if(h.getMedia() == null)
             return null;
         
-        InputStream inStream = null;
+        InputStream inStream;
         try {
             inStream = this.wget(this.boardLinks.get("imgLink") + "/src/"
                 + h.getMedia()).getEntity().getContent();
@@ -316,11 +316,12 @@ public class Yotsuba extends WWW {
     }
     
 
+    @SuppressWarnings("RedundantStringConstructorCall")
     public Post parsePost(String text, int threadNum) throws ContentParseException {
         // Java's substring methods actually just return a new string that
         // points to the original string.
         // In our case, Java will keep the entire page HTML on its heap until
-        // it can garbate collect all of the substrings returned by the matchers.
+        // it can garbage collect all of the substrings returned by the matchers.
         // This is very wasteful when it comes to memory, so throughout this
         // method, we will be forcing the creation of new strings for all
         // string regex matches through the String constructor.
@@ -405,11 +406,9 @@ public class Yotsuba extends WWW {
          mat = omittedPattern.matcher(text);
          if(mat.find()) omitted  = true;
        
-        Post post = this.newYotsubaPost(link, null, spoiler, fileSize, width,
+        return this.newYotsubaPost(link, null, spoiler, fileSize, width,
                 height, fileName, tWidth, tHeight, md5b64, num, title, email,
                 name, trip, capcode, dateUtc, sticky, comment, omitted, threadNum, uid, country);
-        
-        return post;
     }
     
     public String linkPage(int pageNum) {

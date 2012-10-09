@@ -270,7 +270,6 @@ public abstract class SQL implements DB {
             break;
         } catch(SQLRecoverableException e) {
             this.reconnect();
-            continue;
         } catch(SQLException e) {
             try {
                 conn.rollback();
@@ -295,8 +294,7 @@ public abstract class SQL implements DB {
                 break;
             } catch(SQLRecoverableException e) {
                 this.reconnect();
-                continue;
-            } catch(SQLException e) {             
+            } catch(SQLException e) {
                 try {
                     conn.rollback();
                     if(mediaRs != null)

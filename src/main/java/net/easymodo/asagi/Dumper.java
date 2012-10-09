@@ -250,7 +250,6 @@ public class Dumper {
                 } catch(ContentStoreException e) {
                     debug(ERROR, "Couldn't update deleted status of post " + 
                             deletedPost + ": " + e.getMessage());
-                    continue;
                 }
             } 
         }

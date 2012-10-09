@@ -121,7 +121,7 @@ public abstract class WWW extends Board {
         if(text == null) return null;
         
         // Replaces &#dddd; HTML entities with the proper Unicode character
-        Matcher htmlEscapeMatcher = Pattern.compile("&\\#(\\d+);").matcher(text);
+        Matcher htmlEscapeMatcher = Pattern.compile("&#(\\d+);").matcher(text);
         StringBuffer textSb = new StringBuffer();
         while(htmlEscapeMatcher.find()) {
             String escape = (char) Integer.parseInt(htmlEscapeMatcher.group(1)) + "";
