@@ -146,11 +146,11 @@ public class Dumper {
         @Override
         public void run() {
             while(true) {
-                MediaPost mediaPrevPost = null;
+                MediaPost mediaPrevPost;
                 
                 try {
                     mediaPrevPost = mediaPreviewUpdates.take();
-                } catch(InterruptedException e) { } 
+                } catch(InterruptedException e) { continue; }
                 
                 try {
                     mediaLocalBoard.insertMediaPreview(mediaPrevPost, sourceBoard);
@@ -169,11 +169,11 @@ public class Dumper {
         @Override
         public void run() {
             while(true) {
-                MediaPost mediaPost = null;
+                MediaPost mediaPost;
                 
                 try {
                     mediaPost = mediaUpdates.take();
-                } catch(InterruptedException e) { }  
+                } catch(InterruptedException e) { continue; }
                 
                 try {
                     mediaLocalBoard.insertMedia(mediaPost, sourceBoard);
@@ -192,10 +192,10 @@ public class Dumper {
         @Override
         public void run() {
             while(true) {
-                Topic newTopic = null;
+                Topic newTopic;
                 try {
                      newTopic = topicUpdates.take();
-                } catch(InterruptedException e) { }
+                } catch(InterruptedException e) { continue; }
                 
                 newTopic.lock.writeLock().lock();
                 
@@ -239,11 +239,11 @@ public class Dumper {
         @Override
         public void run() {
             while(true) {
-                int deletedPost = 0;
+                int deletedPost;
                 
                 try {
                     deletedPost = deletedPosts.take();
-                } catch(InterruptedException e) { }  
+                } catch(InterruptedException e) { continue; }
                 
                 try {
                     topicLocalBoard.markDeleted(deletedPost);
@@ -283,12 +283,14 @@ public class Dumper {
                         if(e.getHttpStatus() == 304)
                             debug(TALK, (pageNo == 0 ? "front page" : "page " + pageNo)
                                     + ": wasn't modified");
+                        else
+                            debug(WARN, "page " + pageNo + ": " + e.getMessage());
                         continue;
                     } catch(ContentGetException e) {
-                        debug(WARN, pageNo + e.getMessage());
+                        debug(WARN, "page " + pageNo + ": " + e.getMessage());
                         continue;
                     } catch(ContentParseException e) {
-                        debug(ERROR, pageNo + e.getMessage());
+                        debug(WARN, "page " + pageNo + ": " + e.getMessage());
                         continue;
                     }
                     
@@ -308,6 +310,9 @@ public class Dumper {
                         // If we never saw this topic, then we'll put it in the
                         // new topics queue, a TopicFetcher will take care of
                         // it.
+                        synchronized(newTopics) {
+                            if(newTopics.contains(num)) continue;
+                        }
                         if(!topics.containsKey(num)) { 
                             try { newTopics.put(num); } catch(InterruptedException e) {}
                             continue;
@@ -406,33 +411,27 @@ public class Dumper {
         private void pingTopic(Topic topic) {
             if(topic == null) return;
             
-            topic.lock.writeLock().lock();
-            try {
-                topic.setLastHit(DateTime.now().getMillis());
-                topic.setBusy(false);
-            } finally {
-                topic.lock.writeLock().unlock();
-            }
+            topic.setLastHit(DateTime.now().getMillis());
+            topic.setBusy(false);
+            topic.lock.writeLock().unlock();
         }
         
         @Override
         public void run() {
             while(true) {
-                int newTopic = 0;
+                int newTopic;
                 try {
                     newTopic = newTopics.take(); 
-               } catch(InterruptedException e) { }
+               } catch(InterruptedException e) { continue; }
                
                String lastMod = null;
                
                Topic oldTopic = topics.get(newTopic);
 
-               // If we already saw this topic before, acquire its read lock,
-               // so we can get the last modification date (for I-M-S header)
+               // If we already saw this topic before, acquire its lock
                if(oldTopic != null) {
-                   oldTopic.lock.readLock().lock();
+                   oldTopic.lock.writeLock().lock();
                    lastMod = oldTopic.getLastMod();
-                   oldTopic.lock.readLock().unlock();
                }
                
                long startTime = DateTime.now().getMillis();
@@ -450,8 +449,6 @@ public class Dumper {
                        continue;
                    } else if(e.getHttpStatus() == 404) {
                        if(oldTopic != null) {
-                           oldTopic.lock.writeLock().lock();
-                           
                            // If we found the topic before the page limbo
                            // threshold, then it was forcefully deleted
                            if(oldTopic.getLastPage() < pageLimbo) {
@@ -497,13 +494,12 @@ public class Dumper {
                topic.setLastHit(startTime);
                
                // We're about to make our rebuilt topic public
-               topic.lock.readLock().lock();
+               topic.lock.writeLock().lock();
                
                if(oldTopic != null) {
-                   oldTopic.lock.writeLock().lock();
-                   
-                   // Beaten to the punch
-                   if(oldTopic.getLastHit() > startTime) { 
+                   // Beaten to the punch (how?)
+                   if(oldTopic.getLastHit() > startTime) {
+                       debug(ERROR, "Concurrency issue updating topic " + oldTopic.getNum());
                        oldTopic.lock.writeLock().unlock();
                        
                        // Throw this away now.
@@ -530,7 +526,7 @@ public class Dumper {
                
                // We have a read lock, update it
                topicUpdates.add(topic);
-               topic.lock.readLock().unlock();
+               topic.lock.writeLock().unlock();
                
                debug(TALK, newTopic + ": " + (oldTopic != null ? "updated" : "new"));
                oldTopic = null;
@@ -552,7 +548,7 @@ public class Dumper {
                 for(Topic topic : topics.values()) {
                     try {
                         if(!topic.lock.writeLock().tryLock(1, TimeUnit.SECONDS)) continue;
-                    } catch(InterruptedException e) { }
+                    } catch(InterruptedException e) { continue; }
                     if(topic.isBusy()) { topic.lock.writeLock().unlock(); continue; }
                     
                     long deltaLastHit = DateTime.now().getMillis() - topic.getLastHit();
@@ -633,8 +629,9 @@ public class Dumper {
         
         int pageLimbo = bSet.getDeletedThreadsThresholdPage();
         boolean fullMedia = (bSet.getMediaThreads() != 0);
-        
+
         Yotsuba sourceBoard = new Yotsuba(boardName);
+        //YotsubaJSON sourceBoard = new YotsubaJSON(boardName);
 
         // Get and init DB engine class through reflection
         String boardEngine = bSet.getEngine() == null ? "Mysql" : bSet.getEngine();

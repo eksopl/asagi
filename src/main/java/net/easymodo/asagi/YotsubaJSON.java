@@ -38,6 +38,7 @@ public class YotsubaJSON extends WWW {
         return Collections.unmodifiableMap(boardInfo);
     }
 
+
     private static class BooleanTypeConverter implements JsonSerializer<Boolean>, JsonDeserializer<Boolean> {
         @Override
         public JsonElement serialize(Boolean src, Type srcType, JsonSerializationContext context) {
@@ -47,7 +48,7 @@ public class YotsubaJSON extends WWW {
         @Override
         public Boolean deserialize(JsonElement json, Type type, JsonDeserializationContext context)
                 throws JsonParseException {
-            return new Boolean(json.getAsInt() != 0);
+            return (json.getAsInt() != 0);
         }
     }
 

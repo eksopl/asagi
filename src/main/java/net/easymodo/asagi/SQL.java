@@ -202,7 +202,7 @@ public abstract class SQL implements DB {
                 updateStmt.setString(c++,post.getMediaFilename());
                 updateStmt.setBoolean(c++, post.isSticky());
                 updateStmt.setInt(c++, post.getNum());
-                updateStmt.setInt(c++, post.getSubnum());
+                updateStmt.setInt(c, post.getSubnum());
                 updateStmt.addBatch();
 
                 c = 1;
@@ -237,7 +237,7 @@ public abstract class SQL implements DB {
                 insertStmt.setString(c++, post.getExif());
                 
                 insertStmt.setInt(c++, post.getNum());
-                insertStmt.setInt(c++, post.getSubnum());
+                insertStmt.setInt(c, post.getSubnum());
                 insertStmt.addBatch();
             }
             insertStmt.executeBatch();

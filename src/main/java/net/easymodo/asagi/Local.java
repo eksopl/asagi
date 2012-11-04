@@ -180,7 +180,7 @@ public class Local extends Board {
         if((preview && h.getPreview() == null) || (!preview && h.getMedia() == null))
             return;
         
-        Media mediaRow = null;
+        Media mediaRow;
         try {
             mediaRow = db.getMedia(h);
         } catch(DBConnectionException e) { 
