@@ -167,6 +167,9 @@ public class YotsubaJSON extends WWW {
             p.setPreviewOrig(pj.getTim() + "s.jpg");
         }
 
+        String capcode = pj.getCapcode();
+        if(capcode != null) capcode = capcode.substring(0, 1);
+
         String posterCountry = pj.getCountryName();
         if(posterCountry != null && (posterCountry.equals("XX") || posterCountry.equals("A1"))) posterCountry = null;
 
@@ -179,7 +182,7 @@ public class YotsubaJSON extends WWW {
         p.setPreviewW(pj.getTnW());
         p.setPreviewH(pj.getTnH());
         p.setNum(pj.getNo());
-        p.setThreadNum(pj.getResto());
+        p.setThreadNum(pj.getResto() == 0 ? pj.getNo() : pj.getResto());
         p.setOp(pj.getResto() == 0);
         p.setTitle(this.cleanSimple(pj.getSub()));
         p.setEmail(this.cleanLink(pj.getEmail()));
@@ -190,7 +193,7 @@ public class YotsubaJSON extends WWW {
         p.setSpoiler(pj.isSpoiler());
         p.setDeleted(false);
         p.setSticky(pj.isSticky());
-        p.setCapcode(pj.getCapcode());
+        p.setCapcode(capcode);
         p.setPosterHash(pj.getId());
         p.setPosterCountry(posterCountry);
 
