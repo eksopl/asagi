@@ -32,7 +32,7 @@ import com.google.gson.JsonSyntaxException;
 public class Dumper {
     private final String boardName;
     private final int debugLevel;
-    
+
     private static final String DEBUG_FILE = "./debug.log";
     private static final String SETTINGS_FILE = "./asagi.json";
 
@@ -52,9 +52,9 @@ public class Dumper {
     public static final int WARN  = 2;
     public static final int TALK  = 3;
     public static final int INFO  = 4;
-    
+
     private static BufferedWriter debugOut;
-    
+
     public Dumper(String boardName, Local topicLocalBoard, Local mediaLocalBoard,
             Board sourceBoard, boolean fullMedia, int pageLimbo) {
         this.boardName = boardName;
@@ -71,7 +71,7 @@ public class Dumper {
         this.debugLevel = TALK;
         this.pageLimbo = pageLimbo;
     }
-    
+
     public void debug(int level, String ... args){
         String preOutput = "[" +
                         boardName + " " +
@@ -81,18 +81,18 @@ public class Dumper {
                         mediaUpdates.size() + " " +
                         mediaPreviewUpdates.size() +
                         "] ";
-        
+
         String output = "";
-                
+
         for(String arg : args)
             output = output.concat(arg);
-        
+
         if (level <= debugLevel) {
             System.out.println(preOutput + output);
         }
         if(debugOut != null && level == ERROR) {
             LocalTime time = new LocalTime();
-            
+
             try {
                 debugOut.write("["+time.getHourOfDay()+":"+
                         time.getMinuteOfHour()+":"+time.getSecondOfMinute()+"]");
@@ -104,15 +104,15 @@ public class Dumper {
             }
         }
     }
-    
-   
+
+
     private boolean findDeleted(Topic oldTopic, Topic newTopic, boolean markDeleted) {
         boolean changed = false;
-        
+
         if(oldTopic == null) return changed;
-       
+
         List<Integer> oldPosts = new ArrayList<Integer>(oldTopic.getAllPosts());
-        
+
         // Get the posts from the old thread not marked as deleted.
         // We have to do this, otherwise our math for omitted posts will be
         // wrong.
@@ -120,16 +120,16 @@ public class Dumper {
             if(it.next().isDeleted())
                 it.remove();
         }*/
-                
+
         if(oldTopic.getAllPosts().isEmpty()) return changed;
-        
+
         for(int i = 0; i < oldPosts.size(); i++) {
             int num = oldPosts.get(i);
             if(!newTopic.findPost(num)) {
                 // We just found a possibly deleted post, but we haven't been
                 // instructed to actually mark deleted posts.
                 if(!markDeleted) return true;
-                
+
                 changed = true;
                 oldTopic.getAllPosts().remove(num);
                 deletedPosts.add(num);
@@ -140,55 +140,55 @@ public class Dumper {
 
         return changed;
     }
-   
-    
-    public class ThumbFetcher implements Runnable {        
+
+
+    public class ThumbFetcher implements Runnable {
         @Override
         public void run() {
             while(true) {
                 MediaPost mediaPrevPost;
-                
+
                 try {
                     mediaPrevPost = mediaPreviewUpdates.take();
                 } catch(InterruptedException e) { continue; }
-                
+
                 try {
                     mediaLocalBoard.insertMediaPreview(mediaPrevPost, sourceBoard);
 				} catch(ContentGetException e) {
-                    debug(ERROR, "Couldn't fetch preview of post " + 
+                    debug(ERROR, "Couldn't fetch preview of post " +
                             mediaPrevPost.getNum() + ": " + e.getMessage());
                 } catch(ContentStoreException e) {
-                    debug(ERROR, "Couldn't save preview of post " + 
+                    debug(ERROR, "Couldn't save preview of post " +
                             mediaPrevPost.getNum() + ": " + e.getMessage());
                 }
             }
         }
     }
-    
-    public class MediaFetcher implements Runnable {    	
+
+    public class MediaFetcher implements Runnable {
         @Override
         public void run() {
             while(true) {
                 MediaPost mediaPost;
-                
+
                 try {
                     mediaPost = mediaUpdates.take();
                 } catch(InterruptedException e) { continue; }
-                
+
                 try {
                     mediaLocalBoard.insertMedia(mediaPost, sourceBoard);
                 } catch(ContentGetException e) {
-                    debug(ERROR, "Couldn't fetch media of post " + 
+                    debug(ERROR, "Couldn't fetch media of post " +
                             mediaPost.getNum() + ": " + e.getMessage());
                 } catch(ContentStoreException e) {
-                    debug(ERROR, "Couldn't save media of post " + 
+                    debug(ERROR, "Couldn't save media of post " +
                             mediaPost.getNum() + ": " + e.getMessage());
                 }
-            } 
+            }
         }
     }
-    
-    public class TopicInserter implements Runnable {        
+
+    public class TopicInserter implements Runnable {
         @Override
         public void run() {
             while(true) {
@@ -196,9 +196,9 @@ public class Dumper {
                 try {
                      newTopic = topicUpdates.take();
                 } catch(InterruptedException e) { continue; }
-                
+
                 newTopic.lock.writeLock().lock();
-                
+
                 try {
                     topicLocalBoard.insert(newTopic);
                 } catch(ContentStoreException e) {
@@ -213,16 +213,16 @@ public class Dumper {
                     newTopic.lock.writeLock().unlock();
                     continue;
                 }
-                
+
                 List<Post> posts = newTopic.getPosts();
                 if(posts == null) {
                     newTopic.lock.writeLock().unlock();
                     return;
                 }
-                
+
                 for(Post post : posts) {
                     try {
-                        MediaPost mediaPost = new MediaPost(post.getNum(), post.isOp(), 
+                        MediaPost mediaPost = new MediaPost(post.getNum(), post.isOp(),
                                 post.getPreviewOrig(), post.getMediaOrig(), post.getMediaHash());
 
                         if(post.getPreviewOrig() != null) mediaPreviewUpdates.put(mediaPost);
@@ -232,41 +232,41 @@ public class Dumper {
                 newTopic.purgePosts();
                 newTopic.lock.writeLock().unlock();
             }
-        } 
+        }
     }
-    
-    public class PostDeleter implements Runnable {     
+
+    public class PostDeleter implements Runnable {
         @Override
         public void run() {
             while(true) {
                 int deletedPost;
-                
+
                 try {
                     deletedPost = deletedPosts.take();
                 } catch(InterruptedException e) { continue; }
-                
+
                 try {
                     topicLocalBoard.markDeleted(deletedPost);
                 } catch(ContentStoreException e) {
-                    debug(ERROR, "Couldn't update deleted status of post " + 
+                    debug(ERROR, "Couldn't update deleted status of post " +
                             deletedPost + ": " + e.getMessage());
                 }
-            } 
+            }
         }
     }
-    
-    
+
+
     public class PageScanner implements Runnable {
         private final List<Integer> pageNos;
         private final long wait;
         private String[] pagesLastMods;
-        
+
         PageScanner(long wait, List<Integer> pageNos) {
             this.wait = wait * 1000;
             this.pageNos = pageNos;
             this.pagesLastMods = new String[Collections.max(pageNos) + 1];
         }
-        
+
         @Override
         public void run() {
             while(true) {
@@ -274,9 +274,9 @@ public class Dumper {
                 for(int pageNo : pageNos) {
                     String lastMod = pagesLastMods[pageNo];
                     Page page;
-                    
+
                     long startTime = DateTime.now().getMillis();
-                    
+
                     try {
                         page = sourceBoard.content(Request.page(pageNo, lastMod));
                     } catch(HttpGetException e) {
@@ -293,57 +293,57 @@ public class Dumper {
                         debug(WARN, "page " + pageNo + ": " + e.getMessage());
                         continue;
                     }
-                    
+
                     if(page == null) {
                         debug(WARN, (pageNo == 0 ? "front page" : "page " + pageNo)
                                 + "had no threads");
                         continue;
                     }
-                    
+
                     pagesLastMods[pageNo] = page.getLastMod();
-                    
+
                     // debug(TALK, "got page " + pageNo);
-                    
+
                     for(Topic newTopic : page.getThreads()) {
                         int num = newTopic.getNum();
-                        
+
                         // If we never saw this topic, then we'll put it in the
                         // new topics queue, a TopicFetcher will take care of
                         // it.
                         synchronized(newTopics) {
                             if(newTopics.contains(num)) continue;
                         }
-                        if(!topics.containsKey(num)) { 
+                        if(!topics.containsKey(num)) {
                             try { newTopics.put(num); } catch(InterruptedException e) {}
                             continue;
                         }
-                        
+
                         // Otherwise we'll go ahead and try to update the
                         // topic with the posts we have from this index page.
                         Topic fullTopic = topics.get(num);
-                        
+
                         // Perhaps we had extremely bad luck and a TopicFetcher
                         // just saw this thread 404 and got rid of it before we
                         // could grab it? Oh well.
                         if(fullTopic == null) continue;
-                        
+
                         // Try to get the write lock for this topic.
                         fullTopic.lock.writeLock().lock();
-                        
+
                         // Oh, forget it. A ThreadFetcher beat us to this one.
                         // (Or another PageScanner)
-                        if(fullTopic.getLastHit() > startTime) { 
+                        if(fullTopic.getLastHit() > startTime) {
                             fullTopic.lock.writeLock().unlock();
-                            continue; 
+                            continue;
                         }
-                        
+
                         // Update the last page where we saw this topic
                         fullTopic.setLastPage(pageNo);
 
                         int oldPosts = 0;
                         int newPosts = 0;
                         boolean mustRefresh = false;
-                        
+
                         // We check for any posts that got deleted
                         // We have the write lock, so TopicFetchers can suck it.
                         if(findDeleted(fullTopic, newTopic, false)) {
@@ -353,17 +353,17 @@ public class Dumper {
                             mustRefresh = true;
                             newPosts++;
                          }
-                        
+
                         for(Iterator<Post> it = newTopic.getPosts().iterator(); it.hasNext();) {
                             Post newPost = it.next();
-                            
+
                             // This post was already in topics map. Next post
                             if(fullTopic.findPost(newPost.getNum())) {
                                 if(newPost.isOmitted()) it.remove();
-                                oldPosts++; 
-                                continue; 
+                                oldPosts++;
+                                continue;
                             }
-                            
+
                             // Looks like it's new
                             // Add the post's num to the full topic, we'll
                             // update it for real with newTopic.
@@ -373,22 +373,22 @@ public class Dumper {
                             // This means we have to refresh the full thread
                             if(newPost.isOmitted()) mustRefresh = true;
                         }
-                        
+
                         // Update the time we last hit this thread
                         fullTopic.setLastHit(startTime);
-                        
+
                         fullTopic.lock.writeLock().unlock();
-                                                
+
                         //  No new posts
                         if(oldPosts != 0 && newPosts == 0) continue;
-                        
+
                         debug(TALK, (pageNo == 0 ? "front page" : "page " + pageNo) + " update");
-                        
+
                         newTopic.lock.readLock().lock();
                         // Push new posts/images/thumbs to their queues
                         topicUpdates.add(newTopic);
                         newTopic.lock.readLock().unlock();
-                        
+
                         // And send the thread to the new threads queue if we were
                         // forced to refresh earlier or if the only old post we
                         // saw was the OP, as that means we're missing posts from inside the thread.
@@ -398,34 +398,34 @@ public class Dumper {
                         }
                     }
                 }
-                
+
                 long left = this.wait - (DateTime.now().getMillis() - now);
                 if(left > 0) {
                     try { Thread.sleep(left); } catch(InterruptedException e) { }
                 }
-            }            
+            }
         }
     }
-    
+
     public class TopicFetcher implements Runnable {
         private void pingTopic(Topic topic) {
             if(topic == null) return;
-            
+
             topic.setLastHit(DateTime.now().getMillis());
             topic.setBusy(false);
             topic.lock.writeLock().unlock();
         }
-        
+
         @Override
         public void run() {
             while(true) {
-                int newTopic;
-                try {
-                    newTopic = newTopics.take(); 
+               int newTopic;
+               try {
+                    newTopic = newTopics.take();
                } catch(InterruptedException e) { continue; }
-               
+
                String lastMod = null;
-               
+
                Topic oldTopic = topics.get(newTopic);
 
                // If we already saw this topic before, acquire its lock
@@ -433,7 +433,7 @@ public class Dumper {
                    oldTopic.lock.writeLock().lock();
                    lastMod = oldTopic.getLastMod();
                }
-               
+
                long startTime = DateTime.now().getMillis();
 
                // Let's go get our updated topic, from the topic page
@@ -461,7 +461,7 @@ public class Dumper {
                                topicUpdates.add(oldTopic);
                                debug(TALK, newTopic + ": deleted (last seen on page " + oldTopic.getLastPage() + ")");
                            }
-                           
+
                            // Goodbye, old topic.
                            topics.remove(newTopic);
                            oldTopic.lock.writeLock().unlock();
@@ -484,38 +484,38 @@ public class Dumper {
                    debug(ERROR, newTopic + ": " + e.getMessage());
                    continue;
                }
-               
-               if(topic == null) { 
+
+               if(topic == null) {
                    pingTopic(oldTopic);
                    debug(WARN, newTopic + ": topic has no posts");
-                   continue; 
+                   continue;
                }
-               
+
                topic.setLastHit(startTime);
-               
+
                // We're about to make our rebuilt topic public
                topic.lock.writeLock().lock();
-               
+
                if(oldTopic != null) {
                    // Beaten to the punch (how?)
                    if(oldTopic.getLastHit() > startTime) {
                        debug(ERROR, "Concurrency issue updating topic " + oldTopic.getNum());
                        oldTopic.lock.writeLock().unlock();
-                       
+
                        // Throw this away now.
                        topic.lock.readLock().unlock();
                        topic = null;
                        continue;
                    }
-                   
+
                    // Get the deleted posts from the old topic
                    // Update their status in the DB, too.
                    findDeleted(oldTopic, topic, true);
-                   
+
                    // We don't really know at which page this thread is, so let
                    // us keep the last page a PageScanner saw this thread at.
                    topic.setLastPage(oldTopic.getLastPage());
-                   
+
                    // Goodbye, old topic.
                    topics.put(newTopic, topic);
                    oldTopic.lock.writeLock().unlock();
@@ -523,25 +523,25 @@ public class Dumper {
                    // Hello, new topic!
                    topics.put(newTopic, topic);
                }
-               
+
                // We have a read lock, update it
                topicUpdates.add(topic);
                topic.lock.writeLock().unlock();
-               
+
                debug(TALK, newTopic + ": " + (oldTopic != null ? "updated" : "new"));
                oldTopic = null;
            }
         }
     }
-    
+
     public class TopicRebuilder implements Runnable {
         private final long threadRefreshRate;
-        
+
         public TopicRebuilder(int threadRefreshRate) {
             this.threadRefreshRate = threadRefreshRate * 60L * 1000L;
         }
-        
-        
+
+
         @Override
         public void run() {
             while(true) {
@@ -550,17 +550,17 @@ public class Dumper {
                         if(!topic.lock.writeLock().tryLock(1, TimeUnit.SECONDS)) continue;
                     } catch(InterruptedException e) { continue; }
                     if(topic.isBusy()) { topic.lock.writeLock().unlock(); continue; }
-                    
+
                     long deltaLastHit = DateTime.now().getMillis() - topic.getLastHit();
                     //debug(TALK, "deltaLastHit for " + topic.getNum() + ": " + deltaLastHit);
-                    
+
                     if(deltaLastHit <= threadRefreshRate) { topic.lock.writeLock().unlock();  continue; }
-                    
+
                     topic.setBusy(true);
                     try {
                         newTopics.put(topic.getNum());
                     } catch(InterruptedException e) { }
-                    
+
                     topic.lock.writeLock().unlock();
                 }
                 try {
@@ -569,8 +569,8 @@ public class Dumper {
             }
         }
     }
-    
-    public static class DumperUncaughtExceptionHandler implements Thread.UncaughtExceptionHandler {        
+
+    public static class DumperUncaughtExceptionHandler implements Thread.UncaughtExceptionHandler {
         @Override
         public void uncaughtException(Thread t, Throwable e) {
             System.err.print("Exception in thread: \"" + t.getName() + "\" ");
@@ -582,14 +582,14 @@ public class Dumper {
                 System.err.println("Please report this issue if you believe it is a bug.");
             }
             System.exit(-1);
-        } 
+        }
     }
 
-    
+
     private static void spawnBoard(String boardName, Settings settings) throws BoardInitException {
         BoardSettings defSet = settings.getSettings().get("default");
         BoardSettings bSet = settings.getSettings().get(boardName);
-        
+
         if(bSet.getEngine() == null)
             bSet.setEngine(defSet.getEngine());
         if(bSet.getDatabase() == null)
@@ -623,10 +623,10 @@ public class Dumper {
 
         if(bSet.getTable() == null)
             bSet.setTable(boardName);
-        
+
         if(bSet.getUseOldDirectoryStructure() == null)
             bSet.setUseOldDirectoryStructure(false);
-        
+
         int pageLimbo = bSet.getDeletedThreadsThresholdPage();
         boolean fullMedia = (bSet.getMediaThreads() != 0);
 
@@ -636,22 +636,22 @@ public class Dumper {
         // Get and init DB engine class through reflection
         String boardEngine = bSet.getEngine() == null ? "Mysql" : bSet.getEngine();
         bSet.setEngine(boardEngine);
-        
+
         Class<?> sqlBoardClass;
         Constructor<?> boardCnst;
-        
+
         // Init two DB objects: one for topic insertion and another
         // for media insertion
         Object topicDbObj;
         Object mediaDbObj;
-        
+
         try {
             sqlBoardClass = Class.forName("net.easymodo.asagi." + boardEngine);
             boardCnst = sqlBoardClass.getConstructor(String.class, BoardSettings.class);
-                       
+
             // For topics
             topicDbObj = boardCnst.newInstance(bSet.getPath(), bSet);
-            
+
             // For media
             mediaDbObj = boardCnst.newInstance(bSet.getPath(), bSet);
         } catch(ClassNotFoundException e) {
@@ -669,11 +669,11 @@ public class Dumper {
                 throw (RuntimeException)e.getCause();
             throw new BoardInitException("Error initializing board engine " + boardEngine);
         }
-        
+
         // Making sure we got valid DB engines for post and media insertion
         DB topicDb = null;
         DB mediaDb = null;
-        
+
         if(topicDbObj instanceof DB && mediaDbObj instanceof DB) {
             topicDb = (DB) topicDbObj;
             mediaDb = (DB) mediaDbObj;
@@ -682,69 +682,69 @@ public class Dumper {
         if(topicDb == null || mediaDb == null) {
             throw new BoardInitException("Wrong engine specified for " + boardEngine);
         }
-        
+
         Local topicLocalBoard = new Local(bSet.getPath(), bSet, topicDb);
         Local mediaLocalBoard = new Local(bSet.getPath(), bSet, mediaDb);
-        
+
         Dumper dumper = new Dumper(boardName, topicLocalBoard, mediaLocalBoard, sourceBoard, fullMedia, pageLimbo);
         Thread.UncaughtExceptionHandler exHandler = new Dumper.DumperUncaughtExceptionHandler();
-        
+
         for(int i = 0; i < bSet.getThumbThreads() ; i++) {
             Thread thumbFetcher = new Thread(dumper.new ThumbFetcher());
             thumbFetcher.setName("Thumb fetcher #" + i + " - " + boardName);
             thumbFetcher.setUncaughtExceptionHandler(exHandler);
             thumbFetcher.start();
         }
-        
+
         for(int i = 0; i < bSet.getMediaThreads() ; i++) {
             Thread mediaFetcher = new Thread(dumper.new MediaFetcher());
             mediaFetcher.setName("Media fetcher #" + i + " - " + boardName);
             mediaFetcher.setUncaughtExceptionHandler(exHandler);
             mediaFetcher.start();
         }
-        
+
         for(int i = 0; i < bSet.getNewThreadsThreads() ; i++) {
             Thread topicFetcher = new Thread(dumper.new TopicFetcher());
             topicFetcher.setName("Topic fetcher #" + i + " - " + boardName);
             topicFetcher.setUncaughtExceptionHandler(exHandler);
             topicFetcher.start();
         }
-    
-        for(PageSettings pageSet : bSet.getPageSettings()) {            
+
+        for(PageSettings pageSet : bSet.getPageSettings()) {
             Thread pageScanner = new Thread(dumper.new PageScanner(pageSet.getDelay(), pageSet.getPages()));
             pageScanner.setName("Page scanner " + pageSet.getPages().get(0) + " - " + boardName);
             pageScanner.setUncaughtExceptionHandler(exHandler);
             pageScanner.start();
         }
-        
+
         Thread topicInserter = new Thread(dumper.new TopicInserter());
         topicInserter.setName("Topic inserter" + " - " + boardName);
         topicInserter.setUncaughtExceptionHandler(exHandler);
         topicInserter.start();
-        
+
         Thread postDeleter = new Thread(dumper.new PostDeleter());
         postDeleter.setName("Post deleter" + " - " + boardName);
         postDeleter.setUncaughtExceptionHandler(exHandler);
         postDeleter.start();
-        
+
         Thread topicRebuilder = new Thread(dumper.new TopicRebuilder(bSet.getThreadRefreshRate()));
         topicRebuilder.setName("Topic rebuilder" + " - " + boardName);
         topicRebuilder.setUncaughtExceptionHandler(exHandler);
         topicRebuilder.start();
     }
-    
-    public static void main(String[] args) {        
+
+    public static void main(String[] args) {
         Settings fullSettings;
         String settingsJson;
         Gson gson = new Gson();
         String settingsFileName = SETTINGS_FILE;
-        
+
         for(int i = 0; i < args.length; ++i) {
             if(args[i].equals("--config") && ++i < args.length) {
                 settingsFileName = args[i];
             }
         }
-        
+
         File debugFile = new File(DEBUG_FILE);
         try {
             debugOut = new BufferedWriter(Files.newWriterSupplier(debugFile, Charsets.UTF_8, true).getOutput());
@@ -752,7 +752,7 @@ public class Dumper {
             System.err.println("WARN: Cannot write to debug file");
             debugOut = null;
         }
-        
+
         BufferedReader settingsReader;
         if(settingsFileName.equals("-")) {
             settingsReader = new BufferedReader(new InputStreamReader(System.in, Charsets.UTF_8));
@@ -763,7 +763,7 @@ public class Dumper {
             } catch(FileNotFoundException e) {
                 System.err.println("ERROR: Can't find settings file ("+ settingsFile + ")");
                 return;
-            }     
+            }
         }
 
         try {
@@ -772,14 +772,14 @@ public class Dumper {
             System.err.println("ERROR: Error while reading settings file");
             return;
         }
-        
+
         try {
             fullSettings = gson.fromJson(settingsJson, Settings.class);
         } catch(JsonSyntaxException e) {
             System.err.println("ERROR: Settings file is malformed!");
             return;
         }
-        
+
         for(String boardName : fullSettings.getSettings().keySet()) {
             if(boardName.equals("default")) continue;
             try {
@@ -788,6 +788,6 @@ public class Dumper {
                 System.err.println("ERROR: Error initializing dumper for /" + boardName + "/:");
                 System.err.println("  " + e.getMessage());
             }
-        }        
+        }
     }
 }
