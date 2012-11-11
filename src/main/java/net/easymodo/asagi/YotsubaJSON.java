@@ -158,7 +158,14 @@ public class YotsubaJSON extends WWW {
         return (int) (dtEst.withZoneRetainFields(DateTimeZone.UTC).getMillis() / 1000);
     }
 
-    private Post makePostFromJson(PostJson pj) {
+    private Post makePostFromJson(PostJson pj) throws ContentParseException {
+        if(pj.getNo() == 0) {
+            throw new ContentParseException("Could not parse post (post num missing and could not be zero)");
+        }
+        if(pj.getTime() == 0) {
+            throw new ContentParseException("Could not parse post (post timestamp missing and could not be zero)");
+        }
+
         Post p = new Post();
 
         if(pj.getFilename() != null) {
@@ -170,7 +177,7 @@ public class YotsubaJSON extends WWW {
         String capcode = pj.getCapcode();
         if(capcode != null) capcode = capcode.substring(0, 1);
 
-        String posterCountry = pj.getCountryName();
+        String posterCountry = pj.getCountry();
         if(posterCountry != null && (posterCountry.equals("XX") || posterCountry.equals("A1"))) posterCountry = null;
 
         //p.setLink(link);
@@ -204,7 +211,11 @@ public class YotsubaJSON extends WWW {
         return p;
     }
 
-    private Topic makeThreadFromJson(PostJson pj) {
+    private Topic makeThreadFromJson(PostJson pj) throws ContentParseException {
+        if(pj.getNo() == 0) {
+            throw new ContentParseException("Could not parse thread (thread post num missing and could not be zero)");
+        }
+
         Topic t = new Topic(pj.getNo(), pj.getOmittedPosts(), pj.getOmittedImages());
 
         t.addPost(this.makePostFromJson(pj));

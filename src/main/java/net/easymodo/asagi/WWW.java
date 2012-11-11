@@ -28,29 +28,29 @@ import net.easymodo.asagi.exception.*;
  * This class extends the abstract class Board.
  * It provides basic functionality to fetch things over HTTP.
  * Boards that work over WWW should extend from this class.
- * 
+ *
  * Fuuka notes:
  * Equivalent to: Board::WWW
- * 
+ *
  * Implementation notes:
  * Uses Apache HttpComponents to provide functionality similar to Perl's LWP.
  **/
 @ThreadSafe
 public abstract class WWW extends Board {
     private static HttpClient httpClient;
-    
+
     static {
         HttpClient hc = new ContentEncodingHttpClient();
         ClientConnectionManager ccm = hc.getConnectionManager();
         HttpParams params = hc.getParams();
         params.setParameter(ClientPNames.COOKIE_POLICY, CookiePolicy.IGNORE_COOKIES);
-        
+
         ThreadSafeClientConnManager tsccm = new ThreadSafeClientConnManager(ccm.getSchemeRegistry());
         tsccm.setDefaultMaxPerRoute(20);
         tsccm.setMaxTotal(100);
         httpClient = new ContentEncodingHttpClient(tsccm, params);
     }
-    
+
     public HttpResponse wget(String link) throws HttpGetException {
         return this.wget(link, "");
     }
@@ -58,7 +58,7 @@ public abstract class WWW extends Board {
     public HttpResponse wget(String link, String referer) throws HttpGetException {
         return wget(link, referer, "");
     }
-    
+
     public HttpResponse wget(String link, String referer, String lastMod) throws HttpGetException {
         HttpGet req = new HttpGet(link);
         req.setHeader("Referer", referer);
@@ -68,12 +68,12 @@ public abstract class WWW extends Board {
         int maxTries = 3;
         HttpEntity entity;
         HttpResponse res;
-        
+
         try {
             do {
                 res = httpClient.execute(req);
                 statusCode = res.getStatusLine().getStatusCode();
-            } while(--maxTries > 0 && statusCode == 500);
+            } while(--maxTries > 0 && (statusCode == 500 || statusCode == 503));
         } catch(ClientProtocolException e) {
             throw new HttpGetException(e);
         } catch(IOException e) {
@@ -81,7 +81,7 @@ public abstract class WWW extends Board {
         }
 
         entity = res.getEntity();
-        
+
         if(statusCode != 200) {
             try {
                 // Consume the rest of the HTTP response
@@ -92,10 +92,10 @@ public abstract class WWW extends Board {
             }
             throw new HttpGetException(res.getStatusLine().getReasonPhrase(), statusCode);
         }
-        
+
         return res;
     }
-    
+
     public String[] wgetText(String link, String lastMod) throws ContentGetException {
         // Throws ContentGetException on failure
         HttpResponse httpResponse = this.wget(link, "", lastMod);
@@ -107,19 +107,19 @@ public abstract class WWW extends Board {
 
         String pageText = null;
         try {
-            pageText =  EntityUtils.toString(httpResponse.getEntity(), "UTF-8");
+            pageText = EntityUtils.toString(httpResponse.getEntity(), "UTF-8");
         } catch(UnsupportedEncodingException e) {
             throw new ContentGetException("Unsupported encoding in HTTP response");
         } catch(IOException e) {
             throw new HttpGetException(e);
         }
-        
+
         return new String[] {pageText, newLastMod};
     }
-    
+
     public String doClean(String text) {
         if(text == null) return null;
-        
+
         // Replaces &#dddd; HTML entities with the proper Unicode character
         Matcher htmlEscapeMatcher = Pattern.compile("&#(\\d+);").matcher(text);
         StringBuffer textSb = new StringBuffer();
@@ -129,17 +129,17 @@ public abstract class WWW extends Board {
         }
         htmlEscapeMatcher.appendTail(textSb);
         text = textSb.toString();
-        
+
         // Replaces some other HTML entities
         text = text.replaceAll("&gt;", ">");
         text = text.replaceAll("&lt;", "<");
         text = text.replaceAll("&quot;", "\"");
         text = text.replaceAll("&amp;", "&");
-        
+
         // Trims whitespace at the beginning and end of lines
         text = text.replaceAll("\\s*$", "");
         text = text.replaceAll("^\\s*$", "");
-        
+
         return text;
     }
 
@@ -149,7 +149,7 @@ public abstract class WWW extends Board {
         try {
             link = URLDecoder.decode(link, "UTF-8");
         } catch(UnsupportedEncodingException e) {}
-        
+
         return link;
     }
 }
