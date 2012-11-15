@@ -175,7 +175,7 @@ public class YotsubaJSON extends WWW {
         }
 
         String capcode = pj.getCapcode();
-        if(capcode != null) capcode = capcode.substring(0, 1);
+        if(capcode != null) capcode = capcode.substring(0, 1).toUpperCase();
 
         String posterCountry = pj.getCountry();
         if(posterCountry != null && (posterCountry.equals("XX") || posterCountry.equals("A1"))) posterCountry = null;
@@ -251,6 +251,8 @@ public class YotsubaJSON extends WWW {
         // > implying I'm quoting someone
         text = text.replaceAll("<font class=\"unkfunc\">(.*?)</font>", "$1");
         text = text.replaceAll("<span class=\"quote\">(.*?)</span>", "$1");
+        // Dead Quotes
+        text = text.replaceAll("<span class=\"deadlink\">(.*?)</span>", "$1");
         // Links
         text = text.replaceAll("<a[^>]*>(.*?)</a>", "$1");
         // Spoilers (start)

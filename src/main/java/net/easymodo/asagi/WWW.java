@@ -147,6 +147,7 @@ public abstract class WWW extends Board {
         if(link == null) return null;
 
         try {
+            if(link.endsWith("%")) link = link + "25";
             link = URLDecoder.decode(link, "UTF-8");
         } catch(UnsupportedEncodingException e) {}
 

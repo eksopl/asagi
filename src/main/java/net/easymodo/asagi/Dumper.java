@@ -630,8 +630,8 @@ public class Dumper {
         int pageLimbo = bSet.getDeletedThreadsThresholdPage();
         boolean fullMedia = (bSet.getMediaThreads() != 0);
 
-        Yotsuba sourceBoard = new Yotsuba(boardName);
-        //YotsubaJSON sourceBoard = new YotsubaJSON(boardName);
+        //Yotsuba sourceBoard = new Yotsuba(boardName);
+        YotsubaJSON sourceBoard = new YotsubaJSON(boardName);
 
         // Get and init DB engine class through reflection
         String boardEngine = bSet.getEngine() == null ? "Mysql" : bSet.getEngine();

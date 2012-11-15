@@ -24,7 +24,7 @@ public class Yotsuba extends WWW {
     private static final Pattern postParsePattern1;
     private static final Pattern postParsePattern2;
     private static final Pattern postGetPattern;
-    
+
     private static final Pattern numPattern;
     private static final Pattern titlePattern;
     private static final Pattern datePattern;
@@ -33,7 +33,7 @@ public class Yotsuba extends WWW {
     private static final Pattern stickyPattern;
     private static final Pattern omittedPattern;
     private static final Pattern oldCapPattern;
-    
+
     private static final Pattern omPostsPattern;
     private static final Pattern omImagesPattern;
 
@@ -43,24 +43,24 @@ public class Yotsuba extends WWW {
         sizeMuls.put("KB", 1024);
         sizeMuls.put("MB", 1024*1024);
         sizeMultipliers = Collections.unmodifiableMap(sizeMuls);
-        
+
         String postParsePatternString1;
         String postParsePatternString2;
         String postGetPatternString;
         try {
             postParsePatternString1 = Resources.toString(Resources.getResource("net/easymodo/asagi/defs/Yotsuba/post_parse_1.regex"), Charsets.UTF_8);
-            postParsePatternString2 = Resources.toString(Resources.getResource("net/easymodo/asagi/defs/Yotsuba/post_parse_2.regex"), Charsets.UTF_8);    
-            postGetPatternString = Resources.toString(Resources.getResource("net/easymodo/asagi/defs/Yotsuba/post_get.regex"), Charsets.UTF_8);                    
+            postParsePatternString2 = Resources.toString(Resources.getResource("net/easymodo/asagi/defs/Yotsuba/post_parse_2.regex"), Charsets.UTF_8);
+            postGetPatternString = Resources.toString(Resources.getResource("net/easymodo/asagi/defs/Yotsuba/post_get.regex"), Charsets.UTF_8);
         } catch(IOException e) {
             throw new RuntimeException(e);
         } catch(IllegalArgumentException e) {
             throw new RuntimeException(e);
         }
-        
+
         postParsePattern1 = Pattern.compile(postParsePatternString1, Pattern.COMMENTS | Pattern.DOTALL);
         postParsePattern2 = Pattern.compile(postParsePatternString2, Pattern.COMMENTS | Pattern.DOTALL);
         postGetPattern = Pattern.compile(postGetPatternString, Pattern.COMMENTS | Pattern.DOTALL);
-        
+
         String numPatString = "<div \\s id=\"p(\\d+)\" \\s class=\"post \\s [^\"]*\">";
         String titlePatString = "<span \\s class=\"subject\">([^<]*)</span>";
         String emailPatString = "<a \\s href=\"mailto:([^\"]*)\" \\s class=\"useremail\">";
@@ -69,10 +69,10 @@ public class Yotsuba extends WWW {
         String stickyPatString = "<img \\s src=\"[^\"]*\" \\s alt=\"Sticky\" \\s title=\"Sticky\"[^>]*>";
         String omittedPatString = "<span \\s class=\"abbr\">Comment \\s too \\s long";
         String oldCapPatString = "<span \\s class=\"commentpostername\"><span [^>]*>## \\s (.)[^<]*</span></span>";
-        
+
         String omPostsPatString = "<span \\s class=\"info\">\\s*<strong>(\\d*) \\s posts \\s omitted";
         String omImagesPatString = "<em>\\((\\d*) \\s have \\s images\\)</em>";
-        
+
         numPattern = Pattern.compile(numPatString, Pattern.COMMENTS | Pattern.DOTALL);
         titlePattern = Pattern.compile(titlePatString, Pattern.COMMENTS | Pattern.DOTALL);
         emailPattern = Pattern.compile(emailPatString, Pattern.COMMENTS | Pattern.DOTALL);
@@ -82,17 +82,17 @@ public class Yotsuba extends WWW {
         omittedPattern = Pattern.compile(omittedPatString, Pattern.COMMENTS | Pattern.DOTALL);
         oldCapPattern = Pattern.compile(oldCapPatString, Pattern.COMMENTS | Pattern.DOTALL);
 
-        
+
         omPostsPattern = Pattern.compile(omPostsPatString, Pattern.COMMENTS | Pattern.DOTALL);
         omImagesPattern = Pattern.compile(omImagesPatString, Pattern.COMMENTS | Pattern.DOTALL);
     }
-    
+
     private final Map<String,String> boardLinks;
-    
+
     public Yotsuba(String boardName) {
         boardLinks = Yotsuba.getBoardLinks(boardName);
     }
-    
+
     private static Map<String,String> getBoardLinks(String boardName) {
         Map<String,String> boardInfo = new HashMap<String,String>();
         boardInfo.put("link", "http://boards.4chan.org/" + boardName);
@@ -101,21 +101,21 @@ public class Yotsuba extends WWW {
         boardInfo.put("html", "http://boards.4chan.org/" + boardName + "/");
         return Collections.unmodifiableMap(boardInfo);
     }
-    
+
     public String cleanSimple(String text) {
         return super.doClean(text);
     }
-    
+
     public String cleanLink(String text) {
         return super.doCleanLink(super.doClean(text));
     }
-    
+
     public String doClean(String text) {
         if(text == null) return null;
-        
+
         // SOPA spoilers
         //text = text.replaceAll("<span class=\"spoiler\"[^>]*>(.*?)</spoiler>(</span>)?", "$1");
-    
+
         // Admin-Mod-Dev quotelinks
         text = text.replaceAll("<span class=\"capcodeReplies\"><span class=\"smaller\"><span class=\"bold\">(?:Administrator|Moderator|Developer) Repl(?:y|ies):</span>.*?</span><br></span>", "");
         // Non-public tags
@@ -131,6 +131,8 @@ public class Yotsuba extends WWW {
         // > implying I'm quoting someone
         text = text.replaceAll("<font class=\"unkfunc\">(.*?)</font>", "$1");
         text = text.replaceAll("<span class=\"quote\">(.*?)</span>", "$1");
+        // Dead Quotes
+        text = text.replaceAll("<span class=\"deadlink\">(.*?)</span>", "$1");
         // Links
         text = text.replaceAll("<a[^>]*>(.*?)</a>", "$1");
         // Spoilers (start)
@@ -144,59 +146,59 @@ public class Yotsuba extends WWW {
     }
 
     public int parseDate(String date) {
-        Pattern pat = 
+        Pattern pat =
             Pattern.compile("(\\d+)/(\\d+)/(\\d+)\\s*\\(\\w+\\)\\s*(\\d+):(\\d+)(?::(\\d+))?", Pattern.COMMENTS);
         Matcher mat = pat.matcher(date);
-        
+
         if(!mat.find())
             throw new IllegalArgumentException("Malformed date string");
-        
+
         int mon = Integer.parseInt(mat.group(1));
         int mday = Integer.parseInt(mat.group(2));
         int year = Integer.parseInt(mat.group(3));
         int hour = Integer.parseInt(mat.group(4));
         int min = Integer.parseInt(mat.group(5));
         int sec = (mat.group(6) != null) ? Integer.parseInt(mat.group(6)) : 0;
-        
+
         // Don't forget to change this in 88 years from now
         DateTime dtDate = new DateTime(year + 2000, mon, mday, hour, min, sec, DateTimeZone.UTC);
         return (int) (dtDate.getMillis() / 1000);
     }
-    
+
     public int parseDate(int dateUtc) {
         DateTime dtDate = new DateTime(dateUtc * 1000L);
         DateTime dtEst = dtDate.withZone(DateTimeZone.forID("America/New_York"));
         return (int) (dtEst.withZoneRetainFields(DateTimeZone.UTC).getMillis() / 1000);
     }
-    
+
     public int parseFilesize(String text) {
         if(text == null) return 0;
-        
+
         Pattern pat = Pattern.compile("([\\.\\d]+) \\s (.*)", Pattern.COMMENTS);
         Matcher mat = pat.matcher(text);
-        
+
         if(!mat.find())
             throw new IllegalArgumentException("Malformed filesize string");
-        
+
         float v = Float.parseFloat(mat.group(1));
         String m = mat.group(2);
-        
+
         return (int) (v * sizeMultipliers.get(m));
     }
-    
+
     public Post newYotsubaPost(String link, String mediaOrig, boolean spoiler,
             String filesize, int width, int height, String filename, int tWidth,
             int tHeight, String md5, int num, String title, String email,
             String name, String trip, String capcode, int dateUtc, boolean sticky,
-            String comment, boolean omitted, int threadNum, String posterHash, String posterCountry) throws ContentParseException 
+            String comment, boolean omitted, int threadNum, String posterHash, String posterCountry) throws ContentParseException
     {
         String type = "";
         String previewOrig = null;
-        
+
         // TODO: add the following variables
         String exif = null;
         int timeStampExpired = 0;
-        
+
         if(threadNum == 0) threadNum = num;
         boolean op = (threadNum == num);
 
@@ -204,25 +206,25 @@ public class Yotsuba extends WWW {
         if(comment.equals("")) comment = null;
         if(title.equals("")) title = null;
         if(posterCountry != null && (posterCountry.equals("XX") || posterCountry.equals("A1"))) posterCountry = null;
-        
+
         if(link != null) {
             Pattern pat = Pattern.compile("/src/(\\d+)\\.(\\w+)");
             Matcher mat = pat.matcher(link);
             if(mat.find()) {
                 String number = mat.group(1);
                 type = mat.group(2);
-            
+
                 filename = (filename != null) ? filename : (number + "." + type);
                 if(mediaOrig == null) mediaOrig = number + "." + type;
                 previewOrig = number + "s.jpg";
             }
         }
-        
+
         if(spoiler) {
             tWidth = 0;
             tHeight = 0;
         }
-        
+
         int timeStamp;
         int mediaSize;
         try {
@@ -231,7 +233,7 @@ public class Yotsuba extends WWW {
         } catch(IllegalArgumentException e) {
             throw new ContentParseException("Could not create post " + num , e);
         }
-        
+
         Post post = new Post();
         post.setLink(link);
         post.setType(type);
@@ -262,15 +264,15 @@ public class Yotsuba extends WWW {
         post.setPosterHash(posterHash);
         post.setPosterCountry(posterCountry);
         post.setOmitted(omitted);
-        
+
         return post;
-    }    
-    
+    }
+
     @Override
     public InputStream getMediaPreview(MediaPost h) throws ContentGetException {
         if(h.getPreview() == null)
             return null;
-        
+
         InputStream inStream;
         try {
             inStream = this.wget(this.boardLinks.get("previewLink") + "/thumb/"
@@ -278,15 +280,15 @@ public class Yotsuba extends WWW {
         } catch(IOException e) {
             throw new ContentGetException(e);
         }
-        
+
         return inStream;
     }
-    
+
     @Override
     public InputStream getMedia(MediaPost h) throws ContentGetException {
         if(h.getMedia() == null)
             return null;
-        
+
         InputStream inStream;
         try {
             inStream = this.wget(this.boardLinks.get("imgLink") + "/src/"
@@ -294,27 +296,27 @@ public class Yotsuba extends WWW {
         } catch(IOException e) {
             throw new ContentGetException(e);
         }
-                
+
         return inStream;
     }
-    
+
 
     public Topic parseThread(String text) throws ContentParseException {
         int omPosts = 0;
         Matcher mat = omPostsPattern.matcher(text);
         if(mat.find()) omPosts = Integer.parseInt(mat.group(1));
-        
+
         int omImages = 0;
         mat = omImagesPattern.matcher(text);
         if(mat.find()) omImages = Integer.parseInt(mat.group(1));
-    
+
         Post op = this.parsePost(text, 0);
         Topic thread = new Topic(op.getNum(), omPosts, omImages);
         thread.addPost(op);
-        
+
         return thread;
     }
-    
+
 
     @SuppressWarnings("RedundantStringConstructorCall")
     public Post parsePost(String text, int threadNum) throws ContentParseException {
@@ -327,25 +329,25 @@ public class Yotsuba extends WWW {
         // string regex matches through the String constructor.
         // Software like FindBugs will complain we're pointlessly calling the
         // String constructor, but in this case, we know exactly what we're doing.
-        
+
         Matcher mat = numPattern.matcher(text);
         if(!mat.find()) {
             throw new ContentParseException("Could not parse thread (post num regex failed)");
         }
         int num = Integer.parseInt(mat.group(1));
-        
+
         mat = titlePattern.matcher(text);
         if(!mat.find()) {
             throw new ContentParseException("Could not parse thread (post title regex failed)");
         }
         String title = new String(mat.group(1));
-        
+
         String email = null;
         mat = emailPattern.matcher(text);
         if(mat.find()) {
             email = new String(mat.group(1));
         }
-                
+
         mat = postParsePattern1.matcher(text);
         if(!mat.find()) {
             throw new ContentParseException("Could not parse thread (post info block regex failed)");
@@ -355,19 +357,19 @@ public class Yotsuba extends WWW {
         String capcode = (mat.group(3) != null) ? new String(mat.group(3)) : null;
         String uid     = mat.group(4);
         String country = (mat.group(5) != null) ? new String(mat.group(5)) : null;
-                     
+
 
          mat = oldCapPattern.matcher(text);
          if(mat.find()) {
              capcode =  new String(mat.group(1));
          }
-                
+
          mat = datePattern.matcher(text);
          if(!mat.find()) {
              throw new ContentParseException("Could not parse thread (post timestamp regex failed)");
          }
          int dateUtc = Integer.parseInt(mat.group(1));
-         
+
          mat = postParsePattern2.matcher(text);
          String link = null;
          boolean spoiler = false;
@@ -391,13 +393,13 @@ public class Yotsuba extends WWW {
              tHeight  = (mat.group(9) != null) ? Integer.parseInt(mat.group(9)) : 0;
              tWidth   = (mat.group(10) != null) ? Integer.parseInt(mat.group(10)) : 0;
          }
-         
+
          mat = commentPattern.matcher(text);
          if(!mat.find()) {
              throw new ContentParseException("Could not parse thread (post comment regex failed)");
          }
          String comment  = new String(mat.group(1));
-         
+
          boolean sticky = false;
          mat = stickyPattern.matcher(text);
          if(mat.find()) sticky  = true;
@@ -405,12 +407,12 @@ public class Yotsuba extends WWW {
          boolean omitted = false;
          mat = omittedPattern.matcher(text);
          if(mat.find()) omitted  = true;
-       
+
         return this.newYotsubaPost(link, null, spoiler, fileSize, width,
                 height, fileName, tWidth, tHeight, md5b64, num, title, email,
                 name, trip, capcode, dateUtc, sticky, comment, omitted, threadNum, uid, country);
     }
-    
+
     public String linkPage(int pageNum) {
         if(pageNum == 0) {
             return this.boardLinks.get("link") + "/";
@@ -418,7 +420,7 @@ public class Yotsuba extends WWW {
             return this.boardLinks.get("link") + "/" + pageNum;
         }
     }
-    
+
     public String linkThread(int thread) {
         if(thread != 0) {
             return this.boardLinks.get("link") + "/res/" + thread;
@@ -426,7 +428,7 @@ public class Yotsuba extends WWW {
             return this.linkPage(0);
         }
     }
-    
+
     @Override
     public Page getPage(int pageNum, String lastMod) throws ContentGetException, ContentParseException {
         String[] wgetReply = this.wgetText(this.linkPage(pageNum), lastMod);
@@ -435,13 +437,13 @@ public class Yotsuba extends WWW {
 
         Page p = new Page(pageNum);
         Topic t = null;
-        
+
         Matcher mat = postGetPattern.matcher(pageText);
-                
+
         while(mat.find()) {
             String text = mat.group(1);
             String type = mat.group(2);
-            
+
             if(type.equals("opContainer")) {
                 t = this.parseThread(text);
                 p.addThread(t);
@@ -449,21 +451,21 @@ public class Yotsuba extends WWW {
                 if(t != null) t.addPost(this.parsePost(text, t.getNum()));
             }
         }
-        
+
         p.setLastMod(newLastMod);
         return p;
     }
-    
+
     @Override
     public Topic getThread(int threadNum, String lastMod) throws ContentGetException, ContentParseException {
         String[] wgetReply = this.wgetText(this.linkThread(threadNum), lastMod);
         String threadText = wgetReply[0];
         String newLastMod = wgetReply[1];
-        
+
         Topic t = null;
-        
+
         Matcher mat = postGetPattern.matcher(threadText);
-        
+
         while(mat.find()) {
             String text = mat.group(1);
             String type = mat.group(2);
@@ -482,7 +484,7 @@ public class Yotsuba extends WWW {
                 }
             }
         }
-        
+
         return t;
     }
 }
