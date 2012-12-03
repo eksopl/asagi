@@ -177,6 +177,9 @@ public class YotsubaJSON extends WWW {
         String capcode = pj.getCapcode();
         if(capcode != null) capcode = capcode.substring(0, 1).toUpperCase();
 
+        String posterHash = pj.getId();
+        if(posterHash != null && posterHash.equals("Developer")) posterHash = "Dev";
+
         String posterCountry = pj.getCountry();
         if(posterCountry != null && (posterCountry.equals("XX") || posterCountry.equals("A1"))) posterCountry = null;
 
@@ -201,7 +204,7 @@ public class YotsubaJSON extends WWW {
         p.setDeleted(false);
         p.setSticky(pj.isSticky());
         p.setCapcode(capcode);
-        p.setPosterHash(pj.getId());
+        p.setPosterHash(posterHash);
         p.setPosterCountry(posterCountry);
 
         // TODO: Add following values
@@ -227,6 +230,9 @@ public class YotsubaJSON extends WWW {
     }
 
     public String cleanLink(String text) {
+        if(text == null) return null;
+
+        text = text.replaceAll("%", "%25");
         return super.doCleanLink(super.doClean(text));
     }
 
@@ -253,6 +259,7 @@ public class YotsubaJSON extends WWW {
         text = text.replaceAll("<span class=\"quote\">(.*?)</span>", "$1");
         // Dead Quotes
         text = text.replaceAll("<span class=\"deadlink\">(.*?)</span>", "$1");
+        text = text.replaceAll("<span class=\"quote deadlink\">(.*?)</span>", "$1");
         // Links
         text = text.replaceAll("<a[^>]*>(.*?)</a>", "$1");
         // Spoilers (start)

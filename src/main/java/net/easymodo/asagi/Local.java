@@ -259,7 +259,7 @@ public class Local extends Board {
             throw new ContentStoreException("The temp file we just created wasn't there!! (BUG: RACE CONDITION)", e);
         } catch(IOException e) {
             if(!tempFile.delete())
-                throw new ContentStoreException("Additionally, temporary file " + tempFilePath + "could not be deleted.", e);
+                throw new ContentStoreException("Additionally, temporary file " + tempFilePath + "/" + filename + " could not be deleted.", e);
             throw new ContentStoreException("IOException in file download", e);
         } finally {
             try {
@@ -272,7 +272,7 @@ public class Local extends Board {
 
         // Move the temporary file into place
         if(!tempFile.renameTo(outputFile))
-            throw new ContentStoreException("Unable to move temporary file " + tempFilePath + " into place");
+            throw new ContentStoreException("Unable to move temporary file " + tempFilePath + "/" + filename + " into place");
 
         try {
             if(this.webGroupId != 0) {
