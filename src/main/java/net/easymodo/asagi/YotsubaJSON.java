@@ -185,7 +185,7 @@ public class YotsubaJSON extends WWW {
         p.setThreadNum(pj.getResto() == 0 ? pj.getNo() : pj.getResto());
         p.setOp(pj.getResto() == 0);
         p.setTitle(this.cleanSimple(pj.getSub()));
-        p.setEmail(this.cleanLink(pj.getEmail()));
+        p.setEmail(pj.getEmail());
         p.setName(this.cleanSimple(pj.getName()));
         p.setTrip(pj.getTrip());
         p.setDate(this.parseDate(pj.getTime()));
