@@ -262,10 +262,14 @@ public class YotsubaJSON extends WWW {
         text = text.replaceAll("<span class=\"quote deadlink\">(.*?)</span>", "$1");
         // Links
         text = text.replaceAll("<a[^>]*>(.*?)</a>", "$1");
-        // Spoilers (start)
+        // Old Spoilers (start)
         text = text.replaceAll("<span class=\"spoiler\"[^>]*>", "[spoiler]");
-        // Spoilers (end)
+        // Old Spoilers (end)
         text = text.replaceAll("</span>", "[/spoiler]");
+        // Spoilers (start)
+        text = text.replaceAll("<s>", "[spoiler]");
+        // Spoilers (end)
+        text = text.replaceAll("</s>", "[/spoiler]");
         // Newlines
         text = text.replaceAll("<br\\s*/?>", "\n");
 
