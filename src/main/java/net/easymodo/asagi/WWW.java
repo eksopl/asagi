@@ -17,6 +17,9 @@ import org.apache.http.client.params.ClientPNames;
 import org.apache.http.client.params.CookiePolicy;
 import org.apache.http.conn.ClientConnectionManager;
 import org.apache.http.impl.client.ContentEncodingHttpClient;
+import org.apache.http.impl.client.DecompressingHttpClient;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.conn.PoolingClientConnectionManager;
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
 import org.apache.http.params.HttpParams;
 import org.apache.http.util.EntityUtils;
@@ -40,15 +43,16 @@ public abstract class WWW extends Board {
     private static HttpClient httpClient;
 
     static {
-        HttpClient hc = new ContentEncodingHttpClient();
+    	HttpClient hc = new DecompressingHttpClient(new DefaultHttpClient());
+    	
         ClientConnectionManager ccm = hc.getConnectionManager();
         HttpParams params = hc.getParams();
         params.setParameter(ClientPNames.COOKIE_POLICY, CookiePolicy.IGNORE_COOKIES);
 
-        ThreadSafeClientConnManager tsccm = new ThreadSafeClientConnManager(ccm.getSchemeRegistry());
+        PoolingClientConnectionManager tsccm = new PoolingClientConnectionManager(ccm.getSchemeRegistry());
         tsccm.setDefaultMaxPerRoute(20);
         tsccm.setMaxTotal(100);
-        httpClient = new ContentEncodingHttpClient(tsccm, params);
+        httpClient = new DecompressingHttpClient(new DefaultHttpClient(tsccm, params));
     }
 
     public HttpResponse wget(String link) throws HttpGetException {
