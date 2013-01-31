@@ -48,7 +48,7 @@ public abstract class WWW extends Board {
         HttpConnectionParams.setSoTimeout(params, 20000);
         HttpConnectionParams.setConnectionTimeout(params, 20000);
         params.setParameter(ClientPNames.COOKIE_POLICY, CookiePolicy.IGNORE_COOKIES);
-        
+
         PoolingClientConnectionManager pccm = new PoolingClientConnectionManager();
         pccm.setDefaultMaxPerRoute(20);
         pccm.setMaxTotal(100);
@@ -81,6 +81,8 @@ public abstract class WWW extends Board {
         } catch(ClientProtocolException e) {
             throw new HttpGetException(e);
         } catch(IOException e) {
+            req.releaseConnection();
+
             throw new HttpGetException(e);
         }
 
@@ -93,6 +95,8 @@ public abstract class WWW extends Board {
                 EntityUtils.consume(entity);
             } catch(IOException e) {
                 throw new HttpGetException(e);
+            } finally {
+                req.releaseConnection();
             }
             throw new HttpGetException(res.getStatusLine().getReasonPhrase(), statusCode);
         }

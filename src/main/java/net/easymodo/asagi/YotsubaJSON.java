@@ -272,6 +272,8 @@ public class YotsubaJSON extends WWW {
         text = text.replaceAll("</s>", "[/spoiler]");
         // Newlines
         text = text.replaceAll("<br\\s*/?>", "\n");
+        // WBR
+        text = text.replaceAll("<wbr>", "");
 
         return this.cleanSimple(text);
     }
