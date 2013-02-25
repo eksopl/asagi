@@ -26,6 +26,7 @@ public class PostJson {
     private int h;
     private int tnW;
     private int tnH;
+    private boolean bumplimit;
     private boolean filedeleted;
     private boolean spoiler;
     private int customSpoiler;
@@ -222,6 +223,14 @@ public class PostJson {
 
     public void setTnH(int tnH) {
         this.tnH = tnH;
+    }
+
+    public boolean getBumplimit() {
+       return bumplimit;
+    }
+
+    public void setBumplimit(boolean bumplimit) {
+        this.bumplimit = bumplimit;
     }
 
     public boolean isFiledeleted() {

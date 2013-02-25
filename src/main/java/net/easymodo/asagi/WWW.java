@@ -82,7 +82,6 @@ public abstract class WWW extends Board {
             throw new HttpGetException(e);
         } catch(IOException e) {
             req.releaseConnection();
-
             throw new HttpGetException(e);
         }
 
