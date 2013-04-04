@@ -3,6 +3,9 @@ package net.easymodo.asagi.posix;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 
+import java.util.Arrays;
+import java.util.List;
+
 public class Group extends Structure {
     public String name;
     public String password;
@@ -10,7 +13,7 @@ public class Group extends Structure {
     public Pointer mem;
     
     public Group() {}
-    
+
     public String getName() {
         return name;
     }
@@ -28,4 +31,9 @@ public class Group extends Structure {
         // Can be implemented later if it's ever needed
         throw new UnsupportedOperationException();
    }
+
+    @Override
+    protected List getFieldOrder() {
+        return Arrays.asList("name", "password", "gid", "mem");
+    }
 }

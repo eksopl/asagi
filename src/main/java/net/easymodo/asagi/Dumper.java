@@ -631,7 +631,8 @@ public class Dumper {
         boolean fullMedia = (bSet.getMediaThreads() != 0);
 
         //Yotsuba sourceBoard = new Yotsuba(boardName);
-        YotsubaJSON sourceBoard = new YotsubaJSON(boardName);
+        //YotsubaJSON sourceBoard = new YotsubaJSON(boardName);
+        YotsubaMixed sourceBoard = new YotsubaMixed(boardName);
 
         // Get and init DB engine class through reflection
         String boardEngine = bSet.getEngine() == null ? "Mysql" : bSet.getEngine();

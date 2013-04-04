@@ -32,9 +32,9 @@ public class YotsubaJSON extends WWW {
     private static Map<String,String> getBoardLinks(String boardName) {
         Map<String,String> boardInfo = new HashMap<String,String>();
         boardInfo.put("link", "http://api.4chan.org/" + boardName);
+        boardInfo.put("html", "http://boards.4chan.org/" + boardName + "/");
         boardInfo.put("imgLink", "http://images.4chan.org/" + boardName);
         boardInfo.put("previewLink", "http://0.thumbs.4chan.org/" + boardName);
-        boardInfo.put("html", "http://boards.4chan.org/" + boardName + "/");
         return Collections.unmodifiableMap(boardInfo);
     }
 
@@ -195,7 +195,7 @@ public class YotsubaJSON extends WWW {
         p.setThreadNum(pj.getResto() == 0 ? pj.getNo() : pj.getResto());
         p.setOp(pj.getResto() == 0);
         p.setTitle(this.cleanSimple(pj.getSub()));
-        p.setEmail(this.cleanLink(pj.getEmail()));
+        p.setEmail(pj.getEmail());
         p.setName(this.cleanSimple(pj.getName()));
         p.setTrip(pj.getTrip());
         p.setDate(this.parseDate(pj.getTime()));
