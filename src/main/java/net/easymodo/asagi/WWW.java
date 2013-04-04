@@ -16,9 +16,14 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.params.ClientPNames;
 import org.apache.http.client.params.CookiePolicy;
 import org.apache.http.conn.ClientConnectionManager;
-import org.apache.http.impl.client.ContentEncodingHttpClient;
-import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
+import org.apache.http.conn.scheme.SchemeRegistry;
+import org.apache.http.impl.client.DecompressingHttpClient;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.conn.PoolingClientConnectionManager;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
+import org.apache.http.params.HttpProtocolParams;
 import org.apache.http.util.EntityUtils;
 
 import net.easymodo.asagi.exception.*;
@@ -40,15 +45,15 @@ public abstract class WWW extends Board {
     private static HttpClient httpClient;
 
     static {
-        HttpClient hc = new ContentEncodingHttpClient();
-        ClientConnectionManager ccm = hc.getConnectionManager();
-        HttpParams params = hc.getParams();
+    	HttpParams params = new BasicHttpParams();
+        HttpConnectionParams.setSoTimeout(params, 20000);
+        HttpConnectionParams.setConnectionTimeout(params, 20000);
         params.setParameter(ClientPNames.COOKIE_POLICY, CookiePolicy.IGNORE_COOKIES);
 
-        ThreadSafeClientConnManager tsccm = new ThreadSafeClientConnManager(ccm.getSchemeRegistry());
-        tsccm.setDefaultMaxPerRoute(20);
-        tsccm.setMaxTotal(100);
-        httpClient = new ContentEncodingHttpClient(tsccm, params);
+        PoolingClientConnectionManager pccm = new PoolingClientConnectionManager();
+        pccm.setDefaultMaxPerRoute(20);
+        pccm.setMaxTotal(100);
+        httpClient = new DecompressingHttpClient(new DefaultHttpClient(pccm, params));
     }
 
     public HttpResponse wget(String link) throws HttpGetException {
@@ -77,6 +82,7 @@ public abstract class WWW extends Board {
         } catch(ClientProtocolException e) {
             throw new HttpGetException(e);
         } catch(IOException e) {
+            req.releaseConnection();
             throw new HttpGetException(e);
         }
 
@@ -89,6 +95,8 @@ public abstract class WWW extends Board {
                 EntityUtils.consume(entity);
             } catch(IOException e) {
                 throw new HttpGetException(e);
+            } finally {
+                req.releaseConnection();
             }
             throw new HttpGetException(res.getStatusLine().getReasonPhrase(), statusCode);
         }

@@ -2,6 +2,7 @@ package net.easymodo.asagi;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -10,6 +11,7 @@ import java.util.regex.Pattern;
 
 import org.apache.http.annotation.ThreadSafe;
 
+import com.google.gson.*;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
@@ -17,9 +19,10 @@ import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 
 import net.easymodo.asagi.exception.*;
+import net.easymodo.asagi.model.yotsuba.*;
 
 @ThreadSafe
-public class Yotsuba extends WWW {
+public class YotsubaMixed extends WWW {
     private static final Map<String, Integer> sizeMultipliers;
     private static final Pattern postParsePattern1;
     private static final Pattern postParsePattern2;
@@ -83,19 +86,37 @@ public class Yotsuba extends WWW {
         omImagesPattern = Pattern.compile(omImagesPatString, Pattern.COMMENTS | Pattern.DOTALL);
     }
 
+    private static final Gson GSON = new GsonBuilder().
+            registerTypeAdapter(boolean.class, new BooleanTypeConverter()).
+            setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create();
+
     private final Map<String,String> boardLinks;
 
-    public Yotsuba(String boardName) {
-        boardLinks = Yotsuba.getBoardLinks(boardName);
+    public YotsubaMixed(String boardName) {
+        boardLinks = YotsubaMixed.getBoardLinks(boardName);
     }
 
     private static Map<String,String> getBoardLinks(String boardName) {
         Map<String,String> boardInfo = new HashMap<String,String>();
+        boardInfo.put("api", "http://api.4chan.org/" + boardName);
         boardInfo.put("link", "http://boards.4chan.org/" + boardName);
+        boardInfo.put("html", "http://boards.4chan.org/" + boardName + "/");
         boardInfo.put("imgLink", "http://images.4chan.org/" + boardName);
         boardInfo.put("previewLink", "http://0.thumbs.4chan.org/" + boardName);
-        boardInfo.put("html", "http://boards.4chan.org/" + boardName + "/");
         return Collections.unmodifiableMap(boardInfo);
+    }
+
+    private static class BooleanTypeConverter implements JsonSerializer<Boolean>, JsonDeserializer<Boolean> {
+        @Override
+        public JsonElement serialize(Boolean src, Type srcType, JsonSerializationContext context) {
+            return new JsonPrimitive(src ? 1 : 0);
+        }
+
+        @Override
+        public Boolean deserialize(JsonElement json, Type type, JsonDeserializationContext context)
+                throws JsonParseException {
+            return json.getAsBoolean();
+        }
     }
 
     public String cleanSimple(String text) {
@@ -188,6 +209,7 @@ public class Yotsuba extends WWW {
         if(name.equals("")) name = null;
         if(comment.equals("")) comment = null;
         if(title.equals("")) title = null;
+
         if(posterHash != null && posterHash.equals("Developer")) posterHash = "Dev";
         if(posterCountry != null && (posterCountry.equals("XX") || posterCountry.equals("A1"))) posterCountry = null;
 
@@ -285,6 +307,74 @@ public class Yotsuba extends WWW {
     }
 
 
+    private Post makePostFromJson(PostJson pj) throws ContentParseException {
+        if(pj.getNo() == 0) {
+            throw new ContentParseException("Could not parse post (post num missing and could not be zero)");
+        }
+        if(pj.getTime() == 0) {
+            throw new ContentParseException("Could not parse post (post timestamp missing and could not be zero)");
+        }
+
+        Post p = new Post();
+
+        if(pj.getFilename() != null) {
+            p.setMediaFilename(pj.getFilename() + pj.getExt());
+            p.setMediaOrig(pj.getTim() + pj.getExt());
+            p.setPreviewOrig(pj.getTim() + "s.jpg");
+        }
+
+        String capcode = pj.getCapcode();
+        if(capcode != null) capcode = capcode.substring(0, 1).toUpperCase();
+
+        String posterHash = pj.getId();
+        if(posterHash != null && posterHash.equals("Developer")) posterHash = "Dev";
+
+        String posterCountry = pj.getCountry();
+        if(posterCountry != null && (posterCountry.equals("XX") || posterCountry.equals("A1"))) posterCountry = null;
+
+        //p.setLink(link);
+        p.setType(pj.getExt());
+        p.setMediaHash(pj.getMd5());
+        p.setMediaSize(pj.getFsize());
+        p.setMediaW(pj.getW());
+        p.setMediaH(pj.getH());
+        p.setPreviewW(pj.getTnW());
+        p.setPreviewH(pj.getTnH());
+        p.setNum(pj.getNo());
+        p.setThreadNum(pj.getResto() == 0 ? pj.getNo() : pj.getResto());
+        p.setOp(pj.getResto() == 0);
+        p.setTitle(this.cleanSimple(pj.getSub()));
+        p.setEmail(pj.getEmail());
+        p.setName(this.cleanSimple(pj.getName()));
+        p.setTrip(pj.getTrip());
+        p.setDate(this.parseDate(pj.getTime()));
+        p.setComment(this.doClean(pj.getCom()));
+        p.setSpoiler(pj.isSpoiler());
+        p.setDeleted(false);
+        p.setSticky(pj.isSticky());
+        p.setCapcode(capcode);
+        p.setPosterHash(posterHash);
+        p.setPosterCountry(posterCountry);
+
+        // TODO: Add following values
+        p.setDateExpired(0);
+        p.setExif(null);
+
+        return p;
+    }
+
+    private Topic makeThreadFromJson(PostJson pj) throws ContentParseException {
+        if(pj.getNo() == 0) {
+            throw new ContentParseException("Could not parse thread (thread post num missing and could not be zero)");
+        }
+
+        Topic t = new Topic(pj.getNo(), pj.getOmittedPosts(), pj.getOmittedImages());
+
+        t.addPost(this.makePostFromJson(pj));
+        return t;
+    }
+
+
     public Topic parseThread(String text) throws ContentParseException {
         int omPosts = 0;
         Matcher mat = omPostsPattern.matcher(text);
@@ -295,10 +385,10 @@ public class Yotsuba extends WWW {
         if(mat.find()) omImages = Integer.parseInt(mat.group(1));
 
         Post op = this.parsePost(text, 0);
-        Topic thread = new Topic(op.getNum(), omPosts, omImages);
-        thread.addPost(op);
+        Topic t = new Topic(op.getNum(), omPosts, omImages);
 
-        return thread;
+        t.addPost(op);
+        return t;
     }
 
 
@@ -399,6 +489,12 @@ public class Yotsuba extends WWW {
         }
     }
 
+
+    public String linkApiPage(int pageNum) {
+        return this.boardLinks.get("api") + "/" + pageNum + ".json";
+    }
+
+
     public String linkThread(int thread) {
         if(thread != 0) {
             return this.boardLinks.get("link") + "/res/" + thread;
@@ -407,26 +503,26 @@ public class Yotsuba extends WWW {
         }
     }
 
+
     @Override
     public Page getPage(int pageNum, String lastMod) throws ContentGetException, ContentParseException {
-        String[] wgetReply = this.wgetText(this.linkPage(pageNum), lastMod);
+        String[] wgetReply = this.wgetText(this.linkApiPage(pageNum), lastMod);
         String pageText = wgetReply[0];
         String newLastMod = wgetReply[1];
+
+        PageJson pageJson = GSON.fromJson(pageText, PageJson.class);
 
         Page p = new Page(pageNum);
         Topic t = null;
 
-        Matcher mat = postGetPattern.matcher(pageText);
-
-        while(mat.find()) {
-            String text = mat.group(1);
-            String type = mat.group(2);
-
-            if(type.equals("opContainer")) {
-                t = this.parseThread(text);
-                p.addThread(t);
-            } else {
-                if(t != null) t.addPost(this.parsePost(text, t.getNum()));
+        for(TopicJson tj : pageJson.getThreads()) {
+            for(PostJson pj : tj.getPosts()) {
+                if(pj.getResto() == 0) {
+                    t = this.makeThreadFromJson(pj);
+                    p.addThread(t);
+                } else {
+                    if(t != null) t.addPost(this.makePostFromJson(pj));
+                }
             }
         }
 
