@@ -28,6 +28,8 @@ public class Local extends Board {
 
     private final static int DIR_THUMB = 1;
     private final static int DIR_MEDIA = 2;
+    private final static int FULL_FILE = 1;
+    private final static int TEMP_FILE = 2;
 
     private final static Posix posix;
     private DB db;
@@ -105,27 +107,33 @@ public class Local extends Board {
         return new String[] {subdir, subdir2};
     }
 
-    public String getDir(String[] subdirs, int dirType) {
-        if(dirType == DIR_THUMB) {
-            return String.format("%s/thumb/%s/%s", this.path, subdirs[0], subdirs[1]);
-        } else if(dirType == DIR_MEDIA) {
-            return String.format("%s/image/%s/%s", this.path, subdirs[0], subdirs[1]);
+    public String getDir(String[] subdirs, int dirType, int fileType) {
+        if(fileType == TEMP_FILE) {
+            return String.format("%s/tmp", this.path);
+        } else if(fileType == FULL_FILE) {
+            if(dirType == DIR_THUMB) {
+                return String.format("%s/thumb/%s/%s", this.path, subdirs[0], subdirs[1]);
+            } else if(dirType == DIR_MEDIA) {
+                return String.format("%s/image/%s/%s", this.path, subdirs[0], subdirs[1]);
+            } else {
+                return null;
+            }
         } else {
             return null;
         }
     }
 
-    public String makeDir(String filename, int dirType) throws ContentStoreException {
+    public String makeDir(String filename, int dirType, int fileType) throws ContentStoreException {
         String[] subdirs = this.getSubdirs(filename);
-        return this.makeDir(subdirs, this.path, dirType);
+        return this.makeDir(subdirs, this.path, dirType, fileType);
     }
 
-    public String makeDir(MediaPost h, int dirType) throws ContentStoreException {
+    public String makeDir(MediaPost h, int dirType, int fileType) throws ContentStoreException {
         String[] subdirs = this.getSubdirs(h);
-        return this.makeDir(subdirs, this.path, dirType);
+        return this.makeDir(subdirs, this.path, dirType, fileType);
     }
 
-    public String makeDir(String[] subdirs, String path, int dirType) throws ContentStoreException {
+    public String makeDir(String[] subdirs, String path, int dirType, int fileType) throws ContentStoreException {
         String dir;
         if(dirType == DIR_THUMB) {
             dir = "thumb";
@@ -137,22 +145,32 @@ public class Local extends Board {
 
         String subDir = String.format("%s/%s/%s", this.path, dir, subdirs[0]);
         String subDir2 = String.format("%s/%s/%s/%s", this.path, dir, subdirs[0], subdirs[1]);
-        File subDir2File =  new File(subDir2);
+        File subDir2File = new File(subDir2);
+
+        String tempDir = String.format("%s/%s", this.path, "tmp");
+        File tempDirFile = new File(tempDir);
 
         synchronized(this) {
             if(!subDir2File.exists())
                 if(!subDir2File.mkdirs())
                     throw new ContentStoreException("Could not create dirs at path " + subDir2);
 
+            if(!tempDirFile.exists())
+                if(!tempDirFile.mkdirs())
+                    throw new ContentStoreException("Could not create temp dir at path " + tempDir);
+
             if(this.webGroupId != 0) {
                 posix.chmod(subDir, 0775);
                 posix.chmod(subDir2, 0775);
                 posix.chown(subDir, -1, this.webGroupId);
                 posix.chown(subDir2, -1, this.webGroupId);
+
+                posix.chmod(tempDir, 0775);
+                posix.chown(tempDir, -1, this.webGroupId);
             }
         }
 
-        return this.getDir(subdirs, dirType);
+        return this.getDir(subdirs, dirType, fileType);
     }
 
     public void insert(Topic topic) throws ContentStoreException, DBConnectionException {
@@ -193,7 +211,7 @@ public class Local extends Board {
         // Get the proper filename for the file type we're outputting
         String filename;
         if(this.useOldDirectoryStructure)
-            filename =  preview ? h.getPreview() : h.getMedia();
+            filename = preview ? h.getPreview() : h.getMedia();
         else
             filename = preview ? (h.isOp() ?  mediaRow.getPreviewOp() : mediaRow.getPreviewReply()) :
                 mediaRow.getMedia();
@@ -204,9 +222,9 @@ public class Local extends Board {
         // Filename is enough for us here, we just need the first part of the string
         String outputDir;
         if(this.useOldDirectoryStructure)
-            outputDir = makeDir(h, preview ? DIR_THUMB : DIR_MEDIA);
+            outputDir = makeDir(h, preview ? DIR_THUMB : DIR_MEDIA, FULL_FILE);
         else
-            outputDir = makeDir(filename, preview ? DIR_THUMB : DIR_MEDIA);
+            outputDir = makeDir(filename, preview ? DIR_THUMB : DIR_MEDIA, FULL_FILE);
 
         // Construct the path and back down if the file already exists
         File outputFile = new File(outputDir + "/" + filename);
@@ -216,8 +234,13 @@ public class Local extends Board {
         }
 
         // Open a temp file for writing
-        String tempFilePath = outputDir + "/" + filename + ".tmp";
-        File tempFile = new File(tempFilePath);
+        String tempFilePath;
+        if(this.useOldDirectoryStructure)
+            tempFilePath = makeDir(h, preview ? DIR_THUMB : DIR_MEDIA, TEMP_FILE);
+        else
+            tempFilePath = makeDir(filename, preview ? DIR_THUMB : DIR_MEDIA, TEMP_FILE);
+
+        File tempFile = new File(tempFilePath + "/" + filename);
         if(tempFile.exists()) return;
 
         // Throws ContentGetException on failure
@@ -236,7 +259,7 @@ public class Local extends Board {
             throw new ContentStoreException("The temp file we just created wasn't there!! (BUG: RACE CONDITION)", e);
         } catch(IOException e) {
             if(!tempFile.delete())
-                throw new ContentStoreException("Additionally, temporary file " + tempFilePath + "could not be deleted.", e);
+                throw new ContentStoreException("Additionally, temporary file " + tempFilePath + "/" + filename + " could not be deleted.", e);
             throw new ContentStoreException("IOException in file download", e);
         } finally {
             try {
@@ -249,7 +272,7 @@ public class Local extends Board {
 
         // Move the temporary file into place
         if(!tempFile.renameTo(outputFile))
-            throw new ContentStoreException("Unable to move temporary file " + tempFilePath + " into place");
+            throw new ContentStoreException("Unable to move temporary file " + tempFilePath + "/" + filename + " into place");
 
         try {
             if(this.webGroupId != 0) {

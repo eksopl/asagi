@@ -105,19 +105,19 @@ BEGIN
   SET d_trip = p_trip IS NOT NULL;
   SET d_name = COALESCE(p_name <> 'Anonymous' AND p_trip IS NULL, 1);
 
-  INSERT INTO %%BOARD%%_daily VALUES(d_day, 1, d_image, d_sage, d_anon, d_trip,
+  INSERT INTO `%%BOARD%%_daily` VALUES(d_day, 1, d_image, d_sage, d_anon, d_trip,
     d_name)
     ON DUPLICATE KEY UPDATE posts=posts+1, images=images+d_image,
     sage=sage+d_sage, anons=anons+d_anon, trips=trips+d_trip,
     names=names+d_name;
 
-  IF (SELECT trip FROM %%BOARD%%_users WHERE trip = p_trip) IS NOT NULL THEN
-    UPDATE %%BOARD%%_users SET postcount=postcount+1,
+  IF (SELECT trip FROM `%%BOARD%%_users` WHERE trip = p_trip) IS NOT NULL THEN
+    UPDATE `%%BOARD%%_users` SET postcount=postcount+1,
         firstseen = LEAST(p_timestamp, firstseen),
         name = COALESCE(p_name, '')
       WHERE trip = p_trip;
   ELSE
-    INSERT INTO %%BOARD%%_users VALUES(
+    INSERT INTO `%%BOARD%%_users` VALUES(
     NULL, COALESCE(p_name,''), COALESCE(p_trip,''), p_timestamp, 1)
     ON DUPLICATE KEY UPDATE postcount=postcount+1,
       firstseen = LEAST(VALUES(firstseen), firstseen),
@@ -143,14 +143,14 @@ BEGIN
   SET d_trip = p_trip IS NOT NULL;
   SET d_name = COALESCE(p_name <> 'Anonymous' AND p_trip IS NULL, 1);
 
-  UPDATE %%BOARD%%_daily SET posts=posts-1, images=images-d_image,
+  UPDATE `%%BOARD%%_daily` SET posts=posts-1, images=images-d_image,
     sage=sage-d_sage, anons=anons-d_anon, trips=trips-d_trip,
     names=names-d_name WHERE day = d_day;
 
-  IF (SELECT trip FROM %%BOARD%%_users WHERE trip = p_trip) IS NOT NULL THEN
-    UPDATE %%BOARD%%_users SET postcount = postcount-1 WHERE trip = p_trip;
+  IF (SELECT trip FROM `%%BOARD%%_users` WHERE trip = p_trip) IS NOT NULL THEN
+    UPDATE `%%BOARD%%_users` SET postcount = postcount-1 WHERE trip = p_trip;
   ELSE
-    UPDATE %%BOARD%%_users SET postcount = postcount-1 WHERE
+    UPDATE `%%BOARD%%_users` SET postcount = postcount-1 WHERE
       name = COALESCE(p_name, '') AND trip = COALESCE(p_trip, '');
   END IF;
 END;

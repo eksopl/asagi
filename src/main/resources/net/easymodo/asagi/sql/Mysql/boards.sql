@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS %%BOARD%% (
+CREATE TABLE IF NOT EXISTS `%%BOARD%%` (
   `doc_id` int unsigned NOT NULL auto_increment, 
   `media_id` int unsigned NOT NULL DEFAULT '0', 
   `poster_ip` decimal(39,0) unsigned NOT NULL DEFAULT '0', 
