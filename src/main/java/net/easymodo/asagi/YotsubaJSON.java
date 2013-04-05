@@ -229,13 +229,6 @@ public class YotsubaJSON extends WWW {
         return super.doClean(text);
     }
 
-    public String cleanLink(String text) {
-        if(text == null) return null;
-
-        text = text.replaceAll("%", "%25");
-        return super.doCleanLink(super.doClean(text));
-    }
-
     public String doClean(String text) {
         if(text == null) return null;
 

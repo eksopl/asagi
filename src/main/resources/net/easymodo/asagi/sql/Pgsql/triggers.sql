@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION %%BOARD%%_update_thread(n_row %%BOARD%%) RETURNS void AS $$
+CREATE OR REPLACE FUNCTION %%BOARD%%_update_thread(n_row "%%BOARD%%") RETURNS void AS $$
 BEGIN
   UPDATE
     %%BOARD%%_threads AS op
@@ -7,67 +7,67 @@ BEGIN
       COALESCE(GREATEST(
         op.time_op,
         (SELECT MAX(timestamp) FROM %%BOARD%% re WHERE
-          re.parent = $1.parent AND re.subnum = 0)
+          re.thread_num = $1.thread_num AND re.subnum = 0)
         ), op.time_op)
       ),
       time_bump = (
         COALESCE(GREATEST(
           op.time_op,
           (SELECT MAX(timestamp) FROM %%BOARD%% re WHERE
-            re.parent = $1.parent AND (re.email <> 'sage' OR re.email IS NULL)
+            re.thread_num = $1.thread_num AND (re.email <> 'sage' OR re.email IS NULL)
             AND re.subnum = 0)
         ), op.time_op)
       ),
       time_ghost = (
         SELECT MAX(timestamp) FROM %%BOARD%% re WHERE
-          re.parent = $1.parent AND re.subnum <> 0
+          re.thread_num = $1.thread_num AND re.subnum <> 0
       ),
       time_ghost_bump = (
         SELECT MAX(timestamp) FROM %%BOARD%% re WHERE
-          re.parent = $1.parent AND re.subnum <> 0 AND (re.email <> 'sage' OR
+          re.thread_num = $1.thread_num AND re.subnum <> 0 AND (re.email <> 'sage' OR
             re.email IS NULL)
       ),
       nreplies = (
         SELECT COUNT(*) FROM %%BOARD%% re WHERE
-          re.parent = $1.parent
+          re.thread_num = $1.thread_num
       ),
       nimages = (
         SELECT COUNT(media_hash) FROM %%BOARD%% re WHERE
-          re.parent = $1.parent
+          re.thread_num = $1.thread_num
       )
-    WHERE op.parent = $1.parent;
+    WHERE op.thread_num = $1.thread_num;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION %%BOARD%%_create_thread(n_row %%BOARD%%) RETURNS void AS $$
+CREATE OR REPLACE FUNCTION %%BOARD%%_create_thread(n_row "%%BOARD%%") RETURNS void AS $$
 BEGIN
-  IF n_row.parent <> 0 THEN RETURN; END IF;
+  IF n_row.op = false THEN RETURN; END IF;
   INSERT INTO %%BOARD%%_threads SELECT $1.num, $1.timestamp, $1.timestamp,
-      $1.timestamp, NULL, NULL, 0, 0 WHERE NOT EXISTS (SELECT 1 FROM %%BOARD%%_threads WHERE parent=$1.num);
+      $1.timestamp, NULL, NULL, 0, 0 WHERE NOT EXISTS (SELECT 1 FROM %%BOARD%%_threads WHERE thread_num=$1.num);
   RETURN;
 END;
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION %%BOARD%%_delete_thread(n_parent integer) RETURNS void AS $$
 BEGIN
-  DELETE FROM %%BOARD%%_threads WHERE parent = n_parent;
+  DELETE FROM %%BOARD%%_threads WHERE thread_num = n_parent;
   RETURN;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION %%BOARD%%_insert_image(n_row %%BOARD%%) RETURNS integer AS $$
+CREATE OR REPLACE FUNCTION %%BOARD%%_insert_image(n_row "%%BOARD%%") RETURNS integer AS $$
 DECLARE
     img_id INTEGER;
 BEGIN
   INSERT INTO %%BOARD%%_images 
-    (media_hash, media_filename, preview_op, preview_reply, total)
-    SELECT n_row.media_hash, n_row.orig_filename, NULL, NULL, 0
+    (media_hash, media, preview_op, preview_reply, total)
+    SELECT n_row.media_hash, n_row.media_orig, NULL, NULL, 0
     WHERE NOT EXISTS (SELECT 1 FROM %%BOARD%%_images WHERE media_hash = n_row.media_hash);
 
-  IF n_row.parent = 0 THEN
-    UPDATE %%BOARD%%_images SET total = (total + 1), preview_op = COALESCE(preview_op, n_row.preview) WHERE media_hash = n_row.media_hash RETURNING media_id INTO img_id;
+  IF n_row.op = true THEN
+    UPDATE %%BOARD%%_images SET total = (total + 1), preview_op = COALESCE(preview_op, n_row.preview_orig) WHERE media_hash = n_row.media_hash RETURNING media_id INTO img_id;
   ELSE
-    UPDATE %%BOARD%%_images SET total = (total + 1), preview_reply = COALESCE(preview_reply, n_row.preview) WHERE media_hash = n_row.media_hash RETURNING media_id INTO img_id;
+    UPDATE %%BOARD%%_images SET total = (total + 1), preview_reply = COALESCE(preview_reply, n_row.preview_orig) WHERE media_hash = n_row.media_hash RETURNING media_id INTO img_id;
   END IF;
   RETURN img_id;
 END;
@@ -79,7 +79,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION %%BOARD%%_insert_post(n_row %%BOARD%%) RETURNS void AS $$
+CREATE OR REPLACE FUNCTION %%BOARD%%_insert_post(n_row "%%BOARD%%") RETURNS void AS $$
 DECLARE
   d_day integer;
   d_image integer;
@@ -109,7 +109,7 @@ BEGIN
       name = COALESCE($1.name, '')
       WHERE trip = $1.trip;
   ELSE  
-    INSERT INTO %%BOARD%%_users
+    INSERT INTO %%BOARD%%_users (name, trip, firstseen, postcount)
       SELECT COALESCE($1.name,''), COALESCE($1.trip,''), $1.timestamp, 0
       WHERE NOT EXISTS (SELECT 1 FROM %%BOARD%%_users WHERE name = COALESCE($1.name,'') AND trip = COALESCE($1.trip,''));
     
@@ -120,7 +120,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION %%BOARD%%_delete_post(n_row %%BOARD%%) RETURNS void AS $$
+CREATE OR REPLACE FUNCTION %%BOARD%%_delete_post(n_row "%%BOARD%%") RETURNS void AS $$
 DECLARE
   d_day integer;
   d_image integer;
@@ -163,7 +163,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION %%BOARD%%_after_insert() RETURNS trigger AS $$
 BEGIN
-  IF NEW.parent = 0 THEN
+  IF NEW.op = true THEN
     PERFORM %%BOARD%%_create_thread(NEW);
   END IF;
   PERFORM %%BOARD%%_update_thread(NEW);
@@ -175,7 +175,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION %%BOARD%%_after_del() RETURNS trigger AS $$
 BEGIN
   PERFORM %%BOARD%%_update_thread(OLD);
-  IF OLD.parent = 0 THEN
+  IF OLD.op = true THEN
     PERFORM %%BOARD%%_delete_thread(OLD.num);
   END IF;
   PERFORM %%BOARD%%_delete_post(OLD);

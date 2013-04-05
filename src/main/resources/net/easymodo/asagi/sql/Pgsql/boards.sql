@@ -1,5 +1,5 @@
 CREATE TABLE %%BOARD%%_threads (
-  parent integer NOT NULL,
+  thread_num integer NOT NULL,
   time_op integer NOT NULL,
   time_last integer NOT NULL,
   time_bump integer NOT NULL,
@@ -7,7 +7,7 @@ CREATE TABLE %%BOARD%%_threads (
   time_ghost_bump integer DEFAULT NULL,
   nreplies integer NOT NULL DEFAULT '0',
   nimages integer NOT NULL DEFAULT '0',
-  PRIMARY KEY (parent)
+  PRIMARY KEY (thread_num)
 );
 
 CREATE INDEX %%BOARD%%_threads_time_op_index on %%BOARD%%_threads (time_op);
@@ -31,7 +31,7 @@ CREATE INDEX %%BOARD%%_users_postcount_index on %%BOARD%%_users (postcount);
 CREATE TABLE %%BOARD%%_images (
   media_id SERIAL NOT NULL,
   media_hash character varying(25) NOT NULL,
-  media_filename character varying(20),
+  media character varying(20),
   preview_op character varying(20),
   preview_reply character varying(20),
   total integer NOT NULL DEFAULT '0',
@@ -57,20 +57,23 @@ CREATE TABLE %%BOARD%%_daily (
 
 CREATE TABLE %%BOARD%% (
   doc_id SERIAL NOT NULL,
-  id numeric(39,0) DEFAULT 0 NOT NULL,
+  media_id integer,
+  poster_ip numeric(39,0) DEFAULT 0 NOT NULL,
   num integer NOT NULL,
   subnum integer NOT NULL,
-  parent integer,
-  "timestamp" integer,
-  preview character varying(20),
+  thread_num integer DEFAULT 0 NOT NULL,
+  op boolean DEFAULT false NOT NULL,
+  "timestamp" integer NOT NULL,
+  "timestamp_expired" integer NOT NULL,
+  preview_orig character varying(20),
   preview_w integer DEFAULT 0 NOT NULL,
   preview_h integer DEFAULT 0 NOT NULL,
-  media text,
+  media_filename text,
   media_w integer DEFAULT 0 NOT NULL,
   media_h integer DEFAULT 0 NOT NULL,
   media_size integer DEFAULT 0 NOT NULL,
   media_hash character varying(25),
-  orig_filename character varying(20),
+  media_orig character varying(20),
   spoiler boolean DEFAULT false NOT NULL,
   deleted boolean DEFAULT false NOT NULL,
   capcode character(1) DEFAULT 'N' NOT NULL CHECK (capcode = ANY (ARRAY['N', 'M', 'A', 'G'])),
@@ -81,20 +84,25 @@ CREATE TABLE %%BOARD%% (
   comment text,
   delpass text,
   sticky boolean DEFAULT false NOT NULL,
-  media_id integer,
-    
+  poster_hash character varying(8),
+  poster_country character varying(2),
+  exif text,
+
   PRIMARY KEY (doc_id),
-  FOREIGN KEY (media_id) REFERENCES %%BOARD%%_images(id),
+  FOREIGN KEY (media_id) REFERENCES %%BOARD%%_images(media_id),
   UNIQUE (num, subnum)
 );
 
-CREATE INDEX %%BOARD%%_id_index on %%BOARD%% (id);
+CREATE INDEX %%BOARD%%_poster_ip_index on %%BOARD%% (poster_ip);
 CREATE INDEX %%BOARD%%_num_index on %%BOARD%% (num);
 CREATE INDEX %%BOARD%%_subnum_index on %%BOARD%% (subnum);
-CREATE INDEX %%BOARD%%_parent_index on %%BOARD%% (parent);
+CREATE INDEX %%BOARD%%_thread_num_index on %%BOARD%% (thread_num);
+CREATE INDEX %%BOARD%%_op_index on %%BOARD%% (op);
 CREATE INDEX %%BOARD%%_timestamp_index on %%BOARD%% (timestamp);
-CREATE INDEX %%BOARD%%_orig_filename_index on %%BOARD%% (orig_filename);
-CREATE INDEX %%BOARD%%_media_hash_index on %%BOARD%% USING hash (media_hash) ;
+CREATE INDEX %%BOARD%%_timestamp_expired_index on %%BOARD%% (timestamp_expired);
+CREATE INDEX %%BOARD%%_orig_filename_index on %%BOARD%% (media_orig);
+CREATE INDEX %%BOARD%%_media_hash_index on %%BOARD%% (media_hash) ;
+CREATE INDEX %%BOARD%%_media_filename_index on %%BOARD%% (media_filename) ;
 CREATE INDEX %%BOARD%%_email_index on %%BOARD%% (email);
 CREATE INDEX %%BOARD%%_name_index on %%BOARD%% (name);
 CREATE INDEX %%BOARD%%_trip_index on %%BOARD%% (trip);

@@ -82,31 +82,32 @@ public abstract class SQL implements DB {
 
         if(this.insertQuery == null) {
             this.insertQuery = String.format(
-                    "INSERT INTO `%s`" +
+                    "INSERT INTO \"%s\"" +
                     " (poster_ip, num, subnum, thread_num, op, timestamp, timestamp_expired, preview_orig, preview_w, preview_h, media_filename, " +
                     " media_w, media_h, media_size, media_hash, media_orig, spoiler, deleted, " +
                     " capcode, email, name, trip, title, comment, delpass, sticky, poster_hash, poster_country, exif) " +
-                    "  SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? " +
-                    "  WHERE NOT EXISTS (SELECT 1 FROM `%s` WHERE num=? and subnum=?)",
+                    "  SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? " +
+                    "  WHERE NOT EXISTS (SELECT 1 FROM \"%s\" WHERE num=? and subnum=?)",
                     this.table, this.table);
         }
         this.updateQuery =
-                String.format("UPDATE `%s` SET comment = ?, deleted = ?, media_filename = COALESCE(?, media_filename)," +
+                String.format("UPDATE \"%s\" SET comment = ?, deleted = ?, media_filename = COALESCE(?, media_filename)," +
                         "  sticky = (? OR sticky) WHERE num=? and subnum=?", table);
 
-        this.updateDeletedQuery = String.format("UPDATE `%s` SET deleted = ? WHERE num = ? and subnum = ?",
+        this.updateDeletedQuery = String.format("UPDATE \"%s\" SET deleted = ? WHERE num = ? and subnum = ?",
                 this.table);
-        this.selectMediaQuery = String.format("SELECT * FROM `%s_images` WHERE media_hash = ?",
+        this.selectMediaQuery = String.format("SELECT * FROM \"%s_images\" WHERE media_hash = ?",
                 this.table);
-        this.updateMediaQuery = String.format("UPDATE `%s_images` SET media = ? WHERE media_hash = ?",
+        this.updateMediaQuery = String.format("UPDATE \"%s_images\" SET media = ? WHERE media_hash = ?",
                this.table);
-        this.updatePreviewOpQuery = String.format("UPDATE `%s_images` SET preview_op = ? WHERE media_hash = ?",
+        this.updatePreviewOpQuery = String.format("UPDATE \"%s_images\" SET preview_op = ? WHERE media_hash = ?",
                 this.table);
-        this.updatePreviewReplyQuery = String.format("UPDATE `%s_images` SET preview_reply = ? WHERE media_hash = ?",
+        this.updatePreviewReplyQuery = String.format("UPDATE \"%s_images\" SET preview_reply = ? WHERE media_hash = ?",
                 this.table);
 
         try {
             this.connect();
+            this.postConnect();
             tableChkStmt = conn.prepareStatement(tableCheckQuery);
             try {
                 this.createTables();
@@ -120,8 +121,10 @@ public abstract class SQL implements DB {
         }
     }
 
+    protected synchronized void postConnect() throws SQLException {}
+
     public synchronized void createTables() throws BoardInitException, SQLException {
-        ResultSet res = null;
+        ResultSet res;
         String commonSql = null;
 
         // Check if common stuff has already been created
