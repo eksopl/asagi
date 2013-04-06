@@ -53,6 +53,7 @@ public abstract class SQL implements DB {
     private void reconnect() throws DBConnectionException {
         try {
             this.connect();
+            this.postConnect();
         } catch(SQLException e) {
             throw new DBConnectionException(e);
         }
