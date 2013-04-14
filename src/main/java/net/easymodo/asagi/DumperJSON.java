@@ -29,10 +29,17 @@ public class DumperJSON extends AbstractDumper {
             this.wait = wait * 1000;
         }
 
+        private void sleepRemaining(long startTime) {
+            long left = this.wait - (DateTime.now().getMillis() - startTime);
+            if(left > 0) {
+                try { Thread.sleep(left); } catch(InterruptedException e) { }
+            }
+        }
+
         @Override
         public void run() {
             while(true) {
-                long now = DateTime.now().getMillis();
+                long startTime = DateTime.now().getMillis();
                 Page threadList;
                 try {
                     threadList = sourceBoard.getAllThreads(lastMod);
@@ -41,9 +48,11 @@ public class DumperJSON extends AbstractDumper {
                         debug(TALK, ("threads.json: not modified"));
                     else
                         debug(WARN, "threads.json: " + e.getMessage());
+                    sleepRemaining(startTime);
                     continue;
                 } catch (ContentGetException e) {
                     debug(WARN, "Error getting thread list: " + e.getMessage());
+                    sleepRemaining(startTime);
                     continue;
                 }
 
@@ -51,6 +60,7 @@ public class DumperJSON extends AbstractDumper {
 
                 if(threadList == null) {
                     debug(WARN, ("threads.json has no content"));
+                    sleepRemaining(startTime);
                     continue;
                 }
 
@@ -91,11 +101,7 @@ public class DumperJSON extends AbstractDumper {
 
                 debug(TALK, "threads.json update");
 
-
-                long left = this.wait - (DateTime.now().getMillis() - now);
-                if(left > 0) {
-                    try { Thread.sleep(left); } catch(InterruptedException e) { }
-                }
+                sleepRemaining(startTime);
             }
         }
     }

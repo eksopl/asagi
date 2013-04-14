@@ -45,12 +45,12 @@ public class DumperClassic extends AbstractDumper {
         @Override
         public void run() {
             while(true) {
-                long now = DateTime.now().getMillis();
+                long startTime = DateTime.now().getMillis();
                 for(int pageNo : pageNos) {
                     String lastMod = pagesLastMods[pageNo];
                     Page page;
 
-                    long startTime = DateTime.now().getMillis();
+                    long pageStartTime = DateTime.now().getMillis();
 
                     try {
                         page = sourceBoard.getPage(pageNo, lastMod);
@@ -107,7 +107,7 @@ public class DumperClassic extends AbstractDumper {
 
                         // Oh, forget it. A ThreadFetcher beat us to this one.
                         // (Or another PageScanner)
-                        if(fullTopic.getLastHit() > startTime) {
+                        if(fullTopic.getLastHit() > pageStartTime) {
                             fullTopic.lock.writeLock().unlock();
                             continue;
                         }
@@ -150,7 +150,7 @@ public class DumperClassic extends AbstractDumper {
                         }
 
                         // Update the time we last hit this thread
-                        fullTopic.setLastHit(startTime);
+                        fullTopic.setLastHit(pageStartTime);
 
                         fullTopic.lock.writeLock().unlock();
 
@@ -174,7 +174,7 @@ public class DumperClassic extends AbstractDumper {
                     }
                 }
 
-                long left = this.wait - (DateTime.now().getMillis() - now);
+                long left = this.wait - (DateTime.now().getMillis() - startTime);
                 if(left > 0) {
                     try { Thread.sleep(left); } catch(InterruptedException e) { }
                 }
