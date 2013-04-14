@@ -137,10 +137,8 @@ public class BoardSettings {
     public void initSettings(BoardSettings defaults) {
         try {
             new BeanUtilsNoOverwrite().copyProperties(this, defaults);
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();  //To change body of catch statement use File | OuterSettings | File Templates.
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();  //To change body of catch statement use File | OuterSettings | File Templates.
+        } catch (Exception e) {
+            throw new AssertionError("Error initing settings in BoardSettings");
         }
     }
 
@@ -148,12 +146,8 @@ public class BoardSettings {
         try {
             if(BeanUtils.getProperty(this, key) == null)
                 BeanUtils.setProperty(this, key, def);
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();  //To change body of catch statement use File | OuterSettings | File Templates.
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();  //To change body of catch statement use File | OuterSettings | File Templates.
-        } catch (NoSuchMethodException e) {
-            e.printStackTrace();  //To change body of catch statement use File | OuterSettings | File Templates.
+        } catch (Exception e) {
+            throw new AssertionError("Error initing settings in BoardSettings");
         }
     }
 }

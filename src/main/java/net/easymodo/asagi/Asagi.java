@@ -167,7 +167,7 @@ public class Asagi {
         try {
             outerSettings = gson.fromJson(settingsJson, OuterSettings.class);
         } catch(JsonSyntaxException e) {
-            System.err.println("ERROR: OuterSettings file is malformed!");
+            System.err.println("ERROR: Settings file is malformed!");
             return;
         }
 
