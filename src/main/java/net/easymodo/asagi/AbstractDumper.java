@@ -22,16 +22,17 @@ public abstract class AbstractDumper {
     private final int debugLevel;
     private BufferedWriter debugOut = Asagi.getDebugOut();
 
-    protected final int pageLimbo;
-    protected final boolean fullMedia;
-    protected final Local topicLocalBoard;
-    protected final Local mediaLocalBoard;
+    private final int pageLimbo;
+    private final boolean fullMedia;
+    private final Local topicLocalBoard;
+    private final Local mediaLocalBoard;
+    private final BlockingQueue<MediaPost> mediaPreviewUpdates;
+    private final BlockingQueue<MediaPost> mediaUpdates;
+    private final BlockingQueue<Integer> deletedPosts;
+
+    protected final BlockingQueue<Topic> topicUpdates;
     protected final Board sourceBoard;
     protected final ConcurrentHashMap<Integer,Topic> topics;
-    protected final BlockingQueue<MediaPost> mediaPreviewUpdates;
-    protected final BlockingQueue<MediaPost> mediaUpdates;
-    protected final BlockingQueue<Topic> topicUpdates;
-    protected final BlockingQueue<Integer> deletedPosts;
     protected final BlockingQueue<Integer> newTopics;
 
     public static final int ERROR = 1;
@@ -90,8 +91,6 @@ public abstract class AbstractDumper {
         }
     }
 
-
-
     public void initDumper(BoardSettings boardSettings) {
         ThreadUtils.initThread(boardName, new ThumbFetcher(), "Thumb fetcher", boardSettings.getThumbThreads());
         ThreadUtils.initThread(boardName, new MediaFetcher(), "Media fetcher", boardSettings.getMediaThreads());
@@ -129,7 +128,7 @@ public abstract class AbstractDumper {
     }
 
 
-    public class ThumbFetcher implements Runnable {
+    protected class ThumbFetcher implements Runnable {
         @Override
         public void run() {
             while(true) {
@@ -152,7 +151,7 @@ public abstract class AbstractDumper {
         }
     }
 
-    public class MediaFetcher implements Runnable {
+    protected class MediaFetcher implements Runnable {
         @Override
         public void run() {
             while(true) {
@@ -175,7 +174,7 @@ public abstract class AbstractDumper {
         }
     }
 
-    public class TopicInserter implements Runnable {
+    protected class TopicInserter implements Runnable {
         @Override
         public void run() {
             while(true) {
@@ -212,8 +211,14 @@ public abstract class AbstractDumper {
                         MediaPost mediaPost = new MediaPost(post.getNum(), post.isOp(),
                                 post.getPreviewOrig(), post.getMediaOrig(), post.getMediaHash());
 
-                        if(post.getPreviewOrig() != null) mediaPreviewUpdates.put(mediaPost);
-                        if(post.getMediaOrig() != null && fullMedia) mediaUpdates.put(mediaPost);
+                        if(post.getPreviewOrig() != null) {
+                            if(!mediaPreviewUpdates.contains(mediaPost))
+                                mediaPreviewUpdates.put(mediaPost);
+                        }
+                        if(post.getMediaOrig() != null && fullMedia) {
+                            if(!mediaUpdates.contains(mediaPost))
+                                mediaUpdates.put(mediaPost);
+                        }
                     } catch(InterruptedException e) { }
                 }
                 newTopic.purgePosts();
@@ -222,7 +227,7 @@ public abstract class AbstractDumper {
         }
     }
 
-    public class PostDeleter implements Runnable {
+    protected class PostDeleter implements Runnable {
         @Override
         public void run() {
             while(true) {
@@ -242,7 +247,7 @@ public abstract class AbstractDumper {
         }
     }
 
-    public class TopicFetcher implements Runnable {
+    protected class TopicFetcher implements Runnable {
         private void pingTopic(Topic topic) {
             if(topic == null) return;
 
@@ -369,42 +374,6 @@ public abstract class AbstractDumper {
                debug(TALK, newTopic + ": " + (oldTopic != null ? "updated" : "new"));
                oldTopic = null;
            }
-        }
-    }
-
-    public class TopicRebuilder implements Runnable {
-        private final long threadRefreshRate;
-
-        public TopicRebuilder(int threadRefreshRate) {
-            this.threadRefreshRate = threadRefreshRate * 60L * 1000L;
-        }
-
-
-        @Override
-        public void run() {
-            while(true) {
-                for(Topic topic : topics.values()) {
-                    try {
-                        if(!topic.lock.writeLock().tryLock(1, TimeUnit.SECONDS)) continue;
-                    } catch(InterruptedException e) { continue; }
-                    if(topic.isBusy()) { topic.lock.writeLock().unlock(); continue; }
-
-                    long deltaLastHit = DateTime.now().getMillis() - topic.getLastHit();
-                    debug(INFO, "deltaLastHit for " + topic.getNum() + ": " + deltaLastHit);
-
-                    if(deltaLastHit <= threadRefreshRate) { topic.lock.writeLock().unlock();  continue; }
-
-                    topic.setBusy(true);
-                    try {
-                        newTopics.put(topic.getNum());
-                    } catch(InterruptedException e) { }
-
-                    topic.lock.writeLock().unlock();
-                }
-                try {
-                    Thread.sleep(1000);
-                } catch(InterruptedException e) { }
-            }
         }
     }
 }

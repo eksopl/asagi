@@ -18,10 +18,11 @@ public class DumperJSON extends AbstractDumper {
     @Override
     public void initDumper(BoardSettings boardSettings) {
         super.initDumper(boardSettings);
+
         ThreadUtils.initThread(boardName, new BoardPoller(boardSettings.getRefreshDelay()), "Threadlist fetcher", 1);
     }
 
-    public class BoardPoller implements Runnable {
+    private class BoardPoller implements Runnable {
         private final long wait;
         private String lastMod;
 

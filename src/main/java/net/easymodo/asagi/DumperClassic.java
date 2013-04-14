@@ -13,6 +13,7 @@ import org.joda.time.DateTime;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class DumperClassic extends AbstractDumper {
     public DumperClassic(String boardName, Local topicLocalBoard, Local mediaLocalBoard, Board sourceBoard, boolean fullMedia, int pageLimbo) {
@@ -31,7 +32,7 @@ public class DumperClassic extends AbstractDumper {
         }
     }
 
-    public class PageScanner implements Runnable {
+    private class PageScanner implements Runnable {
         private final List<Integer> pageNos;
         private final long wait;
         private String[] pagesLastMods;
@@ -178,6 +179,42 @@ public class DumperClassic extends AbstractDumper {
                 if(left > 0) {
                     try { Thread.sleep(left); } catch(InterruptedException e) { }
                 }
+            }
+        }
+    }
+
+    private class TopicRebuilder implements Runnable {
+        private final long threadRefreshRate;
+
+        public TopicRebuilder(int threadRefreshRate) {
+            this.threadRefreshRate = threadRefreshRate * 60L * 1000L;
+        }
+
+
+        @Override
+        public void run() {
+            while(true) {
+                for(Topic topic : topics.values()) {
+                    try {
+                        if(!topic.lock.writeLock().tryLock(1, TimeUnit.SECONDS)) continue;
+                    } catch(InterruptedException e) { continue; }
+                    if(topic.isBusy()) { topic.lock.writeLock().unlock(); continue; }
+
+                    long deltaLastHit = DateTime.now().getMillis() - topic.getLastHit();
+                    debug(INFO, "deltaLastHit for " + topic.getNum() + ": " + deltaLastHit);
+
+                    if(deltaLastHit <= threadRefreshRate) { topic.lock.writeLock().unlock();  continue; }
+
+                    topic.setBusy(true);
+                    try {
+                        newTopics.put(topic.getNum());
+                    } catch(InterruptedException e) { }
+
+                    topic.lock.writeLock().unlock();
+                }
+                try {
+                    Thread.sleep(1000);
+                } catch(InterruptedException e) { }
             }
         }
     }

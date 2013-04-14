@@ -45,4 +45,19 @@ public class MediaPost {
     public void setOp(boolean op) {
         this.op = op;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        MediaPost mediaPost = (MediaPost) o;
+
+        return mediaHash.equals(mediaPost.mediaHash);
+    }
+
+    @Override
+    public int hashCode() {
+        return mediaHash.hashCode();
+    }
 }

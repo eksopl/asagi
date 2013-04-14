@@ -135,15 +135,15 @@ public class Local extends Board {
 
     public String makeDir(String filename, int dirType, int fileType) throws ContentStoreException {
         String[] subdirs = this.getSubdirs(filename);
-        return this.makeDir(subdirs, this.path, dirType, fileType);
+        return this.makeDir(subdirs, dirType, fileType);
     }
 
     public String makeDir(MediaPost h, int dirType, int fileType) throws ContentStoreException {
         String[] subdirs = this.getSubdirs(h);
-        return this.makeDir(subdirs, this.path, dirType, fileType);
+        return this.makeDir(subdirs, dirType, fileType);
     }
 
-    public String makeDir(String[] subdirs, String path, int dirType, int fileType) throws ContentStoreException {
+    public String makeDir(String[] subdirs, int dirType, int fileType) throws ContentStoreException {
         String dir;
         if(dirType == DIR_THUMB) {
             dir = "thumb";
@@ -239,7 +239,7 @@ public class Local extends Board {
         // Construct the path and back down if the file already exists
         File outputFile = new File(outputDir + "/" + filename);
         if(outputFile.exists()) {
-            if (preview == false) outputFile.setLastModified(System.currentTimeMillis());
+            if (!preview) outputFile.setLastModified(System.currentTimeMillis());
             return;
         }
 
@@ -250,33 +250,35 @@ public class Local extends Board {
         else
             tempFilePath = makeDir(filename, preview ? DIR_THUMB : DIR_MEDIA, TEMP_FILE);
 
-        File tempFile = new File(tempFilePath + "/" + filename);
-        if(tempFile.exists()) return;
 
         // Throws ContentGetException on failure
         InputStream inStream = preview ? source.getMediaPreview(h) : source.getMedia(h);
 
         OutputStream outFile = null;
+        File tempFile = null;
         try {
+             tempFile = File.createTempFile(filename + "_", null, new File(tempFilePath + "/"));
+
             outFile = new BufferedOutputStream(new FileOutputStream(tempFile));
 
             // Copy the network input stream to our local file
             // In case the connection is cut off or something similar happens, an IOException
             // will be thrown.
             ByteStreams.copy(inStream, outFile);
-
         } catch(FileNotFoundException e) {
-            throw new ContentStoreException("The temp file we just created wasn't there!! (BUG: RACE CONDITION)", e);
+            throw new ContentStoreException("The temp file we just created wasn't there! (BUG: RACE CONDITION)", e);
         } catch(IOException e) {
-            if(!tempFile.delete())
-                throw new ContentStoreException("Additionally, temporary file " + tempFilePath + "/" + filename + " could not be deleted.", e);
+            if(tempFile != null && !tempFile.delete())
+                System.err.println("Additionally, temporary file " + tempFilePath + "/" + filename + " could not be deleted.");
+                e.printStackTrace();
             throw new ContentStoreException("IOException in file download", e);
         } finally {
             try {
                 if(outFile != null) outFile.close();
                 inStream.close();
             } catch(IOException e) {
-                throw new ContentStoreException("IOException trying to close streams after file download", e);
+                System.err.println("IOException trying to close streams after file download");
+                e.printStackTrace();
             }
         }
 

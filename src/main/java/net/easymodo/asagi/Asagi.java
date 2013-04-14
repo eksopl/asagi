@@ -30,11 +30,14 @@ public class Asagi {
         BoardSettings defaults = settings.getBoardSettings().get("default");
         BoardSettings bSet = settings.getBoardSettings().get(boardName);
 
-        bSet.initSettings(defaults);
-
         bSet.initSetting("path", defaults.getPath() + "/" + boardName + "/");
         bSet.initSetting("table", boardName);
         bSet.initSetting("useOldDirectoryStructure", false);
+
+        // set everything that isn't set already to their defaults
+        bSet.initSettings(defaults);
+
+        bSet.setFullMedia(bSet.getMediaThreads() != 0);
 
         return bSet;
     }
