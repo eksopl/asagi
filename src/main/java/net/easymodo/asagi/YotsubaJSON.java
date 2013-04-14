@@ -50,7 +50,7 @@ public class YotsubaJSON extends WWW {
         @Override
         public Boolean deserialize(JsonElement json, Type type, JsonDeserializationContext context)
                 throws JsonParseException {
-            return json.getAsBoolean();
+            return (json.getAsInt() != 0);
         }
     }
 
