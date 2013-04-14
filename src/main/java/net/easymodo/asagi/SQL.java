@@ -9,6 +9,10 @@ import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
 import java.sql.Statement;
 
+import net.easymodo.asagi.model.Media;
+import net.easymodo.asagi.model.MediaPost;
+import net.easymodo.asagi.model.Post;
+import net.easymodo.asagi.model.Topic;
 import org.apache.http.annotation.ThreadSafe;
 
 import com.google.common.base.Charsets;
@@ -327,7 +331,7 @@ public abstract class SQL implements DB {
             try {
                 mediaRs.close();
             } catch(SQLException e) {
-                throw new ContentGetException(e);
+                System.err.println("Error closing result set" + e.getMessage());
             }
         }
 

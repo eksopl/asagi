@@ -69,7 +69,7 @@ public abstract class WWW extends Board {
         req.setHeader("Referer", referer);
         if(lastMod != null) req.setHeader("If-Modified-Since", lastMod);
 
-        int statusCode = 0;
+        int statusCode;
         int maxTries = 3;
         HttpEntity entity;
         HttpResponse res;

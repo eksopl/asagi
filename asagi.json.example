@@ -1,27 +1,37 @@
 {"settings": {
-  "default": {
-    "engine": "Mysql",
-    "database": "archive",
-    "host": "localhost",
-    "username": "root",
-    "password": "1234",
-    "charset": "utf8mb4",
-    "path": "/Users/eksi/asagi/",
-    "useOldDirectoryStructure": false,
-    "webserverGroup": "_www",
-    "thumbThreads": 5,
-    "mediaThreads": 5,
-    "newThreadsThreads": 5,
-    "threadRefreshRate": 3,
-    "deletedThreadsThresholdPage": 8,
-    "pageSettings": [
-      {"delay": 30, "pages": [0, 1]},
-      {"delay": 500, "pages": [2, 3, 4, 5, 6, 7, 8, 9, 
-                              10, 11, 12, 14]},
-      {"delay": 30, "pages": [14, 15]}
-    ]
-  },
-  "a": {},
-  "g": {},
-  "jp": {}
+  "dumperEngine": "DumperJSON",
+  "sourceEngine": "YotsubaJSON",
+
+  "boardSettings": {
+    "default": {
+      "engine": "Mysql",
+      "database": "archive",
+      "host": "localhost",
+      "username": "root",
+      "password": "1234",
+      "charset": "utf8mb4",
+      "path": "/Users/eksi/asagi/",
+      "useOldDirectoryStructure": false,
+      "webserverGroup": "_www",
+      "thumbThreads": 5,
+      "mediaThreads": 0,
+      "newThreadsThreads": 5,
+      "deletedThreadsThresholdPage": 8,
+      "refreshDelay": 15,
+
+      "threadRefreshRate": 3,
+      "pageSettings": [
+        {"delay": 30, "pages": [0, 1]},
+        {"delay": 500, "pages": [2, 3, 4, 5, 6, 7, 8]},
+        {"delay": 30, "pages": [9, 10]}
+      ]
+    },
+
+    "a": {},
+    "g": {},
+    "jp": {
+      "engine": "Pgsql",
+      "refreshDelay": 30
+    }
+  }
 }}

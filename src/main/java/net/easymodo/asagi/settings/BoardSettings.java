@@ -1,5 +1,8 @@
 package net.easymodo.asagi.settings;
 
+import org.apache.commons.beanutils.BeanUtils;
+
+import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 
 public class BoardSettings {
@@ -19,6 +22,7 @@ public class BoardSettings {
     private Integer mediaThreads;
     private Integer newThreadsThreads;
     private Integer threadRefreshRate;
+    private Integer refreshDelay;
     private List<PageSettings> pageSettings;
     
     public String getEngine() {
@@ -105,6 +109,12 @@ public class BoardSettings {
     public void setThreadRefreshRate(Integer threadRefreshRate) {
         this.threadRefreshRate = threadRefreshRate;
     }
+    public Integer getRefreshDelay() {
+        return refreshDelay;
+    }
+    public void setRefreshDelay(Integer refreshDelay) {
+        this.refreshDelay = refreshDelay;
+    }
     public List<PageSettings> getPageSettings() {
         return pageSettings;
     }
@@ -122,5 +132,28 @@ public class BoardSettings {
     }
     public void setWebserverGroup(String webserverGroup) {
         this.webserverGroup = webserverGroup;
+    }
+
+    public void initSettings(BoardSettings defaults) {
+        try {
+            new BeanUtilsNoOverwrite().copyProperties(this, defaults);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();  //To change body of catch statement use File | OuterSettings | File Templates.
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();  //To change body of catch statement use File | OuterSettings | File Templates.
+        }
+    }
+
+    public void initSetting(String key, Object def) {
+        try {
+            if(BeanUtils.getProperty(this, key) == null)
+                BeanUtils.setProperty(this, key, def);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();  //To change body of catch statement use File | OuterSettings | File Templates.
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();  //To change body of catch statement use File | OuterSettings | File Templates.
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();  //To change body of catch statement use File | OuterSettings | File Templates.
+        }
     }
 }

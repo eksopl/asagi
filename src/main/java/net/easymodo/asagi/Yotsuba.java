@@ -8,6 +8,10 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import net.easymodo.asagi.model.MediaPost;
+import net.easymodo.asagi.model.Page;
+import net.easymodo.asagi.model.Post;
+import net.easymodo.asagi.model.Topic;
 import org.apache.http.annotation.ThreadSafe;
 
 import org.joda.time.DateTime;
@@ -464,5 +468,10 @@ public class Yotsuba extends WWW {
         }
 
         return t;
+    }
+
+    @Override
+    public Page getAllThreads(String lastMod) throws ContentGetException {
+        throw new UnsupportedOperationException();
     }
 }

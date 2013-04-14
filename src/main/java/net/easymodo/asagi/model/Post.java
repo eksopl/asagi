@@ -1,4 +1,4 @@
-package net.easymodo.asagi;
+package net.easymodo.asagi.model;
 
 public class Post {
     private int posterIp;

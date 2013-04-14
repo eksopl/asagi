@@ -10,6 +10,10 @@ import java.io.OutputStream;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import net.easymodo.asagi.model.Media;
+import net.easymodo.asagi.model.MediaPost;
+import net.easymodo.asagi.model.Page;
+import net.easymodo.asagi.model.Topic;
 import org.apache.http.annotation.ThreadSafe;
 
 import com.google.common.io.ByteStreams;
@@ -74,6 +78,12 @@ public class Local extends Board {
 
     @Override
     public Topic getThread(int threadNum, String lastMod) {
+        // Unimplemented
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Page getAllThreads(String lastMod) throws ContentGetException {
         // Unimplemented
         throw new UnsupportedOperationException();
     }

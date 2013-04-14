@@ -3,11 +3,13 @@ package net.easymodo.asagi;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import com.google.gson.*;
+import net.easymodo.asagi.model.MediaPost;
+import net.easymodo.asagi.model.Page;
+import net.easymodo.asagi.model.Post;
+import net.easymodo.asagi.model.Topic;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
@@ -96,6 +98,10 @@ public class YotsubaJSON extends WWW {
         }
     }
 
+    private String linkThreads() {
+        return this.boardLinks.get("link") + "/" + "threads.json";
+    }
+
     @Override
     public Page getPage(int pageNum, String lastMod) throws ContentGetException, ContentParseException {
         String[] wgetReply = this.wgetText(this.linkPage(pageNum), lastMod);
@@ -150,6 +156,27 @@ public class YotsubaJSON extends WWW {
         }
 
         return t;
+    }
+
+    public Page getAllThreads(String lastMod) throws ContentGetException {
+        String[] wgetReply = this.wgetText(this.linkThreads(), lastMod);
+        String threadsText = wgetReply[0];
+        String newLastMod = wgetReply[1];
+
+        Page threadList = new Page(-1);
+        threadList.setLastMod(newLastMod);
+
+        TopicListJson.Page[] topicsJson = GSON.fromJson(threadsText, TopicListJson.Page[].class);
+        for(TopicListJson.Page page : topicsJson) {
+            for(TopicListJson.Topic topic : page.getThreads()) {
+                Topic t = new Topic(topic.getNo(), 0, 0);
+                t.setLastModTimestamp(topic.getLastModified());
+                t.setLastPage(page.getPage());
+                threadList.addThread(t);
+            }
+        }
+
+        return threadList;
     }
 
     public int parseDate(int dateUtc) {
@@ -238,7 +265,7 @@ public class YotsubaJSON extends WWW {
         // Admin-Mod-Dev quotelinks
         text = text.replaceAll("<span class=\"capcodeReplies\"><span style=\"font-size: smaller;\"><span style=\"font-weight: bold;\">(?:Administrator|Moderator|Developer) Repl(?:y|ies):</span>.*?</span><br></span>", "");
         // Non-public tags
-        text = text.replaceAll("\\[(banned|moot)\\]", "[$1:lit]");
+        text = text.replaceAll("\\[(banned|moot)]", "[$1:lit]");
         // Comment too long, also EXIF tag toggle
         text = text.replaceAll("<span class=\"abbr\">.*?</span>", "");
         // Banned/Warned text

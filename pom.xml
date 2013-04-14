@@ -26,6 +26,11 @@
       <version>2.2.2</version>
     </dependency>
     <dependency>
+      <groupId>commons-beanutils</groupId>
+      <artifactId>commons-beanutils</artifactId>
+      <version>1.8.3</version>
+    </dependency>
+    <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
       <version>14.0</version>
@@ -66,7 +71,7 @@
          <configuration>
            <archive>
              <manifest>
-               <mainClass>net.easymodo.asagi.Dumper</mainClass>
+               <mainClass>net.easymodo.asagi.Asagi</mainClass>
                <packageName>net.easymodo.asagi</packageName>
                <addClasspath>true</addClasspath>
              </manifest>
@@ -81,7 +86,7 @@
           </descriptorRefs>
            <archive>
              <manifest>
-               <mainClass>net.easymodo.asagi.Dumper</mainClass>
+               <mainClass>net.easymodo.asagi.Asagi</mainClass>
              </manifest>
            </archive>
         </configuration>

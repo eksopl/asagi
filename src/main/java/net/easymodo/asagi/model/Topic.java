@@ -1,4 +1,4 @@
-package net.easymodo.asagi;
+package net.easymodo.asagi.model;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -11,6 +11,7 @@ public class Topic {
     private int omPosts;
     private int omImages;
     private String lastMod;
+    private int lastModTimestamp;
     private LinkedHashSet<Integer> allPosts;
     private List<Post> posts;
     private int lastPage;
@@ -87,6 +88,14 @@ public class Topic {
 
     public String getLastMod() {
         return lastMod;
+    }
+
+    public int getLastModTimestamp() {
+        return lastModTimestamp;
+    }
+
+    public void setLastModTimestamp(int lastModTimestamp) {
+        this.lastModTimestamp = lastModTimestamp;
     }
     
     public void setLastHit(long lastHit) {

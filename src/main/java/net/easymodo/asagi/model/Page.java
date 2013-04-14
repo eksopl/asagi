@@ -1,4 +1,6 @@
-package net.easymodo.asagi;
+package net.easymodo.asagi.model;
+
+import net.easymodo.asagi.model.Topic;
 
 import java.util.ArrayList;
 import java.util.List;
