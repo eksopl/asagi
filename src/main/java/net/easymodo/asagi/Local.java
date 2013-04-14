@@ -203,9 +203,9 @@ public class Local extends Board {
         this.insertMedia(h, source, false);
     }
 
-    public void insertMedia(MediaPost h, Board source, boolean preview) throws ContentGetException, ContentStoreException {
+    public void insertMedia(MediaPost h, Board source, boolean isPreview) throws ContentGetException, ContentStoreException {
         // Post has no media
-        if((preview && h.getPreview() == null) || (!preview && h.getMedia() == null))
+        if((isPreview && h.getPreview() == null) || (!isPreview && h.getMedia() == null))
             return;
 
         Media mediaRow;
@@ -221,9 +221,9 @@ public class Local extends Board {
         // Get the proper filename for the file type we're outputting
         String filename;
         if(this.useOldDirectoryStructure)
-            filename = preview ? h.getPreview() : h.getMedia();
+            filename = isPreview ? h.getPreview() : h.getMedia();
         else
-            filename = preview ? (h.isOp() ?  mediaRow.getPreviewOp() : mediaRow.getPreviewReply()) :
+            filename = isPreview ? (h.isOp() ?  mediaRow.getPreviewOp() : mediaRow.getPreviewReply()) :
                 mediaRow.getMedia();
 
         if(filename == null) return;
@@ -232,27 +232,27 @@ public class Local extends Board {
         // Filename is enough for us here, we just need the first part of the string
         String outputDir;
         if(this.useOldDirectoryStructure)
-            outputDir = makeDir(h, preview ? DIR_THUMB : DIR_MEDIA, FULL_FILE);
+            outputDir = makeDir(h, isPreview ? DIR_THUMB : DIR_MEDIA, FULL_FILE);
         else
-            outputDir = makeDir(filename, preview ? DIR_THUMB : DIR_MEDIA, FULL_FILE);
+            outputDir = makeDir(filename, isPreview ? DIR_THUMB : DIR_MEDIA, FULL_FILE);
 
         // Construct the path and back down if the file already exists
         File outputFile = new File(outputDir + "/" + filename);
         if(outputFile.exists()) {
-            if (!preview) outputFile.setLastModified(System.currentTimeMillis());
+            if (!isPreview) outputFile.setLastModified(System.currentTimeMillis());
             return;
         }
 
         // Open a temp file for writing
         String tempFilePath;
         if(this.useOldDirectoryStructure)
-            tempFilePath = makeDir(h, preview ? DIR_THUMB : DIR_MEDIA, TEMP_FILE);
+            tempFilePath = makeDir(h, isPreview ? DIR_THUMB : DIR_MEDIA, TEMP_FILE);
         else
-            tempFilePath = makeDir(filename, preview ? DIR_THUMB : DIR_MEDIA, TEMP_FILE);
+            tempFilePath = makeDir(filename, isPreview ? DIR_THUMB : DIR_MEDIA, TEMP_FILE);
 
 
         // Throws ContentGetException on failure
-        InputStream inStream = preview ? source.getMediaPreview(h) : source.getMedia(h);
+        InputStream inStream = isPreview ? source.getMediaPreview(h) : source.getMedia(h);
 
         OutputStream outFile = null;
         File tempFile = null;
@@ -266,7 +266,7 @@ public class Local extends Board {
             // will be thrown.
             ByteStreams.copy(inStream, outFile);
         } catch(FileNotFoundException e) {
-            throw new ContentStoreException("The temp file we just created wasn't there! (BUG: RACE CONDITION)", e);
+            throw new ContentStoreException("The temp file we just created wasn't there!", e);
         } catch(IOException e) {
             if(tempFile != null && !tempFile.delete())
                 System.err.println("Additionally, temporary file " + tempFilePath + "/" + filename + " could not be deleted.");

@@ -4,7 +4,7 @@ package net.easymodo.asagi.model.yotsuba;
 public class TopicListJson {
     public class Topic {
         private int no;
-        private int lastModified;
+        private long lastModified;
 
         public int getNo() {
             return no;
@@ -14,11 +14,11 @@ public class TopicListJson {
             this.no = no;
         }
 
-        public int getLastModified() {
+        public long getLastModified() {
             return lastModified;
         }
 
-        public void setLastModified(int lastModified) {
+        public void setLastModified(long lastModified) {
             this.lastModified = lastModified;
         }
     }

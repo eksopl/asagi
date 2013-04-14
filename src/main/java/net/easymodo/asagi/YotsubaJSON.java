@@ -175,7 +175,7 @@ public class YotsubaJSON extends WWW {
         for(TopicListJson.Page page : topicsJson) {
             for(TopicListJson.Topic topic : page.getThreads()) {
                 Topic t = new Topic(topic.getNo(), 0, 0);
-                t.setLastModTimestamp(topic.getLastModified());
+                t.setLastModTimestamp(topic.getLastModified() > Integer.MAX_VALUE ? 0 : (int) topic.getLastModified());
                 t.setLastPage(page.getPage());
                 threadList.addThread(t);
             }
