@@ -17,6 +17,7 @@ import org.apache.http.client.params.ClientPNames;
 import org.apache.http.client.params.CookiePolicy;
 import org.apache.http.impl.client.DecompressingHttpClient;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.conn.BasicClientConnectionManager;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpConnectionParams;
@@ -40,6 +41,7 @@ import net.easymodo.asagi.exception.*;
 @ThreadSafe
 public abstract class WWW extends Board {
     private static HttpClient httpClient;
+    private static HttpClient throttledHttpClient;
 
     static {
     	HttpParams params = new BasicHttpParams();
@@ -51,13 +53,18 @@ public abstract class WWW extends Board {
         pccm.setDefaultMaxPerRoute(20);
         pccm.setMaxTotal(100);
         httpClient = new DecompressingHttpClient(new DefaultHttpClient(pccm, params));
+
+        PoolingClientConnectionManager pccm2 = new PoolingClientConnectionManager();
+        pccm.setDefaultMaxPerRoute(1);
+        pccm.setMaxTotal(1);
+        throttledHttpClient = new DecompressingHttpClient(new DefaultHttpClient(pccm2, params));
     }
 
-    private HttpResponse wget(String link, String referer) throws HttpGetException {
-        return wget(link, referer, "");
+    private HttpResponse wget(String link, String referer, boolean throttle) throws HttpGetException {
+        return wget(link, referer, "", throttle);
     }
 
-    private HttpResponse wget(String link, String referer, String lastMod) throws HttpGetException {
+    private HttpResponse wget(String link, String referer, String lastMod, boolean throttle) throws HttpGetException {
         HttpGet req = new HttpGet(link);
         req.setHeader("Referer", referer);
         if(lastMod != null) req.setHeader("If-Modified-Since", lastMod);
@@ -66,7 +73,10 @@ public abstract class WWW extends Board {
         HttpResponse res;
 
         try {
-            res = httpClient.execute(req);
+            if(throttle)
+                res = throttledHttpClient.execute(req);
+            else
+                res = httpClient.execute(req);
             statusCode = res.getStatusLine().getStatusCode();
         } catch(ClientProtocolException e) {
             req.reset();
@@ -86,15 +96,16 @@ public abstract class WWW extends Board {
 
     public InputStream wget(String link) throws HttpGetException {
         try {
-            return this.wget(link, "").getEntity().getContent();
+            return this.wget(link, "", false).getEntity().getContent();
         } catch (IOException e) {
             throw new HttpGetException(e);
         }
     }
 
-    public String[] wgetText(String link, String lastMod) throws ContentGetException {
+
+    public String[] wgetText(String link, String lastMod, boolean throttle) throws ContentGetException {
         // Throws ContentGetException on failure
-        HttpResponse httpResponse = this.wget(link, "", lastMod);
+        HttpResponse httpResponse = this.wget(link, "", lastMod, throttle);
 
         Header[] newLastModHead = httpResponse.getHeaders("Last-Modified");
         String newLastMod = null;

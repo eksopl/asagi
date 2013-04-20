@@ -397,7 +397,7 @@ public class Yotsuba extends WWW {
 
     @Override
     public Page getPage(int pageNum, String lastMod) throws ContentGetException, ContentParseException {
-        String[] wgetReply = this.wgetText(this.linkPage(pageNum), lastMod);
+        String[] wgetReply = this.wgetText(this.linkPage(pageNum), lastMod, false);
         String pageText = wgetReply[0];
         String newLastMod = wgetReply[1];
 
@@ -424,7 +424,7 @@ public class Yotsuba extends WWW {
 
     @Override
     public Topic getThread(int threadNum, String lastMod) throws ContentGetException, ContentParseException {
-        String[] wgetReply = this.wgetText(this.linkThread(threadNum), lastMod);
+        String[] wgetReply = this.wgetText(this.linkThread(threadNum), lastMod, false);
         String threadText = wgetReply[0];
         String newLastMod = wgetReply[1];
 

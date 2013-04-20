@@ -94,7 +94,7 @@ public class YotsubaJSON extends WWW {
 
     @Override
     public Page getPage(int pageNum, String lastMod) throws ContentGetException, ContentParseException {
-        String[] wgetReply = this.wgetText(this.linkPage(pageNum), lastMod);
+        String[] wgetReply = this.wgetText(this.linkPage(pageNum), lastMod, true);
         String pageText = wgetReply[0];
         String newLastMod = wgetReply[1];
 
@@ -120,7 +120,7 @@ public class YotsubaJSON extends WWW {
 
     @Override
     public Topic getThread(int threadNum, String lastMod) throws ContentGetException, ContentParseException {
-        String[] wgetReply = this.wgetText(this.linkThread(threadNum), lastMod);
+        String[] wgetReply = this.wgetText(this.linkThread(threadNum), lastMod, true);
         String threadText = wgetReply[0];
         String newLastMod = wgetReply[1];
 
@@ -149,7 +149,7 @@ public class YotsubaJSON extends WWW {
     }
 
     public Page getAllThreads(String lastMod) throws ContentGetException {
-        String[] wgetReply = this.wgetText(this.linkThreads(), lastMod);
+        String[] wgetReply = this.wgetText(this.linkThreads(), lastMod, true);
         String threadsText = wgetReply[0];
         String newLastMod = wgetReply[1];
 
