@@ -208,7 +208,7 @@ public abstract class AbstractDumper {
 
                 for(Post post : posts) {
                     try {
-                        MediaPost mediaPost = new MediaPost(post.getNum(), post.isOp(),
+                        MediaPost mediaPost = new MediaPost(post.getThreadNum(), post.isOp(),
                                 post.getPreviewOrig(), post.getMediaOrig(), post.getMediaHash());
 
                         if(post.getPreviewOrig() != null) {
