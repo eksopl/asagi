@@ -82,8 +82,9 @@ public abstract class WWW extends Board {
         } catch(ClientProtocolException e) {
             throw new HttpGetException(e);
         } catch(IOException e) {
-            req.releaseConnection();
             throw new HttpGetException(e);
+        } finally {
+            req.releaseConnection();
         }
 
         entity = res.getEntity();
@@ -95,8 +96,6 @@ public abstract class WWW extends Board {
                 EntityUtils.consume(entity);
             } catch(IOException e) {
                 throw new HttpGetException(e);
-            } finally {
-                req.releaseConnection();
             }
             throw new HttpGetException(res.getStatusLine().getReasonPhrase(), statusCode);
         }
