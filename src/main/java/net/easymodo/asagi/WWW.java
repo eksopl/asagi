@@ -42,6 +42,19 @@ import java.util.regex.Pattern;
 public abstract class WWW extends Board {
     private static HttpClient httpClient;
     private static HttpClient throttledHttpClient;
+    private static final Timer sleepanTimer = new Timer();
+
+    private static class Timer {
+        long timer = 0;
+
+        synchronized private long getTimer() {
+            return timer;
+        }
+
+        synchronized private void setTimer(long timer) {
+            this.timer = timer;
+        }
+    }
 
     static {
     	HttpParams params = new BasicHttpParams();
@@ -50,7 +63,7 @@ public abstract class WWW extends Board {
         params.setParameter(ClientPNames.COOKIE_POLICY, CookiePolicy.IGNORE_COOKIES);
 
         PoolingClientConnectionManager pccm = new PoolingClientConnectionManager();
-        pccm.setDefaultMaxPerRoute(20);
+        pccm.setDefaultMaxPerRoute(10);
         pccm.setMaxTotal(100);
         httpClient = new DecompressingHttpClient(new DefaultHttpClient(pccm, params));
 
@@ -76,10 +89,22 @@ public abstract class WWW extends Board {
 
         while(!isDone)
         try {
-            if(throttle)
-                res = throttledHttpClient.execute(req);
-            else
+            if(throttle) {
+                while(res == null) {
+                    if(sleepanTimer.getTimer() == 0 || System.currentTimeMillis() - sleepanTimer.getTimer() > 1000){
+                        sleepanTimer.setTimer(System.currentTimeMillis());
+                        res = throttledHttpClient.execute(req);
+                    } else {
+                        try {
+                            Thread.sleep(System.currentTimeMillis() - sleepanTimer.getTimer());
+                        } catch (InterruptedException e) {
+                            // w
+                        }
+                    }
+                }
+            } else {
                 res = httpClient.execute(req);
+            }
             statusCode = res.getStatusLine().getStatusCode();
             isDone = true;
         } catch(ConnectionPoolTimeoutException e){
