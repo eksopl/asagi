@@ -261,15 +261,7 @@ public class Yotsuba extends WWW {
         if(h.getPreview() == null)
             return null;
 
-        InputStream inStream;
-        try {
-            inStream = this.wget(this.boardLinks.get("previewLink") + "/thumb/"
-                + h.getPreview()).getEntity().getContent();
-        } catch(IOException e) {
-            throw new ContentGetException(e);
-        }
-
-        return inStream;
+        return this.wget(this.boardLinks.get("previewLink") + "/thumb/" + h.getPreview());
     }
 
     @Override
@@ -277,15 +269,7 @@ public class Yotsuba extends WWW {
         if(h.getMedia() == null)
             return null;
 
-        InputStream inStream;
-        try {
-            inStream = this.wget(this.boardLinks.get("imgLink") + "/src/"
-                + h.getMedia()).getEntity().getContent();
-        } catch(IOException e) {
-            throw new ContentGetException(e);
-        }
-
-        return inStream;
+        return this.wget(this.boardLinks.get("imgLink") + "/src/" + h.getMedia());
     }
 
 
