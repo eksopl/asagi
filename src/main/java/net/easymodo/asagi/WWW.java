@@ -1,30 +1,30 @@
 package net.easymodo.asagi;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import org.apache.http.annotation.ThreadSafe;
+import net.easymodo.asagi.exception.ContentGetException;
+import net.easymodo.asagi.exception.HttpGetException;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
+import org.apache.http.annotation.ThreadSafe;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.params.ClientPNames;
 import org.apache.http.client.params.CookiePolicy;
+import org.apache.http.conn.ConnectionPoolTimeoutException;
 import org.apache.http.impl.client.DecompressingHttpClient;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.impl.conn.BasicClientConnectionManager;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
 import org.apache.http.util.EntityUtils;
 
-import net.easymodo.asagi.exception.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 /**
@@ -46,7 +46,7 @@ public abstract class WWW extends Board {
     static {
     	HttpParams params = new BasicHttpParams();
         HttpConnectionParams.setSoTimeout(params, 5000);
-        HttpConnectionParams.setConnectionTimeout(params, 60000);
+        HttpConnectionParams.setConnectionTimeout(params, 5000);
         params.setParameter(ClientPNames.COOKIE_POLICY, CookiePolicy.IGNORE_COOKIES);
 
         PoolingClientConnectionManager pccm = new PoolingClientConnectionManager();
@@ -69,15 +69,25 @@ public abstract class WWW extends Board {
         req.setHeader("Referer", referer);
         if(lastMod != null) req.setHeader("If-Modified-Since", lastMod);
 
-        int statusCode;
-        HttpResponse res;
+        int statusCode = 0;
+        HttpResponse res = null;
 
+        boolean isDone = false;
+
+        while(!isDone)
         try {
             if(throttle)
                 res = throttledHttpClient.execute(req);
             else
                 res = httpClient.execute(req);
             statusCode = res.getStatusLine().getStatusCode();
+            isDone = true;
+        } catch(ConnectionPoolTimeoutException e){
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e1) {
+                // don't even care
+            }
         } catch(ClientProtocolException e) {
             req.reset();
             throw new HttpGetException(e);

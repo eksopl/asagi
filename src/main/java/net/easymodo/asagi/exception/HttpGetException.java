@@ -6,11 +6,11 @@ public class HttpGetException extends ContentGetException {
     
     public HttpGetException(Throwable e) {
         super(e);
-        this.httpStatus = 0;
+        this.httpStatus = -1;
     }
     
     public HttpGetException(String s, int httpStatus) {
-        super("HTTP error: " + s, null);
+        super("HTTP error: " + s + " (" + httpStatus + ")", null);
         this.httpStatus = httpStatus;
     }
 

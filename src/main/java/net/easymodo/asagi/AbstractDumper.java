@@ -314,7 +314,7 @@ public abstract class AbstractDumper {
                    } else {
                        // We got some funky error
                        pingTopic(oldTopic);
-                       debug(WARN, newTopic + ": got HTTP status " + e.getHttpStatus());
+                       debug(WARN, newTopic + ": error: " + e.getMessage());
                        continue;
                    }
                } catch(ContentGetException e) {
