@@ -43,8 +43,8 @@ public abstract class WWW extends Board {
 
     static {
     	HttpParams params = new BasicHttpParams();
-        HttpConnectionParams.setSoTimeout(params, 20000);
-        HttpConnectionParams.setConnectionTimeout(params, 20000);
+        HttpConnectionParams.setSoTimeout(params, 5000);
+        HttpConnectionParams.setConnectionTimeout(params, 5000);
         params.setParameter(ClientPNames.COOKIE_POLICY, CookiePolicy.IGNORE_COOKIES);
 
         PoolingClientConnectionManager pccm = new PoolingClientConnectionManager();
@@ -63,14 +63,11 @@ public abstract class WWW extends Board {
         if(lastMod != null) req.setHeader("If-Modified-Since", lastMod);
 
         int statusCode;
-        int maxTries = 3;
         HttpResponse res;
 
         try {
-            do {
-                res = httpClient.execute(req);
-                statusCode = res.getStatusLine().getStatusCode();
-            } while(--maxTries > 0 && (statusCode == 500 || statusCode == 503));
+            res = httpClient.execute(req);
+            statusCode = res.getStatusLine().getStatusCode();
         } catch(ClientProtocolException e) {
             req.reset();
             throw new HttpGetException(e);
