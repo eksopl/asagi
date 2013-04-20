@@ -9,6 +9,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 @ThreadSafe
+@SuppressWarnings("UnusedDeclaration")
 public class Mysql extends SQL {
     public Mysql(String path, BoardSettings info) throws BoardInitException {
         String dbName = info.getDatabase();

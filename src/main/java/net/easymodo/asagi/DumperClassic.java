@@ -15,6 +15,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+@SuppressWarnings("UnusedDeclaration")
 public class DumperClassic extends AbstractDumper {
     public DumperClassic(String boardName, Local topicLocalBoard, Local mediaLocalBoard, Board sourceBoard, boolean fullMedia, int pageLimbo) {
         super(boardName, topicLocalBoard, mediaLocalBoard, sourceBoard, fullMedia, pageLimbo);
@@ -44,6 +45,7 @@ public class DumperClassic extends AbstractDumper {
         }
 
         @Override
+        @SuppressWarnings("InfiniteLoopStatement")
         public void run() {
             while(true) {
                 long startTime = DateTime.now().getMillis();
@@ -192,6 +194,7 @@ public class DumperClassic extends AbstractDumper {
 
 
         @Override
+        @SuppressWarnings("InfiniteLoopStatement")
         public void run() {
             while(true) {
                 for(Topic topic : topics.values()) {

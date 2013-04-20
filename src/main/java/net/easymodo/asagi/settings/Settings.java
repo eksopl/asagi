@@ -2,6 +2,7 @@ package net.easymodo.asagi.settings;
 
 import java.util.Map;
 
+@SuppressWarnings("UnusedDeclaration")
 public class Settings {
     private String dumperEngine;
     private String sourceEngine;

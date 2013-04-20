@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 public abstract class AbstractDumper {
     protected final String boardName;
@@ -130,6 +129,7 @@ public abstract class AbstractDumper {
 
     protected class ThumbFetcher implements Runnable {
         @Override
+        @SuppressWarnings("InfiniteLoopStatement")
         public void run() {
             while(true) {
                 MediaPost mediaPrevPost;
@@ -153,6 +153,7 @@ public abstract class AbstractDumper {
 
     protected class MediaFetcher implements Runnable {
         @Override
+        @SuppressWarnings("InfiniteLoopStatement")
         public void run() {
             while(true) {
                 MediaPost mediaPost;
@@ -176,6 +177,7 @@ public abstract class AbstractDumper {
 
     protected class TopicInserter implements Runnable {
         @Override
+        @SuppressWarnings("InfiniteLoopStatement")
         public void run() {
             while(true) {
                 Topic newTopic;
@@ -208,7 +210,7 @@ public abstract class AbstractDumper {
 
                 for(Post post : posts) {
                     try {
-                        MediaPost mediaPost = new MediaPost(post.getNum(), post.isOp(),
+                        MediaPost mediaPost = new MediaPost(post.getNum(), post.getThreadNum(), post.isOp(),
                                 post.getPreviewOrig(), post.getMediaOrig(), post.getMediaHash());
 
                         if(post.getPreviewOrig() != null) {
@@ -229,6 +231,7 @@ public abstract class AbstractDumper {
 
     protected class PostDeleter implements Runnable {
         @Override
+        @SuppressWarnings("InfiniteLoopStatement")
         public void run() {
             while(true) {
                 int deletedPost;
@@ -257,6 +260,7 @@ public abstract class AbstractDumper {
         }
 
         @Override
+        @SuppressWarnings("InfiniteLoopStatement")
         public void run() {
             while(true) {
                int newTopic;
@@ -305,7 +309,6 @@ public abstract class AbstractDumper {
                            // Goodbye, old topic.
                            topics.remove(newTopic);
                            oldTopic.lock.writeLock().unlock();
-                           oldTopic = null;
                        }
                        continue;
                    } else {
@@ -344,7 +347,6 @@ public abstract class AbstractDumper {
 
                        // Throw this away now.
                        topic.lock.readLock().unlock();
-                       topic = null;
                        continue;
                    }
 
@@ -372,7 +374,6 @@ public abstract class AbstractDumper {
                topic.lock.writeLock().unlock();
 
                debug(TALK, newTopic + ": " + (oldTopic != null ? "updated" : "new"));
-               oldTopic = null;
            }
         }
     }

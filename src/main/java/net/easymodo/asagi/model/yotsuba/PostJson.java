@@ -1,6 +1,6 @@
 package net.easymodo.asagi.model.yotsuba;
 
-
+@SuppressWarnings("UnusedDeclaration")
 public class PostJson {
     private int no;
     private int resto;

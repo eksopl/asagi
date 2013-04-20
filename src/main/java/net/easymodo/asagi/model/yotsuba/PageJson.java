@@ -1,7 +1,6 @@
 package net.easymodo.asagi.model.yotsuba;
 
-import java.util.Map;
-
+@SuppressWarnings("UnusedDeclaration")
 public class PageJson {
     private TopicJson[] threads;
 

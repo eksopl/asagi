@@ -1,6 +1,6 @@
 package net.easymodo.asagi.model.yotsuba;
 
-
+@SuppressWarnings("UnusedDeclaration")
 public class TopicListJson {
     public class Topic {
         private int no;

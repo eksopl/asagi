@@ -6,6 +6,7 @@ import net.easymodo.asagi.settings.BoardSettings;
 import org.apache.http.annotation.ThreadSafe;
 
 @ThreadSafe
+@SuppressWarnings("UnusedDeclaration")
 public class Pgsql extends SQL {
     
     public Pgsql(String path, BoardSettings info) throws BoardInitException {        

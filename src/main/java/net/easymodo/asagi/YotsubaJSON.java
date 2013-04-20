@@ -1,6 +1,5 @@
 package net.easymodo.asagi;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.util.*;

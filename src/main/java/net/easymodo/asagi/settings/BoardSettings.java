@@ -2,9 +2,9 @@ package net.easymodo.asagi.settings;
 
 import org.apache.commons.beanutils.BeanUtils;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 
+@SuppressWarnings("UnusedDeclaration")
 public class BoardSettings {
     private String engine;
     private String database;

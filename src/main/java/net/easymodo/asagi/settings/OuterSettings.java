@@ -1,7 +1,6 @@
 package net.easymodo.asagi.settings;
 
-import java.util.Map;
-
+@SuppressWarnings("UnusedDeclaration")
 public class OuterSettings {
     private Settings settings;
 

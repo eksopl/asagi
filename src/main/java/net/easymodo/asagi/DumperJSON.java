@@ -10,6 +10,7 @@ import org.joda.time.DateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+@SuppressWarnings("UnusedDeclaration")
 public class DumperJSON extends AbstractDumper {
     public DumperJSON(String boardName, Local topicLocalBoard, Local mediaLocalBoard, Board sourceBoard, boolean fullMedia, int pageLimbo) {
         super(boardName, topicLocalBoard, mediaLocalBoard, sourceBoard, fullMedia, pageLimbo);
@@ -38,6 +39,7 @@ public class DumperJSON extends AbstractDumper {
         }
 
         @Override
+        @SuppressWarnings("InfiniteLoopStatement")
         public void run() {
             while(true) {
                 long startTime = DateTime.now().getMillis();
@@ -58,13 +60,6 @@ public class DumperJSON extends AbstractDumper {
                 }
 
                 lastMod = threadList.getLastMod();
-
-                if(threadList == null) {
-                    debug(WARN, ("threads.json has no content"));
-                    sleepRemaining(startTime);
-                    continue;
-                }
-
 
                 Map<Integer,Topic> threadMap = new HashMap<Integer, Topic>();
                 for(Topic topic : threadList.getThreads()) {

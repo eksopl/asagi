@@ -6,6 +6,7 @@ import com.sun.jna.Structure;
 import java.util.Arrays;
 import java.util.List;
 
+@SuppressWarnings("UnusedDeclaration")
 public class Group extends Structure {
     public String name;
     public String password;

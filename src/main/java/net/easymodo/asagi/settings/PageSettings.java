@@ -2,6 +2,7 @@ package net.easymodo.asagi.settings;
 
 import java.util.List;
 
+@SuppressWarnings("UnusedDeclaration")
 public class PageSettings {
     private int delay;
     private List<Integer> pages;

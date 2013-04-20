@@ -108,7 +108,7 @@ public class Local extends Board {
     }
 
     public String[] getSubdirs(MediaPost h) {
-        Matcher mat = oldDirectoryMatchingPattern.matcher(Integer.toString(h.getNum()));
+        Matcher mat = oldDirectoryMatchingPattern.matcher(Integer.toString(h.getThreadNum()));
         mat.find();
 
         String subdir = String.format("%04d", Integer.parseInt(mat.group(1)));
