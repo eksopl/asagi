@@ -68,7 +68,7 @@ public class DumperJSON extends AbstractDumper {
 
                 // Go over the old threads
                 for(Topic oldTopic : topics.values()) {
-                    oldTopic.lock.writeLock().lock();
+                    oldTopic.lock.readLock().lock();
                     Topic newTopic = threadMap.remove(oldTopic.getNum());
                     if(newTopic != null) {
                         if(oldTopic.getLastModTimestamp() < newTopic.getLastModTimestamp()) {
@@ -76,14 +76,16 @@ public class DumperJSON extends AbstractDumper {
                             if(!newTopics.contains(newTopic.getNum()))
                                 newTopics.add(newTopic.getNum());
                         }
+                        oldTopic.lock.writeLock().lock();
                         oldTopic.setLastModTimestamp(newTopic.getLastModTimestamp());
                         oldTopic.setLastPage(newTopic.getLastPage());
+                        oldTopic.lock.writeLock().unlock();
                     } else {
                         // baleeted topic
                         if(!newTopics.contains(oldTopic.getNum()))
                             newTopics.add(oldTopic.getNum());
                     }
-                    oldTopic.lock.writeLock().unlock();
+                    oldTopic.lock.readLock().unlock();
                 }
 
                 // These are new!

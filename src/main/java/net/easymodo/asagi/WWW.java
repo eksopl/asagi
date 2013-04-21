@@ -41,17 +41,16 @@ import java.util.regex.Pattern;
 @ThreadSafe
 public abstract class WWW extends Board {
     private static HttpClient httpClient;
-    private static HttpClient throttledHttpClient;
-    private static final Timer sleepanTimer = new Timer();
+    private static final Timer SLEEP_TIMER = new Timer();
 
     private static class Timer {
         long timer = 0;
 
-        synchronized private long getTimer() {
+        private long getTimer() {
             return timer;
         }
 
-        synchronized private void setTimer(long timer) {
+        private void setTimer(long timer) {
             this.timer = timer;
         }
     }
@@ -63,14 +62,9 @@ public abstract class WWW extends Board {
         params.setParameter(ClientPNames.COOKIE_POLICY, CookiePolicy.IGNORE_COOKIES);
 
         PoolingClientConnectionManager pccm = new PoolingClientConnectionManager();
-        pccm.setDefaultMaxPerRoute(10);
-        pccm.setMaxTotal(100);
+        pccm.setDefaultMaxPerRoute(100);
+        pccm.setMaxTotal(300);
         httpClient = new DecompressingHttpClient(new DefaultHttpClient(pccm, params));
-
-        PoolingClientConnectionManager pccm2 = new PoolingClientConnectionManager();
-        pccm.setDefaultMaxPerRoute(1);
-        pccm.setMaxTotal(1);
-        throttledHttpClient = new DecompressingHttpClient(new DefaultHttpClient(pccm2, params));
     }
 
     private HttpResponse wget(String link, String referer, boolean throttle) throws HttpGetException {
@@ -87,38 +81,52 @@ public abstract class WWW extends Board {
 
         boolean isDone = false;
 
-        while(!isDone)
-        try {
-            if(throttle) {
-                while(res == null) {
-                    if(sleepanTimer.getTimer() == 0 || System.currentTimeMillis() - sleepanTimer.getTimer() > 1000){
-                        sleepanTimer.setTimer(System.currentTimeMillis());
-                        res = throttledHttpClient.execute(req);
-                    } else {
+        while(!isDone) {
+            try {
+                if(throttle) {
+                    while(res == null) {
+                        boolean okToGo = false;
+                        long timer;
+                        synchronized(SLEEP_TIMER) {
+                            timer = SLEEP_TIMER.getTimer();
+                            long now = System.currentTimeMillis();
+                            if(timer == 0 || (now - timer) > 1000) {
+                                okToGo = true;
+                                SLEEP_TIMER.setTimer(now);
+                            }
+                        }
+                        if(okToGo) {
+                            res = httpClient.execute(req);
+                        } else {
+                            try {
+                                Thread.sleep(System.currentTimeMillis() - timer);
+                            } catch (InterruptedException e) {
+                                // w
+                            }
+                        }
+                    }
+                } else {
+                    try {
+                        res = httpClient.execute(req);
+                    } catch(ConnectionPoolTimeoutException e) {
                         try {
-                            Thread.sleep(System.currentTimeMillis() - sleepanTimer.getTimer());
-                        } catch (InterruptedException e) {
-                            // w
+                            req.reset();
+                            Thread.sleep(5000);
+                            continue;
+                        } catch (InterruptedException e1) {
+                            continue;
                         }
                     }
                 }
-            } else {
-                res = httpClient.execute(req);
+                statusCode = res.getStatusLine().getStatusCode();
+                isDone = true;
+            } catch(ClientProtocolException e) {
+                req.reset();
+                throw new HttpGetException(e);
+            } catch(IOException e) {
+                req.reset();
+                throw new HttpGetException(e);
             }
-            statusCode = res.getStatusLine().getStatusCode();
-            isDone = true;
-        } catch(ConnectionPoolTimeoutException e){
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e1) {
-                // don't even care
-            }
-        } catch(ClientProtocolException e) {
-            req.reset();
-            throw new HttpGetException(e);
-        } catch(IOException e) {
-            req.reset();
-            throw new HttpGetException(e);
         }
 
         if(statusCode != 200) {
