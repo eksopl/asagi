@@ -5,12 +5,10 @@ import net.easymodo.asagi.exception.HttpGetException;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.annotation.ThreadSafe;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.params.ClientPNames;
 import org.apache.http.client.params.CookiePolicy;
-import org.apache.http.conn.ConnectionPoolTimeoutException;
 import org.apache.http.impl.client.DecompressingHttpClient;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
@@ -62,8 +60,8 @@ public abstract class WWW extends Board {
         params.setParameter(ClientPNames.COOKIE_POLICY, CookiePolicy.IGNORE_COOKIES);
 
         PoolingClientConnectionManager pccm = new PoolingClientConnectionManager();
-        pccm.setDefaultMaxPerRoute(100);
-        pccm.setMaxTotal(300);
+        pccm.setDefaultMaxPerRoute(20);
+        pccm.setMaxTotal(100);
         httpClient = new DecompressingHttpClient(new DefaultHttpClient(pccm, params));
     }
 
@@ -106,37 +104,35 @@ public abstract class WWW extends Board {
                         }
                     }
                 } else {
-                    try {
-                        res = httpClient.execute(req);
-                    } catch(ConnectionPoolTimeoutException e) {
-                        try {
-                            req.reset();
-                            Thread.sleep(5000);
-                            continue;
-                        } catch (InterruptedException e1) {
-                            continue;
-                        }
-                    }
+                    res = httpClient.execute(req);
                 }
                 statusCode = res.getStatusLine().getStatusCode();
                 isDone = true;
-            } catch(ClientProtocolException e) {
-                req.reset();
-                throw new HttpGetException(e);
             } catch(IOException e) {
-                req.reset();
+                // Automatically released in case of IOException
+                throw new HttpGetException(e);
+            } catch (RuntimeException e) {
+                req.abort();
                 throw new HttpGetException(e);
             }
         }
 
         if(statusCode != 200) {
-            req.reset();
+            // Needed to consume the rest of the response and release the connection
+            EntityUtils.consumeQuietly(res.getEntity());
             throw new HttpGetException(res.getStatusLine().getReasonPhrase(), statusCode);
         }
 
         return res;
     }
 
+    /**
+     * Gets an arbitrary HTTP link, returns an InputStream.
+     *
+     * @param link the HTTP link to fetch.
+     * @return an InputStream with the content you desire.
+     *         Make sure you always close it, or I'll hurt you.
+     */
     public InputStream wget(String link) throws HttpGetException {
         try {
             return this.wget(link, "", false).getEntity().getContent();
@@ -163,12 +159,8 @@ public abstract class WWW extends Board {
         } catch(IOException e) {
             throw new HttpGetException(e);
         } finally {
-            try {
-                // deal with the rest of this bullshit
-                EntityUtils.consume(httpResponse.getEntity());
-            } catch (IOException e) {
-                // nope don't even care
-            }
+            // EntityUtils.toString should close the stream for us, but I DON'T EVEN KNOW
+            EntityUtils.consumeQuietly(httpResponse.getEntity());
         }
 
         return new String[] {pageText, newLastMod};

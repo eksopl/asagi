@@ -254,6 +254,7 @@ public abstract class AbstractDumper {
         private void pingTopic(Topic topic) {
             if(topic == null) return;
 
+            topic.lock.writeLock().lock();
             topic.setLastHit(DateTime.now().getMillis());
             topic.setBusy(false);
             topic.lock.writeLock().unlock();
@@ -274,8 +275,9 @@ public abstract class AbstractDumper {
 
                // If we already saw this topic before, acquire its lock
                if(oldTopic != null) {
-                   oldTopic.lock.writeLock().lock();
+                   oldTopic.lock.readLock().lock();
                    lastMod = oldTopic.getLastMod();
+                   oldTopic.lock.readLock().unlock();
                }
 
                long startTime = DateTime.now().getMillis();
@@ -293,6 +295,7 @@ public abstract class AbstractDumper {
                        continue;
                    } else if(e.getHttpStatus() == 404) {
                        if(oldTopic != null) {
+                           oldTopic.lock.writeLock().lock();
                            // If we found the topic before the page limbo
                            // threshold, then it was forcefully deleted
                            if(oldTopic.getLastPage() < pageLimbo) {
@@ -340,6 +343,8 @@ public abstract class AbstractDumper {
                topic.lock.writeLock().lock();
 
                if(oldTopic != null) {
+                   oldTopic.lock.writeLock().lock();
+
                    // Beaten to the punch (how?)
                    if(oldTopic.getLastHit() > startTime) {
                        debug(ERROR, "Concurrency issue updating topic " + oldTopic.getNum());

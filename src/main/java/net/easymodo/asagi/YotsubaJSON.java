@@ -72,8 +72,7 @@ public class YotsubaJSON extends WWW {
         if(h.getMedia() == null)
             return null;
 
-        return this.wget(this.boardLinks.get("imgLink") + "/src/"
-                    + h.getMedia());
+        return this.wget(this.boardLinks.get("imgLink") + "/src/" + h.getMedia());
     }
 
     private String linkPage(int pageNum) {
