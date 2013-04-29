@@ -378,7 +378,7 @@ public abstract class AbstractDumper {
                topicUpdates.add(topic);
                topic.lock.writeLock().unlock();
 
-               debug(TALK, newTopic + ": " + (oldTopic != null ? "updated" : "new"));
+               debug(TALK, newTopic + ": " + ((oldTopic != null && oldTopic.getLastMod() != null) ? "updated" : "new"));
            }
         }
     }

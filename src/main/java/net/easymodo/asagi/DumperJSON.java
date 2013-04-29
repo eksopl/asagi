@@ -69,31 +69,37 @@ public class DumperJSON extends AbstractDumper {
                 // Go over the old threads
                 for(Topic oldTopic : topics.values()) {
                     oldTopic.lock.readLock().lock();
-                    Topic newTopic = threadMap.remove(oldTopic.getNum());
+                    int oldTopicNum = oldTopic.getNum();
+                    int oldTopicLastMod = oldTopic.getLastModTimestamp();
+                    oldTopic.lock.readLock().unlock();
+
+                    Topic newTopic = threadMap.remove(oldTopicNum);
                     if(newTopic != null) {
-                        if(oldTopic.getLastModTimestamp() < newTopic.getLastModTimestamp()) {
-                            debug(TALK, "modified: " + oldTopic.getNum());
+                        if(oldTopicLastMod < newTopic.getLastModTimestamp()) {
+                            debug(TALK, "modified: " + oldTopicNum);
                             if(!newTopics.contains(newTopic.getNum()))
                                 newTopics.add(newTopic.getNum());
                         }
+
                         oldTopic.lock.writeLock().lock();
                         oldTopic.setLastModTimestamp(newTopic.getLastModTimestamp());
                         oldTopic.setLastPage(newTopic.getLastPage());
                         oldTopic.lock.writeLock().unlock();
                     } else {
                         // baleeted topic
-                        if(!newTopics.contains(oldTopic.getNum()))
-                            newTopics.add(oldTopic.getNum());
+                        if(!newTopics.contains(oldTopicNum))
+                            newTopics.add(oldTopicNum);
                     }
-                    oldTopic.lock.readLock().unlock();
+
                 }
 
                 // These are new!
                 for(Topic topic : threadMap.values()) {
                     topic.lock.writeLock().lock();
                     topics.put(topic.getNum(), topic);
-                    if(!newTopics.contains(topic.getNum()))
+                    if(!newTopics.contains(topic.getNum())) {
                         newTopics.add(topic.getNum());
+                    }
                     topic.lock.writeLock().unlock();
                 }
 
