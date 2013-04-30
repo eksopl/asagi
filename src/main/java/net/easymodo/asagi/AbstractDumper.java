@@ -351,7 +351,7 @@ public abstract class AbstractDumper {
                        oldTopic.lock.writeLock().unlock();
 
                        // Throw this away now.
-                       topic.lock.readLock().unlock();
+                       topic.lock.writeLock().unlock();
                        continue;
                    }
 
