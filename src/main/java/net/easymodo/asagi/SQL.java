@@ -54,7 +54,7 @@ public abstract class SQL implements DB {
     protected String boardSqlRes = null;
     protected String triggersSqlRes = null;
 
-    private void reconnect() throws DBConnectionException {
+    private synchronized void reconnect() throws DBConnectionException {
         try {
             this.connect();
             this.postConnect();
@@ -63,7 +63,7 @@ public abstract class SQL implements DB {
         }
     }
 
-    private void connect() throws SQLException {
+    private synchronized void connect() throws SQLException {
         conn = DriverManager.getConnection(connectionString);
         conn.setAutoCommit(false);
         conn.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);

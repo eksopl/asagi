@@ -38,8 +38,9 @@ import java.util.regex.Pattern;
  **/
 @ThreadSafe
 public abstract class WWW extends Board {
-    private static HttpClient httpClient;
     private static final Timer SLEEP_TIMER = new Timer();
+    private static HttpClient httpClient;
+
     protected boolean throttleAPI = true;
     protected String throttleURL;
     protected long throttleMillisec = 0L;
