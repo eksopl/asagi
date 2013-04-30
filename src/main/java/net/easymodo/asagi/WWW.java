@@ -40,6 +40,9 @@ import java.util.regex.Pattern;
 public abstract class WWW extends Board {
     private static HttpClient httpClient;
     private static final Timer SLEEP_TIMER = new Timer();
+    protected boolean throttleAPI = true;
+    protected String throttleURL;
+    protected long throttleMillisec = 0L;
 
     private static class Timer {
         long timer = 0;
@@ -65,56 +68,51 @@ public abstract class WWW extends Board {
         httpClient = new DecompressingHttpClient(new DefaultHttpClient(pccm, params));
     }
 
-    private HttpResponse wget(String link, String referer, boolean throttle) throws HttpGetException {
-        return wget(link, referer, "", throttle);
+    private HttpResponse wget(String link, String referer) throws HttpGetException {
+        return wget(link, referer, "");
     }
 
-    private HttpResponse wget(String link, String referer, String lastMod, boolean throttle) throws HttpGetException {
+    private HttpResponse wget(String link, String referer, String lastMod) throws HttpGetException {
         HttpGet req = new HttpGet(link);
         req.setHeader("Referer", referer);
         if(lastMod != null) req.setHeader("If-Modified-Since", lastMod);
 
-        int statusCode = 0;
+        int statusCode;
         HttpResponse res = null;
 
-        boolean isDone = false;
-
-        while(!isDone) {
-            try {
-                if(throttle) {
-                    while(res == null) {
-                        boolean okToGo = false;
-                        long timer;
-                        synchronized(SLEEP_TIMER) {
-                            timer = SLEEP_TIMER.getTimer();
-                            long now = System.currentTimeMillis();
-                            if(timer == 0 || (now - timer) > 1000) {
-                                okToGo = true;
-                                SLEEP_TIMER.setTimer(now);
-                            }
-                        }
-                        if(okToGo) {
-                            res = httpClient.execute(req);
-                        } else {
-                            try {
-                                Thread.sleep(System.currentTimeMillis() - timer);
-                            } catch (InterruptedException e) {
-                                // w
-                            }
+        try {
+            if(throttleAPI && req.getURI().getHost().equalsIgnoreCase(throttleURL)) {
+                while(res == null) {
+                    boolean okToGo = false;
+                    long timer;
+                    synchronized(SLEEP_TIMER) {
+                        timer = SLEEP_TIMER.getTimer();
+                        long now = System.currentTimeMillis();
+                        if(timer == 0 || (now - timer) > throttleMillisec) {
+                            okToGo = true;
+                            SLEEP_TIMER.setTimer(now);
                         }
                     }
-                } else {
-                    res = httpClient.execute(req);
+                    if(okToGo) {
+                        res = httpClient.execute(req);
+                    } else {
+                        try {
+                            Thread.sleep(System.currentTimeMillis() - timer);
+                        } catch (InterruptedException e) {
+                            // w
+                        }
+                    }
                 }
-                statusCode = res.getStatusLine().getStatusCode();
-                isDone = true;
-            } catch(IOException e) {
-                // Automatically released in case of IOException
-                throw new HttpGetException(e);
-            } catch (RuntimeException e) {
-                req.abort();
-                throw new HttpGetException(e);
+            } else {
+                res = httpClient.execute(req);
             }
+            statusCode = res.getStatusLine().getStatusCode();
+        } catch(IOException e) {
+            // Automatically released in case of IOException
+            throw new HttpGetException(e);
+        } catch (RuntimeException e) {
+            req.abort();
+            throw new HttpGetException(e);
         }
 
         if(statusCode != 200) {
@@ -135,16 +133,16 @@ public abstract class WWW extends Board {
      */
     public InputStream wget(String link) throws HttpGetException {
         try {
-            return this.wget(link, "", false).getEntity().getContent();
+            return this.wget(link, "").getEntity().getContent();
         } catch (IOException e) {
             throw new HttpGetException(e);
         }
     }
 
 
-    public String[] wgetText(String link, String lastMod, boolean throttle) throws ContentGetException {
+    public String[] wgetText(String link, String lastMod) throws ContentGetException {
         // Throws ContentGetException on failure
-        HttpResponse httpResponse = this.wget(link, "", lastMod, throttle);
+        HttpResponse httpResponse = this.wget(link, "", lastMod);
 
         Header[] newLastModHead = httpResponse.getHeaders("Last-Modified");
         String newLastMod = null;

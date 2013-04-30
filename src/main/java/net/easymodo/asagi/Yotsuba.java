@@ -12,6 +12,7 @@ import net.easymodo.asagi.model.MediaPost;
 import net.easymodo.asagi.model.Page;
 import net.easymodo.asagi.model.Post;
 import net.easymodo.asagi.model.Topic;
+import net.easymodo.asagi.settings.BoardSettings;
 import org.apache.http.annotation.ThreadSafe;
 
 import org.joda.time.DateTime;
@@ -89,7 +90,7 @@ public class Yotsuba extends WWW {
 
     private final Map<String,String> boardLinks;
 
-    public Yotsuba(String boardName) {
+    public Yotsuba(String boardName, BoardSettings settings) {
         boardLinks = Yotsuba.getBoardLinks(boardName);
     }
 
@@ -397,7 +398,7 @@ public class Yotsuba extends WWW {
 
     @Override
     public Page getPage(int pageNum, String lastMod) throws ContentGetException, ContentParseException {
-        String[] wgetReply = this.wgetText(this.linkPage(pageNum), lastMod, false);
+        String[] wgetReply = this.wgetText(this.linkPage(pageNum), lastMod);
         String pageText = wgetReply[0];
         String newLastMod = wgetReply[1];
 
@@ -424,7 +425,7 @@ public class Yotsuba extends WWW {
 
     @Override
     public Topic getThread(int threadNum, String lastMod) throws ContentGetException, ContentParseException {
-        String[] wgetReply = this.wgetText(this.linkThread(threadNum), lastMod, false);
+        String[] wgetReply = this.wgetText(this.linkThread(threadNum), lastMod);
         String threadText = wgetReply[0];
         String newLastMod = wgetReply[1];
 

@@ -9,6 +9,7 @@ import net.easymodo.asagi.model.MediaPost;
 import net.easymodo.asagi.model.Page;
 import net.easymodo.asagi.model.Post;
 import net.easymodo.asagi.model.Topic;
+import net.easymodo.asagi.settings.BoardSettings;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
@@ -26,8 +27,11 @@ public class YotsubaJSON extends WWW {
 
     private final Map<String,String> boardLinks;
 
-    public YotsubaJSON(String boardName) {
+    public YotsubaJSON(String boardName, BoardSettings settings) {
         boardLinks = YotsubaJSON.getBoardLinks(boardName);
+        this.throttleAPI = settings.getThrottleAPI();
+        this.throttleURL = settings.getThrottleURL();
+        this.throttleMillisec = settings.getThrottleMillisec();
     }
 
     private static Map<String,String> getBoardLinks(String boardName) {
@@ -93,7 +97,7 @@ public class YotsubaJSON extends WWW {
 
     @Override
     public Page getPage(int pageNum, String lastMod) throws ContentGetException, ContentParseException {
-        String[] wgetReply = this.wgetText(this.linkPage(pageNum), lastMod, true);
+        String[] wgetReply = this.wgetText(this.linkPage(pageNum), lastMod);
         String pageText = wgetReply[0];
         String newLastMod = wgetReply[1];
 
@@ -119,7 +123,7 @@ public class YotsubaJSON extends WWW {
 
     @Override
     public Topic getThread(int threadNum, String lastMod) throws ContentGetException, ContentParseException {
-        String[] wgetReply = this.wgetText(this.linkThread(threadNum), lastMod, true);
+        String[] wgetReply = this.wgetText(this.linkThread(threadNum), lastMod);
         String threadText = wgetReply[0];
         String newLastMod = wgetReply[1];
 
@@ -148,7 +152,7 @@ public class YotsubaJSON extends WWW {
     }
 
     public Page getAllThreads(String lastMod) throws ContentGetException {
-        String[] wgetReply = this.wgetText(this.linkThreads(), lastMod, true);
+        String[] wgetReply = this.wgetText(this.linkThreads(), lastMod);
         String threadsText = wgetReply[0];
         String newLastMod = wgetReply[1];
 

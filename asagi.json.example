@@ -18,6 +18,9 @@
       "newThreadsThreads": 5,
       "deletedThreadsThresholdPage": 8,
       "refreshDelay": 15,
+      "throttle": true,
+      "throttleURL": "api.4chan.org",
+      "throttleMillisec": 1100,
 
       "threadRefreshRate": 3,
       "pageSettings": [

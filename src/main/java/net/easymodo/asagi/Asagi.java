@@ -32,7 +32,6 @@ public class Asagi {
 
         bSet.initSetting("path", defaults.getPath() + "/" + boardName + "/");
         bSet.initSetting("table", boardName);
-        bSet.initSetting("useOldDirectoryStructure", false);
 
         // set everything that isn't set already to their defaults
         bSet.initSettings(defaults);
@@ -48,12 +47,11 @@ public class Asagi {
         int pageLimbo = bSet.getDeletedThreadsThresholdPage();
         boolean fullMedia = (bSet.getMediaThreads() != 0);
 
-
         // Init source board engine through reflection
         Board sourceBoard;
         try {
             Class<?> sourceBoardClass = Class.forName("net.easymodo.asagi." + sourceEngine);
-            sourceBoard = (Board) sourceBoardClass.getConstructor(String.class).newInstance(boardName);
+            sourceBoard = (Board) sourceBoardClass.getConstructor(String.class, BoardSettings.class).newInstance(boardName, bSet);
         } catch (ClassNotFoundException e) {
             throw new BoardInitException("Error initializing board engine " + sourceEngine + ", no such engine?");
         } catch (Exception e) {
