@@ -18,7 +18,7 @@ public class Topic {
     private long lastHit;
     private boolean busy;
     public final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-    
+
     public Topic(int num, int omPosts, int omImages) {
         this.num = num;
         this.omPosts = omPosts;
@@ -59,25 +59,25 @@ public class Topic {
     }
 
     public void setPosts(List<Post> posts) {
-        for(Post post : posts) {
+        for (Post post : posts) {
             allPosts.add(post.getNum());
         }
         this.posts = posts;
     }
-    
+
     public void addPost(Post post) {
         this.allPosts.add(post.getNum());
         this.posts.add(post);
     }
-    
+
     public void addPost(int num) {
         this.allPosts.add(num);
     }
-    
+
     public void purgePosts() {
         posts.clear();
     }
-    
+
     public boolean findPost(int num) {
         return this.allPosts.contains(num);
     }
@@ -97,7 +97,7 @@ public class Topic {
     public void setLastModTimestamp(int lastModTimestamp) {
         this.lastModTimestamp = lastModTimestamp;
     }
-    
+
     public void setLastHit(long lastHit) {
         this.lastHit = lastHit;
     }

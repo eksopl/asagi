@@ -42,7 +42,7 @@ public class Local extends Board {
     private final static Pattern oldDirectoryMatchingPattern = Pattern.compile("(\\d+?)(\\d{2})\\d{0,3}$");
 
     static {
-        if(Platform.isWindows()) {
+        if (Platform.isWindows()) {
           posix = null;
         } else {
           posix = (Posix)Native.loadLibrary("c", Posix.class);
@@ -60,9 +60,9 @@ public class Local extends Board {
         // chown from the C library (which are reentrant functions) keeps this
         // class thread-safe.
         String webServerGroup = info.getWebserverGroup();
-        if(webServerGroup != null && posix != null) {
+        if (webServerGroup != null && posix != null) {
             Group group = posix.getgrnam(webServerGroup);
-            if(group == null)
+            if (group == null)
                 webGroupId = 0;
             else
                 webGroupId = (int)group.getGid();
@@ -119,12 +119,12 @@ public class Local extends Board {
     }
 
     public String getDir(String[] subdirs, int dirType, int fileType) {
-        if(fileType == TEMP_FILE) {
+        if (fileType == TEMP_FILE) {
             return String.format("%s/tmp", this.path);
-        } else if(fileType == FULL_FILE) {
-            if(dirType == DIR_THUMB) {
+        } else if (fileType == FULL_FILE) {
+            if (dirType == DIR_THUMB) {
                 return String.format("%s/thumb/%s/%s", this.path, subdirs[0], subdirs[1]);
-            } else if(dirType == DIR_MEDIA) {
+            } else if (dirType == DIR_MEDIA) {
                 return String.format("%s/image/%s/%s", this.path, subdirs[0], subdirs[1]);
             } else {
                 return null;
@@ -146,9 +146,9 @@ public class Local extends Board {
 
     public String makeDir(String[] subdirs, int dirType, int fileType) throws ContentStoreException {
         String dir;
-        if(dirType == DIR_THUMB) {
+        if (dirType == DIR_THUMB) {
             dir = "thumb";
-        } else if(dirType == DIR_MEDIA) {
+        } else if (dirType == DIR_MEDIA) {
             dir = "image";
         } else {
             return null;
@@ -162,15 +162,15 @@ public class Local extends Board {
         File tempDirFile = new File(tempDir);
 
         synchronized(this) {
-            if(!subDir2File.exists())
-                if(!subDir2File.mkdirs())
+            if (!subDir2File.exists())
+                if (!subDir2File.mkdirs())
                     throw new ContentStoreException("Could not create dirs at path " + subDir2);
 
-            if(!tempDirFile.exists())
-                if(!tempDirFile.mkdirs())
+            if (!tempDirFile.exists())
+                if (!tempDirFile.mkdirs())
                     throw new ContentStoreException("Could not create temp dir at path " + tempDir);
 
-            if(this.webGroupId != 0) {
+            if (this.webGroupId != 0) {
                 posix.chmod(subDir, 0775);
                 posix.chmod(subDir2, 0775);
                 posix.chown(subDir, -1, this.webGroupId);
@@ -191,7 +191,7 @@ public class Local extends Board {
     public void markDeleted(DeletePost post) throws ContentStoreException {
         try{
             this.db.markDeleted(post);
-        } catch(DBConnectionException e) {
+        } catch (DBConnectionException e) {
             throw new ContentStoreException("Lost connection to database, can't reconnect", e);
         }
     }
@@ -206,47 +206,47 @@ public class Local extends Board {
 
     public void insertMedia(MediaPost h, Board source, boolean isPreview) throws ContentGetException, ContentStoreException {
         // Post has no media
-        if((isPreview && h.getPreview() == null) || (!isPreview && h.getMedia() == null))
+        if ((isPreview && h.getPreview() == null) || (!isPreview && h.getMedia() == null))
             return;
 
         Media mediaRow;
         try {
             mediaRow = db.getMedia(h);
-        } catch(DBConnectionException e) {
+        } catch (DBConnectionException e) {
             throw new ContentStoreException("Lost connection to database, can't reconnect", e);
         }
 
         // Media is banned from archiving
-        if(mediaRow.getBanned() == 1) return;
+        if (mediaRow.getBanned() == 1) return;
 
         // Get the proper filename for the file type we're outputting
         String filename;
-        if(this.useOldDirectoryStructure)
+        if (this.useOldDirectoryStructure)
             filename = isPreview ? h.getPreview() : h.getMedia();
         else
             filename = isPreview ? (h.isOp() ?  mediaRow.getPreviewOp() : mediaRow.getPreviewReply()) :
                 mediaRow.getMedia();
 
-        if(filename == null) return;
+        if (filename == null) return;
 
         // Create the dir structure (if necessary) and return the path to where we're outputting our file
         // Filename is enough for us here, we just need the first part of the string
         String outputDir;
-        if(this.useOldDirectoryStructure)
+        if (this.useOldDirectoryStructure)
             outputDir = makeDir(h, isPreview ? DIR_THUMB : DIR_MEDIA, FULL_FILE);
         else
             outputDir = makeDir(filename, isPreview ? DIR_THUMB : DIR_MEDIA, FULL_FILE);
 
         // Construct the path and back down if the file already exists
         File outputFile = new File(outputDir + "/" + filename);
-        if(outputFile.exists()) {
+        if (outputFile.exists()) {
             if (!isPreview) outputFile.setLastModified(System.currentTimeMillis());
             return;
         }
 
         // Open a temp file for writing
         String tempFilePath;
-        if(this.useOldDirectoryStructure)
+        if (this.useOldDirectoryStructure)
             tempFilePath = makeDir(h, isPreview ? DIR_THUMB : DIR_MEDIA, TEMP_FILE);
         else
             tempFilePath = makeDir(filename, isPreview ? DIR_THUMB : DIR_MEDIA, TEMP_FILE);
@@ -266,33 +266,33 @@ public class Local extends Board {
             // In case the connection is cut off or something similar happens, an IOException
             // will be thrown.
             ByteStreams.copy(inStream, outFile);
-        } catch(FileNotFoundException e) {
+        } catch (FileNotFoundException e) {
             throw new ContentStoreException("The temp file we just created wasn't there!", e);
-        } catch(IOException e) {
-            if(tempFile != null && !tempFile.delete())
+        } catch (IOException e) {
+            if (tempFile != null && !tempFile.delete())
                 System.err.println("Additionally, temporary file " + tempFilePath + "/" + filename + " could not be deleted.");
                 e.printStackTrace();
             throw new ContentStoreException("IOException in file download", e);
         } finally {
             try {
-                if(outFile != null) outFile.close();
+                if (outFile != null) outFile.close();
                 inStream.close();
-            } catch(IOException e) {
+            } catch (IOException e) {
                 System.err.println("IOException trying to close streams after file download");
                 e.printStackTrace();
             }
         }
 
         // Move the temporary file into place
-        if(!tempFile.renameTo(outputFile))
+        if (!tempFile.renameTo(outputFile))
             throw new ContentStoreException("Unable to move temporary file " + tempFilePath + "/" + filename + " into place");
 
         try {
-            if(this.webGroupId != 0) {
+            if (this.webGroupId != 0) {
                 posix.chmod(outputFile.getCanonicalPath(), 0664);
                 posix.chown(outputFile.getCanonicalPath(), -1, this.webGroupId);
             }
-        } catch(IOException e) {
+        } catch (IOException e) {
             throw new ContentStoreException("IOException trying to get filename for output file (nice broken filesystem you have there)", e);
         }
     }

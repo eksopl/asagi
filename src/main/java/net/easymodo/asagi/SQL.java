@@ -59,7 +59,7 @@ public abstract class SQL implements DB {
         try {
             this.connect();
             this.postConnect();
-        } catch(SQLException e) {
+        } catch (SQLException e) {
             throw new DBConnectionException(e);
         }
     }
@@ -86,7 +86,7 @@ public abstract class SQL implements DB {
         this.boardSqlRes = "net/easymodo/asagi/sql/" + info.getEngine() + "/boards.sql";
         this.triggersSqlRes = "net/easymodo/asagi/sql/" + info.getEngine() + "/triggers.sql";
 
-        if(this.insertQuery == null) {
+        if (this.insertQuery == null) {
             this.insertQuery = String.format(
                     "INSERT INTO \"%s\"" +
                     " (poster_ip, num, subnum, thread_num, op, timestamp, timestamp_expired, preview_orig, preview_w, preview_h, media_filename, " +
@@ -118,12 +118,12 @@ public abstract class SQL implements DB {
             tableChkStmt = conn.prepareStatement(tableCheckQuery);
             try {
                 this.createTables();
-            } catch(BoardInitException e) {
+            } catch (BoardInitException e) {
                 conn.commit();
                 throw e;
             }
             tableChkStmt.close();
-        } catch(SQLException e) {
+        } catch (SQLException e) {
             throw new BoardInitException(e);
         }
     }
@@ -138,13 +138,13 @@ public abstract class SQL implements DB {
         tableChkStmt.setString(1, "index_counters");
         res = tableChkStmt.executeQuery();
         try {
-            if(!res.isBeforeFirst()) {
+            if (!res.isBeforeFirst()) {
                 // Query to create tables common to all boards
                 try {
                     commonSql = Resources.toString(Resources.getResource(commonSqlRes), Charsets.UTF_8);
-                } catch(IOException e) {
+                } catch (IOException e) {
                     throw new BoardInitException(e);
-                } catch(IllegalArgumentException e) {
+                } catch (IllegalArgumentException e) {
                     throw new BoardInitException(e);
                 }
             }
@@ -158,7 +158,7 @@ public abstract class SQL implements DB {
         tableChkStmt.setString(1, this.table);
         res = tableChkStmt.executeQuery();
         try {
-            if(res.isBeforeFirst()) {
+            if (res.isBeforeFirst()) {
                 conn.commit();
                 return;
             }
@@ -173,9 +173,9 @@ public abstract class SQL implements DB {
             boardSql = Resources.toString(Resources.getResource(boardSqlRes), Charsets.UTF_8);
             boardSql = boardSql.replaceAll("%%BOARD%%", table);
             boardSql = boardSql.replaceAll("%%CHARSET%%", charset);
-        } catch(IOException e) {
+        } catch (IOException e) {
             throw new BoardInitException(e);
-        } catch(IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
             throw new BoardInitException(e);
         }
 
@@ -185,15 +185,15 @@ public abstract class SQL implements DB {
             triggersSql = Resources.toString(Resources.getResource(triggersSqlRes), Charsets.UTF_8);
             triggersSql = triggersSql.replaceAll("%%BOARD%%", table);
             triggersSql = triggersSql.replaceAll("%%CHARSET%%", charset);
-        } catch(IOException e) {
+        } catch (IOException e) {
             throw new BoardInitException(e);
-        } catch(IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
             throw new BoardInitException(e);
         }
 
         Statement st = conn.createStatement();
         try {
-            if(commonSql != null)
+            if (commonSql != null)
                 st.executeUpdate(commonSql);
             st.executeUpdate(boardSql);
             st.executeUpdate(triggersSql);
@@ -204,8 +204,8 @@ public abstract class SQL implements DB {
     }
 
     public synchronized void insert(Topic topic) throws ContentStoreException, DBConnectionException {
-        while(true) { try {
-            for(Post post : topic.getPosts()) {
+        while (true) { try {
+            for (Post post : topic.getPosts()) {
                 int c = 1;
                 updateStmt.setString(c++, post.getComment());
                 updateStmt.setBoolean(c++, post.isDeleted());
@@ -255,15 +255,15 @@ public abstract class SQL implements DB {
             updateStmt.executeBatch();
             conn.commit();
             break;
-        } catch(SQLException e) {
-            if(e.getCause() instanceof SQLRecoverableException) {
+        } catch (SQLException e) {
+            if (e.getCause() instanceof SQLRecoverableException) {
                 this.reconnect();
                 continue;
             }
 
             try {
                 conn.rollback();
-            } catch(SQLException e1) {
+            } catch (SQLException e1) {
                 e1.setNextException(e);
                 throw new ContentStoreException(e1);
             }
@@ -272,7 +272,7 @@ public abstract class SQL implements DB {
     }
 
     public synchronized void markDeleted(DeletePost post) throws ContentStoreException, DBConnectionException {
-        while(true) { try {
+        while (true) { try {
             updateDeletedStmt.setBoolean(1, true);
             updateDeletedStmt.setInt(2, post.getDate());
             updateDeletedStmt.setInt(3, post.getNum());
@@ -280,12 +280,12 @@ public abstract class SQL implements DB {
             updateDeletedStmt.execute();
             conn.commit();
             break;
-        } catch(SQLRecoverableException e) {
+        } catch (SQLRecoverableException e) {
             this.reconnect();
-        } catch(SQLException e) {
+        } catch (SQLException e) {
             try {
                 conn.rollback();
-            } catch(SQLException e1) {
+            } catch (SQLException e1) {
                 e1.setNextException(e);
                 throw new ContentStoreException(e1);
             }
@@ -298,20 +298,20 @@ public abstract class SQL implements DB {
         ResultSet mediaRs = null;
 
         // Get the media row from the _images table associated with this image
-        while(true) {
+        while (true) {
             try {
                 selectMediaStmt.setString(1, post.getMediaHash());
                 mediaRs = selectMediaStmt.executeQuery();
                 conn.commit();
                 break;
-            } catch(SQLRecoverableException e) {
+            } catch (SQLRecoverableException e) {
                 this.reconnect();
-            } catch(SQLException e) {
+            } catch (SQLException e) {
                 try {
                     conn.rollback();
-                    if(mediaRs != null)
+                    if (mediaRs != null)
                         mediaRs.close();
-                } catch(SQLException e1) {
+                } catch (SQLException e1) {
                     e.setNextException(e1);
                 }
                 throw new ContentGetException(e);
@@ -319,7 +319,7 @@ public abstract class SQL implements DB {
         }
 
         try {
-            if(mediaRs.next()) {
+            if (mediaRs.next()) {
                 media = new Media(
                     mediaRs.getInt("media_id"),
                     mediaRs.getString("media_hash"),
@@ -329,17 +329,17 @@ public abstract class SQL implements DB {
                     mediaRs.getInt("total"),
                     mediaRs.getInt("banned"));
             }
-        } catch(SQLException e) {
+        } catch (SQLException e) {
             throw new ContentGetException(e);
         } finally {
             try {
                 mediaRs.close();
-            } catch(SQLException e) {
+            } catch (SQLException e) {
                 System.err.println("Error closing result set" + e.getMessage());
             }
         }
 
-        if(media == null) {
+        if (media == null) {
             // Somehow, we got ahead of the post insertion. Oh well, we'll get it next time.
             // Getting here means something isn't right with our transaction isolation mode
             // (Or maybe the DB we're using just sucks)
@@ -351,28 +351,28 @@ public abstract class SQL implements DB {
         boolean previewReplyUpdate = media.getPreviewReply() == null && !post.isOp();
 
         // Update media row in _images table when any of its entries are null and we actually have it
-        if(mediaUpdate || previewOpUpdate || previewReplyUpdate) {
+        if (mediaUpdate || previewOpUpdate || previewReplyUpdate) {
             try {
-                if(mediaUpdate) {
+                if (mediaUpdate) {
                     updateMediaStmt.setString(1, post.getMedia());
                     updateMediaStmt.setString(2, post.getMediaHash());
                     updateMediaStmt.executeUpdate();
                 }
-                if(previewOpUpdate) {
+                if (previewOpUpdate) {
                     updatePreviewOpStmt.setString(1, post.getPreview());
                     updatePreviewOpStmt.setString(2, post.getMediaHash());
                     updatePreviewOpStmt.executeUpdate();
                 }
-                if(previewReplyUpdate) {
+                if (previewReplyUpdate) {
                     updatePreviewReplyStmt.setString(1, post.getPreview());
                     updatePreviewReplyStmt.setString(2, post.getMediaHash());
                     updatePreviewReplyStmt.executeUpdate();
                 }
                 conn.commit();
-            } catch(SQLException e) {
+            } catch (SQLException e) {
                 try {
                     conn.rollback();
-                } catch(SQLException e1) {
+                } catch (SQLException e1) {
                     e.setNextException(e1);
                 }
                 throw new ContentStoreException(e);

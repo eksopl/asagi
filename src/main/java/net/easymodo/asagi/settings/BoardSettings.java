@@ -27,7 +27,7 @@ public class BoardSettings {
     private String throttleURL;
     private Long throttleMillisec;
     private List<PageSettings> pageSettings;
-    
+
     public String getEngine() {
         return engine;
     }
@@ -206,7 +206,7 @@ public class BoardSettings {
 
     public void initSetting(String key, Object def) {
         try {
-            if(BeanUtils.getProperty(this, key) == null)
+            if (BeanUtils.getProperty(this, key) == null)
                 BeanUtils.setProperty(this, key, def);
         } catch (Exception e) {
             throw new AssertionError("Error initing settings in BoardSettings");

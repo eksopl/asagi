@@ -12,4 +12,3 @@ public class TopicJson {
         this.posts = posts;
     }
 }
-
