@@ -10,6 +10,7 @@ import java.io.OutputStream;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import net.easymodo.asagi.model.DeletePost;
 import net.easymodo.asagi.model.Media;
 import net.easymodo.asagi.model.MediaPost;
 import net.easymodo.asagi.model.Page;
@@ -187,7 +188,7 @@ public class Local extends Board {
         this.db.insert(topic);
     }
 
-    public void markDeleted(int post) throws ContentStoreException {
+    public void markDeleted(DeletePost post) throws ContentStoreException {
         try{
             this.db.markDeleted(post);
         } catch(DBConnectionException e) {

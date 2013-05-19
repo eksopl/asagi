@@ -235,6 +235,7 @@ public class YotsubaJSON extends WWW {
         p.setName(this.cleanSimple(pj.getName()));
         p.setTrip(pj.getTrip());
         p.setDate(this.parseDate(pj.getTime()));
+        p.setDateExpired(0);
         p.setComment(this.doClean(pj.getCom()));
         p.setSpoiler(pj.isSpoiler());
         p.setDeleted(false);
@@ -244,7 +245,6 @@ public class YotsubaJSON extends WWW {
         p.setPosterCountry(posterCountry);
 
         // TODO: Add following values
-        p.setDateExpired(0);
         p.setExif(null);
 
         return p;
