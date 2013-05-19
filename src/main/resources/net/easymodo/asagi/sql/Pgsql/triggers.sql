@@ -8,33 +8,40 @@ BEGIN
         op.time_op,
         (SELECT MAX(timestamp) FROM %%BOARD%% re WHERE
           re.thread_num = $1.thread_num AND re.subnum = 0)
-        ), op.time_op)
-      ),
-      time_bump = (
-        COALESCE(GREATEST(
-          op.time_op,
-          (SELECT MAX(timestamp) FROM %%BOARD%% re WHERE
-            re.thread_num = $1.thread_num AND (re.email <> 'sage' OR re.email IS NULL)
-            AND re.subnum = 0)
-        ), op.time_op)
-      ),
-      time_ghost = (
-        SELECT MAX(timestamp) FROM %%BOARD%% re WHERE
-          re.thread_num = $1.thread_num AND re.subnum <> 0
-      ),
-      time_ghost_bump = (
-        SELECT MAX(timestamp) FROM %%BOARD%% re WHERE
-          re.thread_num = $1.thread_num AND re.subnum <> 0 AND (re.email <> 'sage' OR
-            re.email IS NULL)
-      ),
-      nreplies = (
-        SELECT COUNT(*) FROM %%BOARD%% re WHERE
-          re.thread_num = $1.thread_num
-      ),
-      nimages = (
-        SELECT COUNT(media_hash) FROM %%BOARD%% re WHERE
-          re.thread_num = $1.thread_num
-      )
+      ), op.time_op)
+    ),
+    time_bump = (
+      COALESCE(GREATEST(
+        op.time_op,
+        (SELECT MAX(timestamp) FROM %%BOARD%% re WHERE
+          re.thread_num = $1.thread_num AND (re.email <> 'sage' OR re.email IS NULL)
+          AND re.subnum = 0)
+      ), op.time_op)
+    ),
+    time_ghost = (
+      SELECT MAX(timestamp) FROM %%BOARD%% re WHERE
+        re.thread_num = $1.thread_num AND re.subnum <> 0
+    ),
+    time_ghost_bump = (
+      SELECT MAX(timestamp) FROM %%BOARD%% re WHERE
+        re.thread_num = $1.thread_num AND re.subnum <> 0 AND (re.email <> 'sage' OR
+          re.email IS NULL)
+    ),
+    time_last_modified = (
+      COALESCE(GREATEST(
+        op.time_op,
+        (SELECT GREATEST(MAX(timestamp), MAX(timestamp_expired)) FROM %%BOARD%% re WHERE
+          re.thread_num = $1.thread_num)
+      ), op.time_op)
+    ),
+    nreplies = (
+      SELECT COUNT(*) FROM %%BOARD%% re WHERE
+        re.thread_num = $1.thread_num
+    ),
+    nimages = (
+      SELECT COUNT(media_hash) FROM %%BOARD%% re WHERE
+        re.thread_num = $1.thread_num
+    )
     WHERE op.thread_num = $1.thread_num;
 END;
 $$ LANGUAGE plpgsql;
@@ -43,7 +50,7 @@ CREATE OR REPLACE FUNCTION %%BOARD%%_create_thread(n_row "%%BOARD%%") RETURNS vo
 BEGIN
   IF n_row.op = false THEN RETURN; END IF;
   INSERT INTO %%BOARD%%_threads SELECT $1.num, $1.timestamp, $1.timestamp,
-      $1.timestamp, NULL, NULL, 0, 0 WHERE NOT EXISTS (SELECT 1 FROM %%BOARD%%_threads WHERE thread_num=$1.num);
+      $1.timestamp, NULL, NULL, $1.timestamp, 0, 0, false, false WHERE NOT EXISTS (SELECT 1 FROM %%BOARD%%_threads WHERE thread_num=$1.num);
   RETURN;
 END;
 $$ LANGUAGE plpgsql;
@@ -59,7 +66,7 @@ CREATE OR REPLACE FUNCTION %%BOARD%%_insert_image(n_row "%%BOARD%%") RETURNS int
 DECLARE
     img_id INTEGER;
 BEGIN
-  INSERT INTO %%BOARD%%_images 
+  INSERT INTO %%BOARD%%_images
     (media_hash, media, preview_op, preview_reply, total)
     SELECT n_row.media_hash, n_row.media_orig, NULL, NULL, 0
     WHERE NOT EXISTS (SELECT 1 FROM %%BOARD%%_images WHERE media_hash = n_row.media_hash);
@@ -94,11 +101,11 @@ BEGIN
   d_anon := CASE WHEN $1.name = 'Anonymous' AND $1.trip IS NULL THEN 1 ELSE 0 END;
   d_trip := CASE WHEN $1.trip IS NOT NULL THEN 1 ELSE 0 END;
   d_name := CASE WHEN COALESCE($1.name <> 'Anonymous' AND $1.trip IS NULL, TRUE) THEN 1 ELSE 0 END;
-  
-  INSERT INTO %%BOARD%%_daily 
+
+  INSERT INTO %%BOARD%%_daily
     SELECT d_day, 0, 0, 0, 0, 0, 0
     WHERE NOT EXISTS (SELECT 1 FROM %%BOARD%%_daily WHERE day = d_day);
-    
+
   UPDATE %%BOARD%%_daily SET posts=posts+1, images=images+d_image,
     sage=sage+d_sage, anons=anons+d_anon, trips=trips+d_trip,
     names=names+d_name WHERE day = d_day;
@@ -108,11 +115,11 @@ BEGIN
       firstseen = LEAST($1.timestamp, firstseen),
       name = COALESCE($1.name, '')
       WHERE trip = $1.trip;
-  ELSE  
+  ELSE
     INSERT INTO %%BOARD%%_users (name, trip, firstseen, postcount)
       SELECT COALESCE($1.name,''), COALESCE($1.trip,''), $1.timestamp, 0
       WHERE NOT EXISTS (SELECT 1 FROM %%BOARD%%_users WHERE name = COALESCE($1.name,'') AND trip = COALESCE($1.trip,''));
-    
+
     UPDATE %%BOARD%%_users SET postcount=postcount+1,
       firstseen = LEAST($1.timestamp, firstseen)
       WHERE name = COALESCE($1.name,'') AND trip = COALESCE($1.trip,'');
@@ -135,7 +142,7 @@ BEGIN
   d_anon := CASE WHEN $1.name = 'Anonymous' AND $1.trip IS NULL THEN 1 ELSE 0 END;
   d_trip := CASE WHEN $1.trip IS NOT NULL THEN 1 ELSE 0 END;
   d_name := CASE WHEN COALESCE($1.name <> 'Anonymous' AND $1.trip IS NULL, TRUE) THEN 1 ELSE 0 END;
-    
+
   UPDATE %%BOARD%%_daily SET posts=posts-1, images=images-d_image,
     sage=sage-d_sage, anons=anons-d_anon, trips=trips-d_trip,
     names=names-d_name WHERE day = d_day;
@@ -144,7 +151,7 @@ BEGIN
     UPDATE %%BOARD%%_users SET postcount=postcount-1,
       firstseen = LEAST($1.timestamp, firstseen)
       WHERE trip = $1.trip;
-  ELSE      
+  ELSE
     UPDATE %%BOARD%%_users SET postcount=postcount-1,
       firstseen = LEAST($1.timestamp, firstseen)
       WHERE (name = $1.name OR $1.name IS NULL) AND (trip = $1.trip OR $1.trip IS NULL);
@@ -187,16 +194,13 @@ END;
 $$ LANGUAGE plpgsql;
 
 DROP TRIGGER IF EXISTS %%BOARD%%_after_delete ON %%BOARD%%;
-CREATE TRIGGER %%BOARD%%_after_delete AFTER DELETE ON %%BOARD%% 
+CREATE TRIGGER %%BOARD%%_after_delete AFTER DELETE ON %%BOARD%%
   FOR EACH ROW EXECUTE PROCEDURE %%BOARD%%_after_del();
 
 DROP TRIGGER IF EXISTS %%BOARD%%_before_insert ON %%BOARD%%;
-CREATE TRIGGER %%BOARD%%_before_insert BEFORE INSERT ON %%BOARD%% 
+CREATE TRIGGER %%BOARD%%_before_insert BEFORE INSERT ON %%BOARD%%
   FOR EACH ROW EXECUTE PROCEDURE %%BOARD%%_before_insert();
 
 DROP TRIGGER IF EXISTS %%BOARD%%_after_insert ON %%BOARD%%;
-CREATE TRIGGER %%BOARD%%_after_insert AFTER INSERT ON %%BOARD%% 
+CREATE TRIGGER %%BOARD%%_after_insert AFTER INSERT ON %%BOARD%%
   FOR EACH ROW EXECUTE PROCEDURE %%BOARD%%_after_insert();
-
-
-

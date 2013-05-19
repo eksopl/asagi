@@ -10,33 +10,40 @@ BEGIN
         op.time_op,
         (SELECT MAX(timestamp) FROM "%%BOARD%%" re FORCE INDEX(thread_num_subnum_index) WHERE
           re.thread_num = tnum AND re.subnum = 0)
-        ), op.time_op)
-      ),
-      op.time_bump = (
-        COALESCE(GREATEST(
-          op.time_op,
-          (SELECT MAX(timestamp) FROM "%%BOARD%%" re FORCE INDEX(thread_num_subnum_index) WHERE
-            re.thread_num = tnum AND (re.email <> 'sage' OR re.email IS NULL)
-            AND re.subnum = 0)
-        ), op.time_op)
-      ),
-      op.time_ghost = (
-        SELECT MAX(timestamp) FROM "%%BOARD%%" re FORCE INDEX(thread_num_subnum_index) WHERE
-          re.thread_num = tnum AND re.subnum <> 0
-      ),
-      op.time_ghost_bump = (
-        SELECT MAX(timestamp) FROM "%%BOARD%%" re FORCE INDEX(thread_num_subnum_index) WHERE
-          re.thread_num = tnum AND re.subnum <> 0 AND (re.email <> 'sage' OR
-            re.email IS NULL)
-      ),
-      op.nreplies = (
-        SELECT COUNT(*) FROM "%%BOARD%%" re FORCE INDEX(thread_num_subnum_index) WHERE
-          re.thread_num = tnum
-      ),
-      op.nimages = (
-        SELECT COUNT(media_hash) FROM "%%BOARD%%" re FORCE INDEX(thread_num_subnum_index) WHERE
-          re.thread_num = tnum
-      )
+      ), op.time_op)
+    ),
+    op.time_bump = (
+      COALESCE(GREATEST(
+        op.time_op,
+        (SELECT MAX(timestamp) FROM "%%BOARD%%" re FORCE INDEX(thread_num_subnum_index) WHERE
+          re.thread_num = tnum AND (re.email <> 'sage' OR re.email IS NULL)
+          AND re.subnum = 0)
+      ), op.time_op)
+    ),
+    op.time_ghost = (
+      SELECT MAX(timestamp) FROM "%%BOARD%%" re FORCE INDEX(thread_num_subnum_index) WHERE
+        re.thread_num = tnum AND re.subnum <> 0
+    ),
+    op.time_ghost_bump = (
+      SELECT MAX(timestamp) FROM "%%BOARD%%" re FORCE INDEX(thread_num_subnum_index) WHERE
+        re.thread_num = tnum AND re.subnum <> 0 AND (re.email <> 'sage' OR
+          re.email IS NULL)
+    ),
+    op.time_last_modified = (
+      COALESCE(GREATEST(
+        op.time_op,
+        (SELECT GREATEST(MAX(timestamp), MAX(timestamp_expired)) FROM "%%BOARD%%" re FORCE INDEX(thread_num_subnum_index) WHERE
+          re.thread_num = tnum)
+      ), op.time_op)
+    ),
+    op.nreplies = (
+      SELECT COUNT(*) FROM "%%BOARD%%" re FORCE INDEX(thread_num_subnum_index) WHERE
+        re.thread_num = tnum
+    ),
+    op.nimages = (
+      SELECT COUNT(media_hash) FROM "%%BOARD%%" re FORCE INDEX(thread_num_subnum_index) WHERE
+        re.thread_num = tnum
+    )
     WHERE op.thread_num = tnum;
 END;
 
@@ -45,7 +52,7 @@ DROP PROCEDURE IF EXISTS "create_thread_%%BOARD%%";
 CREATE PROCEDURE "create_thread_%%BOARD%%" (num INT, timestamp INT)
 BEGIN
   INSERT IGNORE INTO "%%BOARD%%_threads" VALUES (num, timestamp, timestamp,
-    timestamp, NULL, NULL, 0, 0);
+    timestamp, NULL, NULL, timestamp, 0, 0, 0, 0);
 END;
 
 DROP PROCEDURE IF EXISTS "delete_thread_%%BOARD%%";
