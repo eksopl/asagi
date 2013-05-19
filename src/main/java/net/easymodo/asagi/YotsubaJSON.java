@@ -9,16 +9,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.google.gson.*;
+
 import net.easymodo.asagi.model.MediaPost;
 import net.easymodo.asagi.model.Page;
 import net.easymodo.asagi.model.Post;
 import net.easymodo.asagi.model.Topic;
 import net.easymodo.asagi.settings.BoardSettings;
+
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import org.apache.http.annotation.ThreadSafe;
 
@@ -316,22 +315,17 @@ public class YotsubaJSON extends WWW {
             // remove empty rows
             data = data.replaceAll("<tr><td colspan=\"2\"></td></tr><tr>", "");
 
-            try {
-                JSONObject exifJson = new JSONObject();
-                Matcher exifData = exifDataPattern.matcher(data);
+            Map<String, String> exifJson = new HashMap<String, String>();
+            Matcher exifData = exifDataPattern.matcher(data);
 
-                while (exifData.find()) {
-                    String key = exifData.group(1);
-                    String val = exifData.group(2);
-
-                    exifJson.put(key, val);
-                }
-
-                if (exifJson.length() > 0)
-                    return exifJson.toString();
-            } catch (JSONException e) {
-                // nothing, just return null
+            while (exifData.find()) {
+                String key = exifData.group(1);
+                String val = exifData.group(2);
+                exifJson.put(key, val);
             }
+
+            if (exifJson.size() > 0)
+                return GSON.toJson(exifJson);
         }
 
         return null;
