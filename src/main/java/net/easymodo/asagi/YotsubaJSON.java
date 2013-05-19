@@ -13,18 +13,33 @@ import net.easymodo.asagi.model.yotsuba.TopicJson;
 import net.easymodo.asagi.model.yotsuba.TopicListJson;
 import net.easymodo.asagi.settings.BoardSettings;
 import org.apache.http.annotation.ThreadSafe;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.InputStream;
 import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @ThreadSafe
 public class YotsubaJSON extends WWW {
     private static final Gson GSON = new GsonBuilder().
             registerTypeAdapter(boolean.class, new BooleanTypeConverter()).
             setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create();
+
+    private static final Pattern exifPattern;
+    private static final Pattern exifDataPattern;
+
+    static {
+        String exifPatString = "<table \\s class=\"exif\"[^>]*>(.*)</table>";
+        String exifDataPatString = "<tr><td>(.*?)</td><td>(.*?)</td></tr>";
+
+        exifPattern = Pattern.compile(exifPatString, Pattern.COMMENTS | Pattern.DOTALL);
+        exifDataPattern = Pattern.compile(exifDataPatString, Pattern.COMMENTS | Pattern.DOTALL);
+    }
 
     private final Map<String,String> boardLinks;
 
@@ -214,7 +229,6 @@ public class YotsubaJSON extends WWW {
         String posterCountry = pj.getCountry();
         if(posterCountry != null && (posterCountry.equals("XX") || posterCountry.equals("A1"))) posterCountry = null;
 
-        //p.setLink(link);
         p.setType(pj.getExt());
         p.setMediaHash(pj.getMd5());
         p.setMediaSize(pj.getFsize());
@@ -237,9 +251,7 @@ public class YotsubaJSON extends WWW {
         p.setCapcode(capcode);
         p.setPosterHash(posterHash);
         p.setPosterCountry(posterCountry);
-
-        // TODO: Add following values
-        p.setExif(null);
+        p.setExif(this.cleanSimple(this.parseExif(pj.getCom())));
 
         return p;
     }
@@ -271,6 +283,8 @@ public class YotsubaJSON extends WWW {
         text = text.replaceAll("\\[(banned|moot)]", "[$1:lit]");
         // Comment too long, also EXIF tag toggle
         text = text.replaceAll("<span class=\"abbr\">.*?</span>", "");
+        // EXIF data
+        text = text.replaceAll("<table class=\"exif\"[^>]*>.*?</table>", "");
         // Banned/Warned text
         text = text.replaceAll("<(?:b|strong) style=\"color:\\s*red;\">(.*?)</(?:b|strong)>", "[banned]$1[/banned]");
         // moot text
@@ -298,6 +312,39 @@ public class YotsubaJSON extends WWW {
         // WBR
         text = text.replaceAll("<wbr>", "");
 
+        // empty after EXIF stripped
+        if(text == "") return null;
+
         return this.cleanSimple(text);
+    }
+
+    public String parseExif(String text) {
+        if(text == null) return null;
+
+        Matcher exif = exifPattern.matcher(text);
+
+        if(exif.find()) {
+            String data = exif.group(1);
+            data = data.replaceAll("<tr><td colspan=\"2\"></td></tr><tr>", "");
+
+            try {
+                JSONObject exifJson = new JSONObject();
+                Matcher exifData = exifDataPattern.matcher(data);
+
+                while(exifData.find()) {
+                    String key = exifData.group(1);
+                    String val = exifData.group(2);
+
+                    exifJson.put(key, val);
+                }
+
+                if(exifJson.length() > 0)
+                    return exifJson.toString();
+            } catch(JSONException e) {
+                // nothing
+            }
+        }
+
+        return null;
     }
 }
