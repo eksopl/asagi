@@ -13,13 +13,17 @@ import net.easymodo.asagi.model.Page;
 import net.easymodo.asagi.model.Post;
 import net.easymodo.asagi.model.Topic;
 import net.easymodo.asagi.settings.BoardSettings;
-import org.apache.http.annotation.ThreadSafe;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
+
+import org.apache.http.annotation.ThreadSafe;
 
 import net.easymodo.asagi.exception.*;
 
@@ -40,6 +44,9 @@ public class Yotsuba extends WWW {
 
     private static final Pattern omPostsPattern;
     private static final Pattern omImagesPattern;
+
+    private static final Pattern exifPattern;
+    private static final Pattern exifDataPattern;
 
     static {
         Map<String, Integer> sizeMuls = new HashMap<String,Integer>();
@@ -76,6 +83,9 @@ public class Yotsuba extends WWW {
         String omPostsPatString = "<span \\s class=\"info\">\\s*<strong>(\\d*) \\s posts \\s omitted";
         String omImagesPatString = "<em>\\((\\d*) \\s have \\s images\\)</em>";
 
+        String exifPatString = "<table \\s class=\"exif\"[^>]*>(.*)</table>";
+        String exifDataPatString = "<tr><td>(.*?)</td><td>(.*?)</td></tr>";
+
         numPattern = Pattern.compile(numPatString, Pattern.COMMENTS | Pattern.DOTALL);
         titlePattern = Pattern.compile(titlePatString, Pattern.COMMENTS | Pattern.DOTALL);
         emailPattern = Pattern.compile(emailPatString, Pattern.COMMENTS | Pattern.DOTALL);
@@ -86,6 +96,9 @@ public class Yotsuba extends WWW {
         omittedPattern = Pattern.compile(omittedPatString, Pattern.COMMENTS | Pattern.DOTALL);
         omPostsPattern = Pattern.compile(omPostsPatString, Pattern.COMMENTS | Pattern.DOTALL);
         omImagesPattern = Pattern.compile(omImagesPatString, Pattern.COMMENTS | Pattern.DOTALL);
+
+        exifPattern = Pattern.compile(exifPatString, Pattern.COMMENTS | Pattern.DOTALL);
+        exifDataPattern = Pattern.compile(exifDataPatString, Pattern.COMMENTS | Pattern.DOTALL);
     }
 
     private final Map<String,String> boardLinks;
@@ -123,6 +136,8 @@ public class Yotsuba extends WWW {
         text = text.replaceAll("\\[(banned|moot)\\]", "[$1:lit]");
         // Comment too long, also EXIF tag toggle
         text = text.replaceAll("<span class=\"abbr\">.*?</span>", "");
+        // EXIF data
+        text = text.replaceAll("<table class=\"exif\"[^>]*>.*?</table>", "");
         // Banned/Warned text
         text = text.replaceAll("<(?:b|strong) style=\"color:\\s*red;\">(.*?)</(?:b|strong)>", "[banned]$1[/banned]");
         // moot text
@@ -150,6 +165,9 @@ public class Yotsuba extends WWW {
         // WBR
         text = text.replaceAll("<wbr>", "");
 
+        // empty after EXIF stripped
+        if(text == "") return null;
+
         return this.cleanSimple(text);
     }
 
@@ -157,6 +175,36 @@ public class Yotsuba extends WWW {
         DateTime dtDate = new DateTime(dateUtc * 1000L);
         DateTime dtEst = dtDate.withZone(DateTimeZone.forID("America/New_York"));
         return (int) (dtEst.withZoneRetainFields(DateTimeZone.UTC).getMillis() / 1000);
+    }
+
+    public String parseExif(String text) {
+        if(text == null) return null;
+
+        Matcher exif = exifPattern.matcher(text);
+
+        if(exif.find()) {
+            String data = exif.group(1);
+            data = data.replaceAll("<tr><td colspan=\"2\"></td></tr><tr>", "");
+
+            try {
+                JSONObject exifJson = new JSONObject();
+                Matcher exifData = exifDataPattern.matcher(data);
+
+                while(exifData.find()) {
+                    String key = exifData.group(1);
+                    String val = exifData.group(2);
+
+                    exifJson.put(key, val);
+                }
+
+                if(exifJson.length() > 0)
+                    return exifJson.toString();
+            } catch(JSONException e) {
+                // nothing
+            }
+        }
+
+        return null;
     }
 
     public int parseFilesize(String text) {
@@ -182,9 +230,6 @@ public class Yotsuba extends WWW {
     {
         String type = "";
         String previewOrig = null;
-
-        // TODO: add the following variables
-        String exif = null;
 
         if(threadNum == 0) threadNum = num;
         boolean op = (threadNum == num);
@@ -221,6 +266,8 @@ public class Yotsuba extends WWW {
         } catch(IllegalArgumentException e) {
             throw new ContentParseException("Could not create post " + num , e);
         }
+
+        String exif = this.cleanSimple(this.parseExif(comment));
 
         Post post = new Post();
         post.setLink(link);
@@ -272,7 +319,6 @@ public class Yotsuba extends WWW {
         return this.wget(this.boardLinks.get("imgLink") + "/src/" + h.getMedia());
     }
 
-
     public Topic parseThread(String text) throws ContentParseException {
         int omPosts = 0;
         Matcher mat = omPostsPattern.matcher(text);
@@ -288,7 +334,6 @@ public class Yotsuba extends WWW {
 
         return thread;
     }
-
 
     @SuppressWarnings("RedundantStringConstructorCall")
     public Post parsePost(String text, int threadNum) throws ContentParseException {
@@ -330,49 +375,49 @@ public class Yotsuba extends WWW {
         String uid     = mat.group(4);
         String country = (mat.group(5) != null) ? new String(mat.group(5)) : null;
 
-         mat = datePattern.matcher(text);
-         if(!mat.find()) {
-             throw new ContentParseException("Could not parse thread (post timestamp regex failed)");
-         }
-         int dateUtc = Integer.parseInt(mat.group(1));
+        mat = datePattern.matcher(text);
+        if(!mat.find()) {
+            throw new ContentParseException("Could not parse thread (post timestamp regex failed)");
+        }
+        int dateUtc = Integer.parseInt(mat.group(1));
 
-         mat = postParsePattern2.matcher(text);
-         String link = null;
-         boolean spoiler = false;
-         String fileSize = null;
-         int width = 0;
-         int height = 0;
-         String fileName = null;
-         String md5b64 = null;
-         int tHeight = 0;
-         int tWidth = 0;
-         if(mat.find()) {
-             link     = (mat.group(2) != null) ? new String(mat.group(2)) : null;
-             spoiler  = (mat.group(3) != null);
-             fileSize = (mat.group(4) != null) ? new String(mat.group(4)) : null;
-             width    = (mat.group(5) != null) ? Integer.parseInt(mat.group(5)) : 0;
-             height   = (mat.group(6) != null) ? Integer.parseInt(mat.group(6)) : 0;
-             fileName = (mat.group(7) == null) ?
-                           ((mat.group(1) != null) ? new String(mat.group(1)) : null) :
-                           new String(mat.group(7));
-             md5b64   = (mat.group(8) != null) ? new String(mat.group(8)) : null;
-             tHeight  = (mat.group(9) != null) ? Integer.parseInt(mat.group(9)) : 0;
-             tWidth   = (mat.group(10) != null) ? Integer.parseInt(mat.group(10)) : 0;
-         }
+        mat = postParsePattern2.matcher(text);
+        String link = null;
+        boolean spoiler = false;
+        String fileSize = null;
+        int width = 0;
+        int height = 0;
+        String fileName = null;
+        String md5b64 = null;
+        int tHeight = 0;
+        int tWidth = 0;
+        if(mat.find()) {
+            link     = (mat.group(2) != null) ? new String(mat.group(2)) : null;
+            spoiler  = (mat.group(3) != null);
+            fileSize = (mat.group(4) != null) ? new String(mat.group(4)) : null;
+            width    = (mat.group(5) != null) ? Integer.parseInt(mat.group(5)) : 0;
+            height   = (mat.group(6) != null) ? Integer.parseInt(mat.group(6)) : 0;
+            fileName = (mat.group(7) == null) ?
+                          ((mat.group(1) != null) ? new String(mat.group(1)) : null) :
+                          new String(mat.group(7));
+            md5b64   = (mat.group(8) != null) ? new String(mat.group(8)) : null;
+            tHeight  = (mat.group(9) != null) ? Integer.parseInt(mat.group(9)) : 0;
+            tWidth   = (mat.group(10) != null) ? Integer.parseInt(mat.group(10)) : 0;
+        }
 
-         mat = commentPattern.matcher(text);
-         if(!mat.find()) {
-             throw new ContentParseException("Could not parse thread (post comment regex failed)");
-         }
-         String comment  = new String(mat.group(1));
+        mat = commentPattern.matcher(text);
+        if(!mat.find()) {
+            throw new ContentParseException("Could not parse thread (post comment regex failed)");
+        }
+        String comment  = new String(mat.group(1));
 
-         boolean sticky = false;
-         mat = stickyPattern.matcher(text);
-         if(mat.find()) sticky  = true;
+        boolean sticky = false;
+        mat = stickyPattern.matcher(text);
+        if(mat.find()) sticky  = true;
 
-         boolean omitted = false;
-         mat = omittedPattern.matcher(text);
-         if(mat.find()) omitted  = true;
+        boolean omitted = false;
+        mat = omittedPattern.matcher(text);
+        if(mat.find()) omitted  = true;
 
         return this.newYotsubaPost(link, null, spoiler, fileSize, width,
                 height, fileName, tWidth, tHeight, md5b64, num, title, email,
