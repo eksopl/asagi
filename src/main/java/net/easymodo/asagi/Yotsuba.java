@@ -185,7 +185,6 @@ public class Yotsuba extends WWW {
 
         // TODO: add the following variables
         String exif = null;
-        int timeStampExpired = 0;
 
         if(threadNum == 0) threadNum = num;
         boolean op = (threadNum == num);
@@ -244,7 +243,7 @@ public class Yotsuba extends WWW {
         post.setName(this.cleanSimple(name));
         post.setTrip(trip);
         post.setDate(timeStamp);
-        post.setDateExpired(timeStampExpired);
+        post.setDateExpired(0);
         post.setComment(this.doClean(comment));
         post.setSpoiler(spoiler);
         post.setDeleted(false);

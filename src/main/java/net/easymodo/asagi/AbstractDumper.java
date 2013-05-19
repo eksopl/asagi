@@ -1,6 +1,7 @@
 package net.easymodo.asagi;
 
 import net.easymodo.asagi.exception.*;
+import net.easymodo.asagi.model.DeletePost;
 import net.easymodo.asagi.model.MediaPost;
 import net.easymodo.asagi.model.Post;
 import net.easymodo.asagi.model.Topic;
@@ -27,7 +28,7 @@ public abstract class AbstractDumper {
     private final Local mediaLocalBoard;
     private final BlockingQueue<MediaPost> mediaPreviewUpdates;
     private final BlockingQueue<MediaPost> mediaUpdates;
-    private final BlockingQueue<Integer> deletedPosts;
+    private final BlockingQueue<DeletePost> deletedPosts;
 
     protected final BlockingQueue<Topic> topicUpdates;
     protected final Board sourceBoard;
@@ -39,7 +40,6 @@ public abstract class AbstractDumper {
     public static final int TALK  = 3;
     public static final int INFO  = 4;
 
-
     public AbstractDumper(String boardName, Local topicLocalBoard, Local mediaLocalBoard,
                           Board sourceBoard, boolean fullMedia, int pageLimbo) {
         this.boardName = boardName;
@@ -50,7 +50,7 @@ public abstract class AbstractDumper {
         this.mediaPreviewUpdates = new LinkedBlockingQueue<MediaPost>();
         this.mediaUpdates = new LinkedBlockingQueue<MediaPost>();
         this.topicUpdates = new LinkedBlockingQueue<Topic>();
-        this.deletedPosts = new LinkedBlockingQueue<Integer>();
+        this.deletedPosts = new LinkedBlockingQueue<DeletePost>();
         this.newTopics = new LinkedBlockingQueue<Integer>();
         this.fullMedia = fullMedia;
         this.debugLevel = TALK;
@@ -98,7 +98,6 @@ public abstract class AbstractDumper {
         ThreadUtils.initThread(boardName, new PostDeleter(), "Post deleter", 1);
     }
 
-
     protected boolean findDeleted(Topic oldTopic, Topic newTopic, boolean markDeleted) {
         boolean changed = false;
 
@@ -117,7 +116,10 @@ public abstract class AbstractDumper {
 
                 changed = true;
                 oldTopic.getAllPosts().remove(num);
-                deletedPosts.add(num);
+
+                DeletePost post = new DeletePost(num, System.currentTimeMillis());
+                deletedPosts.add(post);
+
                 debug(TALK, num + " (post): deleted");
             }
             if(i == 0) i = newTopic.getOmPosts();
@@ -140,7 +142,7 @@ public abstract class AbstractDumper {
 
                 try {
                     mediaLocalBoard.insertMediaPreview(mediaPrevPost, sourceBoard);
-				} catch(ContentGetException e) {
+                } catch(ContentGetException e) {
                     debug(ERROR, "Couldn't fetch preview of post " +
                             mediaPrevPost.getNum() + ": " + e.getMessage());
                 } catch(ContentStoreException e) {
@@ -234,7 +236,7 @@ public abstract class AbstractDumper {
         @SuppressWarnings("InfiniteLoopStatement")
         public void run() {
             while(true) {
-                int deletedPost;
+                DeletePost deletedPost;
 
                 try {
                     deletedPost = deletedPosts.take();
@@ -302,7 +304,8 @@ public abstract class AbstractDumper {
                                if(oldTopic.getAllPosts().size() > 1) {
                                    int op = oldTopic.getAllPosts().iterator().next();
                                    try {
-                                       deletedPosts.put(op);
+                                       DeletePost post = new DeletePost(op, System.currentTimeMillis());
+                                       deletedPosts.put(post);
                                    } catch(InterruptedException e1) { }
                                }
                                topicUpdates.add(oldTopic);

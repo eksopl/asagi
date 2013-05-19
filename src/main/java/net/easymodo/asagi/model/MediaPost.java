@@ -16,7 +16,7 @@ public class MediaPost {
         this.media = media;
         this.mediaHash = mediaHash;
     }
-    
+
     public int getNum() {
         return num;
     }
@@ -38,7 +38,6 @@ public class MediaPost {
     public boolean isOp() {
         return op;
     }
-
 
     @Override
     public boolean equals(Object o) {

@@ -9,6 +9,7 @@ import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
 import java.sql.Statement;
 
+import net.easymodo.asagi.model.DeletePost;
 import net.easymodo.asagi.model.Media;
 import net.easymodo.asagi.model.MediaPost;
 import net.easymodo.asagi.model.Post;
@@ -96,15 +97,16 @@ public abstract class SQL implements DB {
                     this.table, this.table);
         }
         this.updateQuery =
-                String.format("UPDATE \"%s\" SET comment = ?, deleted = ?, media_filename = COALESCE(?, media_filename)," +
-                        "  sticky = (? OR sticky) WHERE num=? and subnum=?", table);
+                String.format("UPDATE \"%s\" SET comment = ?, deleted = ?, timestamp_expired = ?, media_filename = COALESCE(?, media_filename)," +
+                        "  sticky = (? OR sticky) WHERE num = ? and subnum = ?",
+                        this.table);
 
-        this.updateDeletedQuery = String.format("UPDATE \"%s\" SET deleted = ? WHERE num = ? and subnum = ?",
+        this.updateDeletedQuery = String.format("UPDATE \"%s\" SET deleted = ?, timestamp_expired = ? WHERE num = ? and subnum = ?",
                 this.table);
         this.selectMediaQuery = String.format("SELECT * FROM \"%s_images\" WHERE media_hash = ?",
                 this.table);
         this.updateMediaQuery = String.format("UPDATE \"%s_images\" SET media = ? WHERE media_hash = ?",
-               this.table);
+                this.table);
         this.updatePreviewOpQuery = String.format("UPDATE \"%s_images\" SET preview_op = ? WHERE media_hash = ?",
                 this.table);
         this.updatePreviewReplyQuery = String.format("UPDATE \"%s_images\" SET preview_reply = ? WHERE media_hash = ?",
@@ -207,6 +209,7 @@ public abstract class SQL implements DB {
                 int c = 1;
                 updateStmt.setString(c++, post.getComment());
                 updateStmt.setBoolean(c++, post.isDeleted());
+                updateStmt.setInt(c++, post.getDateExpired());
                 updateStmt.setString(c++,post.getMediaFilename());
                 updateStmt.setBoolean(c++, post.isSticky());
                 updateStmt.setInt(c++, post.getNum());
@@ -268,11 +271,12 @@ public abstract class SQL implements DB {
         }}
     }
 
-    public synchronized void markDeleted(int post) throws ContentStoreException, DBConnectionException {
+    public synchronized void markDeleted(DeletePost post) throws ContentStoreException, DBConnectionException {
         while(true) { try {
             updateDeletedStmt.setBoolean(1, true);
-            updateDeletedStmt.setInt(2, post);
-            updateDeletedStmt.setInt(3, 0);
+            updateDeletedStmt.setInt(2, post.getDate());
+            updateDeletedStmt.setInt(3, post.getNum());
+            updateDeletedStmt.setInt(4, 0);
             updateDeletedStmt.execute();
             conn.commit();
             break;
