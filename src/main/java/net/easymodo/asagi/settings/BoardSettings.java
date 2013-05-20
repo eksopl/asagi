@@ -17,7 +17,6 @@ public class BoardSettings {
     private Boolean useOldDirectoryStructure;
     private Integer deletedThreadsThresholdPage;
     private String webserverGroup;
-    private Boolean fullMedia;
     private Integer thumbThreads;
     private Integer mediaThreads;
     private Integer newThreadsThreads;
@@ -98,14 +97,6 @@ public class BoardSettings {
 
     public void setUseOldDirectoryStructure(Boolean useOldDirectoryStructure) {
         this.useOldDirectoryStructure = useOldDirectoryStructure;
-    }
-
-    public Boolean getFullMedia() {
-        return fullMedia;
-    }
-
-    public void setFullMedia(Boolean fullMedia) {
-        this.fullMedia = fullMedia;
     }
 
     public Integer getThumbThreads() {

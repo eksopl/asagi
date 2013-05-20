@@ -17,8 +17,8 @@ import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings("UnusedDeclaration")
 public class DumperClassic extends AbstractDumper {
-    public DumperClassic(String boardName, Local topicLocalBoard, Local mediaLocalBoard, Board sourceBoard, boolean fullMedia, int pageLimbo) {
-        super(boardName, topicLocalBoard, mediaLocalBoard, sourceBoard, fullMedia, pageLimbo);
+    public DumperClassic(String boardName, Local topicLocalBoard, Local mediaLocalBoard, Board sourceBoard, boolean fullThumb, boolean fullMedia, int pageLimbo) {
+        super(boardName, topicLocalBoard, mediaLocalBoard, sourceBoard, fullThumb, fullMedia, pageLimbo);
     }
 
     public void initDumper(BoardSettings boardSettings) {
