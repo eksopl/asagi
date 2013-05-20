@@ -12,8 +12,8 @@ import java.util.Map;
 
 @SuppressWarnings("UnusedDeclaration")
 public class DumperJSON extends AbstractDumper {
-    public DumperJSON(String boardName, Local topicLocalBoard, Local mediaLocalBoard, Board sourceBoard, boolean fullMedia, int pageLimbo) {
-        super(boardName, topicLocalBoard, mediaLocalBoard, sourceBoard, fullMedia, pageLimbo);
+    public DumperJSON(String boardName, Local topicLocalBoard, Local mediaLocalBoard, Board sourceBoard, boolean fullThumb, boolean fullMedia, int pageLimbo) {
+        super(boardName, topicLocalBoard, mediaLocalBoard, sourceBoard, fullThumb, fullMedia, pageLimbo);
     }
 
     @Override

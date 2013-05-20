@@ -36,8 +36,6 @@ public class Asagi {
         // set everything that isn't set already to their defaults
         bSet.initSettings(defaults);
 
-        bSet.setFullMedia(bSet.getMediaThreads() != 0);
-
         return bSet;
     }
 
@@ -45,6 +43,7 @@ public class Asagi {
         BoardSettings bSet = getBoardSettings(settings, boardName);
 
         int pageLimbo = bSet.getDeletedThreadsThresholdPage();
+        boolean fullThumb = (bSet.getThumbThreads() != 0);
         boolean fullMedia = (bSet.getMediaThreads() != 0);
 
         // Init source board engine through reflection
@@ -115,8 +114,8 @@ public class Asagi {
         AbstractDumper dumper;
         try {
             Class<?> dumperClass = Class.forName("net.easymodo.asagi." + dumperEngine);
-            dumper = (AbstractDumper) dumperClass.getConstructor(String.class, Local.class, Local.class, Board.class, boolean.class, int.class)
-                    .newInstance(boardName, topicLocalBoard, mediaLocalBoard, sourceBoard, fullMedia, pageLimbo);
+            dumper = (AbstractDumper) dumperClass.getConstructor(String.class, Local.class, Local.class, Board.class, boolean.class, boolean.class, int.class)
+                    .newInstance(boardName, topicLocalBoard, mediaLocalBoard, sourceBoard, fullThumb, fullMedia, pageLimbo);
         } catch (ClassNotFoundException e) {
             throw new BoardInitException("Error initializing dumper engine " + dumperEngine + ", no such engine?");
         } catch (Exception e) {

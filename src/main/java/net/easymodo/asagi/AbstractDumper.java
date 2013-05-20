@@ -23,6 +23,7 @@ public abstract class AbstractDumper {
     private BufferedWriter debugOut = Asagi.getDebugOut();
 
     private final int pageLimbo;
+    private final boolean fullThumb;
     private final boolean fullMedia;
     private final Local topicLocalBoard;
     private final Local mediaLocalBoard;
@@ -41,7 +42,7 @@ public abstract class AbstractDumper {
     public static final int INFO  = 4;
 
     public AbstractDumper(String boardName, Local topicLocalBoard, Local mediaLocalBoard,
-                          Board sourceBoard, boolean fullMedia, int pageLimbo) {
+                          Board sourceBoard, boolean fullThumb, boolean fullMedia, int pageLimbo) {
         this.boardName = boardName;
         this.sourceBoard = sourceBoard;
         this.topicLocalBoard = topicLocalBoard;
@@ -52,6 +53,7 @@ public abstract class AbstractDumper {
         this.topicUpdates = new LinkedBlockingQueue<Topic>();
         this.deletedPosts = new LinkedBlockingQueue<DeletePost>();
         this.newTopics = new LinkedBlockingQueue<Integer>();
+        this.fullThumb = fullThumb;
         this.fullMedia = fullMedia;
         this.debugLevel = TALK;
         this.pageLimbo = pageLimbo;
@@ -215,7 +217,7 @@ public abstract class AbstractDumper {
                         MediaPost mediaPost = new MediaPost(post.getNum(), post.getThreadNum(), post.isOp(),
                                 post.getPreviewOrig(), post.getMediaOrig(), post.getMediaHash());
 
-                        if (post.getPreviewOrig() != null) {
+                        if (post.getPreviewOrig() != null && fullThumb) {
                             if (!mediaPreviewUpdates.contains(mediaPost))
                                 mediaPreviewUpdates.put(mediaPost);
                         }
