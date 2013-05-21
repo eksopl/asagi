@@ -89,19 +89,21 @@ public abstract class SQL implements DB {
         if (this.insertQuery == null) {
             this.insertQuery = String.format(
                     "INSERT INTO \"%s\"" +
-                    " (poster_ip, num, subnum, thread_num, op, timestamp, timestamp_expired, preview_orig, preview_w, preview_h, media_filename, " +
-                    " media_w, media_h, media_size, media_hash, media_orig, spoiler, deleted, " +
-                    " capcode, email, name, trip, title, comment, delpass, sticky, poster_hash, poster_country, exif) " +
-                    "  SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? " +
-                    "  WHERE NOT EXISTS (SELECT 1 FROM \"%s\" WHERE num=? and subnum=?)",
-                    this.table, this.table);
+                    "  (poster_ip, num, subnum, thread_num, op, timestamp, timestamp_expired, preview_orig, preview_w, preview_h, " +
+                    "  media_filename, media_w, media_h, media_size, media_hash, media_orig, spoiler, deleted, " +
+                    "  capcode, email, name, trip, title, comment, delpass, sticky, poster_hash, poster_country, exif) " +
+                    "    SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? " +
+                    "    WHERE NOT EXISTS (SELECT 1 FROM \"%s\" WHERE num = ? AND subnum = ?)" +
+                    "      AND NOT EXISTS (SELECT 1 FROM \"%s_deleted\" WHERE num = ? AND subnum = ?)",
+                    this.table, this.table, this.table);
         }
         this.updateQuery =
-                String.format("UPDATE \"%s\" SET comment = ?, deleted = ?, timestamp_expired = ?, media_filename = COALESCE(?, media_filename)," +
-                        "  sticky = (? OR sticky) WHERE num = ? and subnum = ?",
+                String.format(
+                        "UPDATE \"%s\" SET comment = ?, deleted = ?, timestamp_expired = ?, media_filename = COALESCE(?, media_filename)," +
+                        "  sticky = (? OR sticky) WHERE num = ? AND subnum = ?",
                         this.table);
 
-        this.updateDeletedQuery = String.format("UPDATE \"%s\" SET deleted = ?, timestamp_expired = ? WHERE num = ? and subnum = ?",
+        this.updateDeletedQuery = String.format("UPDATE \"%s\" SET deleted = ?, timestamp_expired = ? WHERE num = ? AND subnum = ?",
                 this.table);
         this.selectMediaQuery = String.format("SELECT * FROM \"%s_images\" WHERE media_hash = ?",
                 this.table);
@@ -247,6 +249,8 @@ public abstract class SQL implements DB {
                 insertStmt.setString(c++, post.getPosterCountry());
                 insertStmt.setString(c++, post.getExif());
 
+                insertStmt.setInt(c++, post.getNum());
+                insertStmt.setInt(c++, post.getSubnum());
                 insertStmt.setInt(c++, post.getNum());
                 insertStmt.setInt(c, post.getSubnum());
                 insertStmt.addBatch();

@@ -84,7 +84,7 @@ CREATE TABLE %%BOARD%% (
   media_orig character varying(20),
   spoiler boolean DEFAULT false NOT NULL,
   deleted boolean DEFAULT false NOT NULL,
-  capcode character(1) DEFAULT 'N' NOT NULL CHECK (capcode = ANY (ARRAY['N', 'M', 'A', 'G'])),
+  capcode character(1) DEFAULT 'N' NOT NULL,
   email character varying(100),
   name character varying(100),
   trip character varying(25),
@@ -113,3 +113,7 @@ CREATE INDEX %%BOARD%%_trip_index on %%BOARD%% (trip);
 CREATE INDEX %%BOARD%%_email_index on %%BOARD%% (email);
 CREATE INDEX %%BOARD%%_poster_ip_index on %%BOARD%% (poster_ip);
 CREATE INDEX %%BOARD%%_timestamp_index on %%BOARD%% (timestamp);
+
+CREATE TABLE %%BOARD%%_deleted (
+  LIKE %%BOARD%% INCLUDING ALL
+);

@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS "%%BOARD%%" (
   INDEX timestamp_index ("timestamp")
 ) engine=InnoDB	 CHARSET=%%CHARSET%%;
 
+CREATE TABLE IF NOT EXISTS "%%BOARD%%_deleted" LIKE "%%BOARD%%";
+
 CREATE TABLE IF NOT EXISTS "%%BOARD%%_threads" (
   "thread_num" int unsigned NOT NULL,
   "time_op" int unsigned NOT NULL,
