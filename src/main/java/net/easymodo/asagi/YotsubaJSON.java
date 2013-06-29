@@ -2,7 +2,11 @@ package net.easymodo.asagi;
 
 import java.io.InputStream;
 import java.lang.reflect.Type;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.google.gson.*;
 import net.easymodo.asagi.model.MediaPost;
