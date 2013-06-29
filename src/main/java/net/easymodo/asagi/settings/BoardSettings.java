@@ -17,7 +17,6 @@ public class BoardSettings {
     private Boolean useOldDirectoryStructure;
     private Integer deletedThreadsThresholdPage;
     private String webserverGroup;
-    private Boolean fullMedia;
     private Integer thumbThreads;
     private Integer mediaThreads;
     private Integer newThreadsThreads;
@@ -27,7 +26,7 @@ public class BoardSettings {
     private String throttleURL;
     private Long throttleMillisec;
     private List<PageSettings> pageSettings;
-    
+
     public String getEngine() {
         return engine;
     }
@@ -98,14 +97,6 @@ public class BoardSettings {
 
     public void setUseOldDirectoryStructure(Boolean useOldDirectoryStructure) {
         this.useOldDirectoryStructure = useOldDirectoryStructure;
-    }
-
-    public Boolean getFullMedia() {
-        return fullMedia;
-    }
-
-    public void setFullMedia(Boolean fullMedia) {
-        this.fullMedia = fullMedia;
     }
 
     public Integer getThumbThreads() {
@@ -206,7 +197,7 @@ public class BoardSettings {
 
     public void initSetting(String key, Object def) {
         try {
-            if(BeanUtils.getProperty(this, key) == null)
+            if (BeanUtils.getProperty(this, key) == null)
                 BeanUtils.setProperty(this, key, def);
         } catch (Exception e) {
             throw new AssertionError("Error initing settings in BoardSettings");

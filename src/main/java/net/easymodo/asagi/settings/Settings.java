@@ -8,7 +8,6 @@ public class Settings {
     private String sourceEngine;
     private Map<String, BoardSettings> boardSettings;
 
-
     public Map<String, BoardSettings> getBoardSettings() {
         return boardSettings;
     }

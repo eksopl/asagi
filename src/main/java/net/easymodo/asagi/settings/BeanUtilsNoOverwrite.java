@@ -10,7 +10,7 @@ public class BeanUtilsNoOverwrite extends BeanUtilsBean {
             throws IllegalAccessException, InvocationTargetException {
         try {
             Object exValue = this.getPropertyUtils().getProperty(dest, name);
-            if(exValue == null)
+            if (exValue == null)
                 super.copyProperty(dest, name, value);
         } catch (NoSuchMethodException e) {
             // nothing to do either, just return

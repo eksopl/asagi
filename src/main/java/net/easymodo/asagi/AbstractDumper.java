@@ -1,6 +1,7 @@
 package net.easymodo.asagi;
 
 import net.easymodo.asagi.exception.*;
+import net.easymodo.asagi.model.DeletePost;
 import net.easymodo.asagi.model.MediaPost;
 import net.easymodo.asagi.model.Post;
 import net.easymodo.asagi.model.Topic;
@@ -22,12 +23,13 @@ public abstract class AbstractDumper {
     private BufferedWriter debugOut = Asagi.getDebugOut();
 
     private final int pageLimbo;
+    private final boolean fullThumb;
     private final boolean fullMedia;
     private final Local topicLocalBoard;
     private final Local mediaLocalBoard;
     private final BlockingQueue<MediaPost> mediaPreviewUpdates;
     private final BlockingQueue<MediaPost> mediaUpdates;
-    private final BlockingQueue<Integer> deletedPosts;
+    private final BlockingQueue<DeletePost> deletedPosts;
 
     protected final BlockingQueue<Topic> topicUpdates;
     protected final Board sourceBoard;
@@ -39,9 +41,8 @@ public abstract class AbstractDumper {
     public static final int TALK  = 3;
     public static final int INFO  = 4;
 
-
     public AbstractDumper(String boardName, Local topicLocalBoard, Local mediaLocalBoard,
-                          Board sourceBoard, boolean fullMedia, int pageLimbo) {
+                          Board sourceBoard, boolean fullThumb, boolean fullMedia, int pageLimbo) {
         this.boardName = boardName;
         this.sourceBoard = sourceBoard;
         this.topicLocalBoard = topicLocalBoard;
@@ -50,8 +51,9 @@ public abstract class AbstractDumper {
         this.mediaPreviewUpdates = new LinkedBlockingQueue<MediaPost>();
         this.mediaUpdates = new LinkedBlockingQueue<MediaPost>();
         this.topicUpdates = new LinkedBlockingQueue<Topic>();
-        this.deletedPosts = new LinkedBlockingQueue<Integer>();
+        this.deletedPosts = new LinkedBlockingQueue<DeletePost>();
         this.newTopics = new LinkedBlockingQueue<Integer>();
+        this.fullThumb = fullThumb;
         this.fullMedia = fullMedia;
         this.debugLevel = TALK;
         this.pageLimbo = pageLimbo;
@@ -69,13 +71,13 @@ public abstract class AbstractDumper {
 
         String output = "";
 
-        for(String arg : args)
+        for (String arg : args)
             output = output.concat(arg);
 
         if (level <= debugLevel) {
             System.out.println(preOutput + output);
         }
-        if(debugOut != null && level == ERROR) {
+        if (debugOut != null && level == ERROR) {
             LocalTime time = new LocalTime();
 
             try {
@@ -84,7 +86,7 @@ public abstract class AbstractDumper {
                 debugOut.write("["+boardName+"] ");
                 debugOut.write(output + '\n');
                 debugOut.flush();
-            } catch(IOException e) {
+            } catch (IOException e) {
                 System.err.println("WARN: Cannot write to debug file");
             }
         }
@@ -98,29 +100,31 @@ public abstract class AbstractDumper {
         ThreadUtils.initThread(boardName, new PostDeleter(), "Post deleter", 1);
     }
 
-
     protected boolean findDeleted(Topic oldTopic, Topic newTopic, boolean markDeleted) {
         boolean changed = false;
 
-        if(oldTopic == null) return changed;
+        if (oldTopic == null) return changed;
 
         List<Integer> oldPosts = new ArrayList<Integer>(oldTopic.getAllPosts());
 
-        if(oldTopic.getAllPosts().isEmpty()) return changed;
+        if (oldTopic.getAllPosts().isEmpty()) return changed;
 
-        for(int i = 0; i < oldPosts.size(); i++) {
+        for (int i = 0; i < oldPosts.size(); i++) {
             int num = oldPosts.get(i);
-            if(!newTopic.findPost(num)) {
+            if (!newTopic.findPost(num)) {
                 // We just found a possibly deleted post, but we haven't been
                 // instructed to actually mark deleted posts.
-                if(!markDeleted) return true;
+                if (!markDeleted) return true;
 
                 changed = true;
                 oldTopic.getAllPosts().remove(num);
-                deletedPosts.add(num);
+
+                DeletePost post = new DeletePost(num, System.currentTimeMillis());
+                deletedPosts.add(post);
+
                 debug(TALK, num + " (post): deleted");
             }
-            if(i == 0) i = newTopic.getOmPosts();
+            if (i == 0) i = newTopic.getOmPosts();
         }
 
         return changed;
@@ -131,19 +135,19 @@ public abstract class AbstractDumper {
         @Override
         @SuppressWarnings("InfiniteLoopStatement")
         public void run() {
-            while(true) {
+            while (true) {
                 MediaPost mediaPrevPost;
 
                 try {
                     mediaPrevPost = mediaPreviewUpdates.take();
-                } catch(InterruptedException e) { continue; }
+                } catch (InterruptedException e) { continue; }
 
                 try {
                     mediaLocalBoard.insertMediaPreview(mediaPrevPost, sourceBoard);
-				} catch(ContentGetException e) {
+                } catch (ContentGetException e) {
                     debug(ERROR, "Couldn't fetch preview of post " +
                             mediaPrevPost.getNum() + ": " + e.getMessage());
-                } catch(ContentStoreException e) {
+                } catch (ContentStoreException e) {
                     debug(ERROR, "Couldn't save preview of post " +
                             mediaPrevPost.getNum() + ": " + e.getMessage());
                 }
@@ -155,19 +159,19 @@ public abstract class AbstractDumper {
         @Override
         @SuppressWarnings("InfiniteLoopStatement")
         public void run() {
-            while(true) {
+            while (true) {
                 MediaPost mediaPost;
 
                 try {
                     mediaPost = mediaUpdates.take();
-                } catch(InterruptedException e) { continue; }
+                } catch (InterruptedException e) { continue; }
 
                 try {
                     mediaLocalBoard.insertMedia(mediaPost, sourceBoard);
-                } catch(ContentGetException e) {
+                } catch (ContentGetException e) {
                     debug(ERROR, "Couldn't fetch media of post " +
                             mediaPost.getNum() + ": " + e.getMessage());
-                } catch(ContentStoreException e) {
+                } catch (ContentStoreException e) {
                     debug(ERROR, "Couldn't save media of post " +
                             mediaPost.getNum() + ": " + e.getMessage());
                 }
@@ -179,22 +183,22 @@ public abstract class AbstractDumper {
         @Override
         @SuppressWarnings("InfiniteLoopStatement")
         public void run() {
-            while(true) {
+            while (true) {
                 Topic newTopic;
                 try {
                      newTopic = topicUpdates.take();
-                } catch(InterruptedException e) { continue; }
+                } catch (InterruptedException e) { continue; }
 
                 newTopic.lock.writeLock().lock();
 
                 try {
                     topicLocalBoard.insert(newTopic);
-                } catch(ContentStoreException e) {
+                } catch (ContentStoreException e) {
                     debug(ERROR, "Couldn't insert topic " + newTopic.getNum() +
                             ": " + e.getMessage());
                     newTopic.lock.writeLock().unlock();
                     continue;
-                } catch(DBConnectionException e) {
+                } catch (DBConnectionException e) {
                     debug(ERROR, "Database connection error while inserting topic: " + newTopic.getNum()
                             + ". Lost connection to database, can't reconnect. Reason: "
                             + e.getMessage());
@@ -203,25 +207,25 @@ public abstract class AbstractDumper {
                 }
 
                 List<Post> posts = newTopic.getPosts();
-                if(posts == null) {
+                if (posts == null) {
                     newTopic.lock.writeLock().unlock();
                     return;
                 }
 
-                for(Post post : posts) {
+                for (Post post : posts) {
                     try {
                         MediaPost mediaPost = new MediaPost(post.getNum(), post.getThreadNum(), post.isOp(),
                                 post.getPreviewOrig(), post.getMediaOrig(), post.getMediaHash());
 
-                        if(post.getPreviewOrig() != null) {
-                            if(!mediaPreviewUpdates.contains(mediaPost))
+                        if (post.getPreviewOrig() != null && fullThumb) {
+                            if (!mediaPreviewUpdates.contains(mediaPost))
                                 mediaPreviewUpdates.put(mediaPost);
                         }
-                        if(post.getMediaOrig() != null && fullMedia) {
-                            if(!mediaUpdates.contains(mediaPost))
+                        if (post.getMediaOrig() != null && fullMedia) {
+                            if (!mediaUpdates.contains(mediaPost))
                                 mediaUpdates.put(mediaPost);
                         }
-                    } catch(InterruptedException e) { }
+                    } catch (InterruptedException e) { }
                 }
                 newTopic.purgePosts();
                 newTopic.lock.writeLock().unlock();
@@ -233,16 +237,16 @@ public abstract class AbstractDumper {
         @Override
         @SuppressWarnings("InfiniteLoopStatement")
         public void run() {
-            while(true) {
-                int deletedPost;
+            while (true) {
+                DeletePost deletedPost;
 
                 try {
                     deletedPost = deletedPosts.take();
-                } catch(InterruptedException e) { continue; }
+                } catch (InterruptedException e) { continue; }
 
                 try {
                     topicLocalBoard.markDeleted(deletedPost);
-                } catch(ContentStoreException e) {
+                } catch (ContentStoreException e) {
                     debug(ERROR, "Couldn't update deleted status of post " +
                             deletedPost + ": " + e.getMessage());
                 }
@@ -252,7 +256,7 @@ public abstract class AbstractDumper {
 
     protected class TopicFetcher implements Runnable {
         private void pingTopic(Topic topic) {
-            if(topic == null) return;
+            if (topic == null) return;
 
             topic.lock.writeLock().lock();
             topic.setLastHit(DateTime.now().getMillis());
@@ -263,18 +267,18 @@ public abstract class AbstractDumper {
         @Override
         @SuppressWarnings("InfiniteLoopStatement")
         public void run() {
-            while(true) {
+            while (true) {
                int newTopic;
                try {
                     newTopic = newTopics.take();
-               } catch(InterruptedException e) { continue; }
+               } catch (InterruptedException e) { continue; }
 
                String lastMod = null;
 
                Topic oldTopic = topics.get(newTopic);
 
                // If we already saw this topic before, acquire its lock
-               if(oldTopic != null) {
+               if (oldTopic != null) {
                    oldTopic.lock.readLock().lock();
                    lastMod = oldTopic.getLastMod();
                    oldTopic.lock.readLock().unlock();
@@ -286,24 +290,25 @@ public abstract class AbstractDumper {
                Topic topic;
                try {
                    topic = sourceBoard.getThread(newTopic, lastMod);
-               } catch(HttpGetException e) {
-                   if(e.getHttpStatus() == 304) {
+               } catch (HttpGetException e) {
+                   if (e.getHttpStatus() == 304) {
                        // If the old topic exists, update its lastHit timestamp
                        // The old topic should always exist at this point.
                        pingTopic(oldTopic);
                        debug(TALK, newTopic + ": wasn't modified");
                        continue;
-                   } else if(e.getHttpStatus() == 404) {
-                       if(oldTopic != null) {
+                   } else if (e.getHttpStatus() == 404) {
+                       if (oldTopic != null) {
                            oldTopic.lock.writeLock().lock();
                            // If we found the topic before the page limbo
                            // threshold, then it was forcefully deleted
-                           if(oldTopic.getLastPage() < pageLimbo) {
-                               if(oldTopic.getAllPosts().size() > 1) {
+                           if (oldTopic.getLastPage() < pageLimbo) {
+                               if (oldTopic.getAllPosts().size() > 1) {
                                    int op = oldTopic.getAllPosts().iterator().next();
                                    try {
-                                       deletedPosts.put(op);
-                                   } catch(InterruptedException e1) { }
+                                       DeletePost post = new DeletePost(op, System.currentTimeMillis());
+                                       deletedPosts.put(post);
+                                   } catch (InterruptedException e1) { }
                                }
                                topicUpdates.add(oldTopic);
                                debug(TALK, newTopic + ": deleted (last seen on page " + oldTopic.getLastPage() + ")");
@@ -320,18 +325,18 @@ public abstract class AbstractDumper {
                        debug(WARN, newTopic + ": error: " + e.getMessage());
                        continue;
                    }
-               } catch(ContentGetException e) {
+               } catch (ContentGetException e) {
                    // We got an even funkier, non-HTTP error
                    pingTopic(oldTopic);
                    debug(WARN, newTopic + ": error: " + e.getMessage());
                    continue;
-               } catch(ContentParseException e) {
+               } catch (ContentParseException e) {
                    pingTopic(oldTopic);
                    debug(ERROR, newTopic + ": " + e.getMessage());
                    continue;
                }
 
-               if(topic == null) {
+               if (topic == null) {
                    pingTopic(oldTopic);
                    debug(WARN, newTopic + ": topic has no posts");
                    continue;
@@ -342,11 +347,11 @@ public abstract class AbstractDumper {
                // We're about to make our rebuilt topic public
                topic.lock.writeLock().lock();
 
-               if(oldTopic != null) {
+               if (oldTopic != null) {
                    oldTopic.lock.writeLock().lock();
 
                    // Beaten to the punch (how?)
-                   if(oldTopic.getLastHit() > startTime) {
+                   if (oldTopic.getLastHit() > startTime) {
                        debug(ERROR, "Concurrency issue updating topic " + oldTopic.getNum());
                        oldTopic.lock.writeLock().unlock();
 

@@ -2,7 +2,11 @@ package net.easymodo.asagi;
 
 import java.io.InputStream;
 import java.lang.reflect.Type;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.google.gson.*;
 import net.easymodo.asagi.model.MediaPost;
@@ -25,6 +29,17 @@ public class YotsubaJSON extends WWW {
             registerTypeAdapter(boolean.class, new BooleanTypeConverter()).
             setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES).create();
 
+    private static final Pattern exifPattern;
+    private static final Pattern exifDataPattern;
+
+    static {
+        String exifPatString = "<table \\s class=\"exif\"[^>]*>(.*)</table>";
+        String exifDataPatString = "<tr><td>(.*?)</td><td>(.*?)</td></tr>";
+
+        exifPattern = Pattern.compile(exifPatString, Pattern.COMMENTS | Pattern.DOTALL);
+        exifDataPattern = Pattern.compile(exifDataPatString, Pattern.COMMENTS | Pattern.DOTALL);
+    }
+
     private final Map<String,String> boardLinks;
 
     public YotsubaJSON(String boardName, BoardSettings settings) {
@@ -43,7 +58,6 @@ public class YotsubaJSON extends WWW {
         return Collections.unmodifiableMap(boardInfo);
     }
 
-
     private static class BooleanTypeConverter implements JsonSerializer<Boolean>, JsonDeserializer<Boolean> {
         @Override
         public JsonElement serialize(Boolean src, Type srcType, JsonSerializationContext context) {
@@ -55,7 +69,7 @@ public class YotsubaJSON extends WWW {
                 throws JsonParseException {
             try {
                 return (json.getAsInt() != 0);
-            } catch(ClassCastException e) {
+            } catch (ClassCastException e) {
                 // fourchan api can't make up its mind about this
                 return json.getAsBoolean();
             }
@@ -64,16 +78,15 @@ public class YotsubaJSON extends WWW {
 
     @Override
     public InputStream getMediaPreview(MediaPost h) throws ContentGetException {
-        if(h.getPreview() == null)
+        if (h.getPreview() == null)
             return null;
 
-    return this.wget(this.boardLinks.get("previewLink") + "/thumb/"
-                    + h.getPreview());
+        return this.wget(this.boardLinks.get("previewLink") + "/thumb/" + h.getPreview());
     }
 
     @Override
     public InputStream getMedia(MediaPost h) throws ContentGetException {
-        if(h.getMedia() == null)
+        if (h.getMedia() == null)
             return null;
 
         return this.wget(this.boardLinks.get("imgLink") + "/src/" + h.getMedia());
@@ -84,7 +97,7 @@ public class YotsubaJSON extends WWW {
     }
 
     private String linkThread(int thread) {
-        if(thread != 0) {
+        if (thread != 0) {
             return this.boardLinks.get("link") + "/res/" + thread + ".json";
         } else {
             return this.linkPage(0);
@@ -105,7 +118,7 @@ public class YotsubaJSON extends WWW {
         try {
             pageJson = GSON.fromJson(pageText, PageJson.class);
         } catch (JsonSyntaxException ex) {
-            throw new ContentGetException("API returned invalid JSON", ex);
+            throw new ContentGetException("API returned invalid JSON", ex.getCause());
         }
 
         Page p = new Page(pageNum);
@@ -138,7 +151,7 @@ public class YotsubaJSON extends WWW {
         try {
             topicJson = GSON.fromJson(threadText, TopicJson.class);
         } catch (JsonSyntaxException ex) {
-            throw new ContentGetException("API returned invalid JSON", ex);
+            throw new ContentGetException("API returned invalid JSON", ex.getCause());
         }
 
         for (PostJson pj : topicJson.getPosts()) {
@@ -173,7 +186,7 @@ public class YotsubaJSON extends WWW {
         try {
             topicsJson = GSON.fromJson(threadsText, TopicListJson.Page[].class);
         } catch (JsonSyntaxException ex) {
-            throw new ContentGetException("API returned invalid JSON", ex);
+            throw new ContentGetException("API returned invalid JSON", ex.getCause());
         }
 
         for (TopicListJson.Page page : topicsJson) {
@@ -194,32 +207,42 @@ public class YotsubaJSON extends WWW {
         return (int) (dtEst.withZoneRetainFields(DateTimeZone.UTC).getMillis() / 1000);
     }
 
+    private Topic makeThreadFromJson(PostJson pj) throws ContentParseException {
+        if (pj.getNo() == 0) {
+            throw new ContentParseException("Could not parse thread (thread post num missing and could not be zero)");
+        }
+
+        Topic t = new Topic(pj.getNo(), pj.getOmittedPosts(), pj.getOmittedImages());
+
+        t.addPost(this.makePostFromJson(pj));
+        return t;
+    }
+
     private Post makePostFromJson(PostJson pj) throws ContentParseException {
-        if(pj.getNo() == 0) {
+        if (pj.getNo() == 0) {
             throw new ContentParseException("Could not parse post (post num missing and could not be zero)");
         }
-        if(pj.getTime() == 0) {
+        if (pj.getTime() == 0) {
             throw new ContentParseException("Could not parse post (post timestamp missing and could not be zero)");
         }
 
         Post p = new Post();
 
-        if(pj.getFilename() != null) {
+        if (pj.getFilename() != null) {
             p.setMediaFilename(pj.getFilename() + pj.getExt());
             p.setMediaOrig(pj.getTim() + pj.getExt());
             p.setPreviewOrig(pj.getTim() + "s.jpg");
         }
 
         String capcode = pj.getCapcode();
-        if(capcode != null) capcode = capcode.substring(0, 1).toUpperCase();
+        if (capcode != null) capcode = capcode.substring(0, 1).toUpperCase();
 
         String posterHash = pj.getId();
-        if(posterHash != null && posterHash.equals("Developer")) posterHash = "Dev";
+        if (posterHash != null && posterHash.equals("Developer")) posterHash = "Dev";
 
         String posterCountry = pj.getCountry();
-        if(posterCountry != null && (posterCountry.equals("XX") || posterCountry.equals("A1"))) posterCountry = null;
+        if (posterCountry != null && (posterCountry.equals("XX") || posterCountry.equals("A1"))) posterCountry = null;
 
-        //p.setLink(link);
         p.setType(pj.getExt());
         p.setMediaHash(pj.getMd5());
         p.setMediaSize(pj.getFsize());
@@ -235,6 +258,7 @@ public class YotsubaJSON extends WWW {
         p.setName(this.cleanSimple(pj.getName()));
         p.setTrip(pj.getTrip());
         p.setDate(this.parseDate(pj.getTime()));
+        p.setDateExpired(0);
         p.setComment(this.doClean(pj.getCom()));
         p.setSpoiler(pj.isSpoiler());
         p.setDeleted(false);
@@ -242,23 +266,9 @@ public class YotsubaJSON extends WWW {
         p.setCapcode(capcode);
         p.setPosterHash(posterHash);
         p.setPosterCountry(posterCountry);
-
-        // TODO: Add following values
-        p.setDateExpired(0);
-        p.setExif(null);
+        p.setExif(this.cleanSimple(this.parseExif(pj.getCom())));
 
         return p;
-    }
-
-    private Topic makeThreadFromJson(PostJson pj) throws ContentParseException {
-        if(pj.getNo() == 0) {
-            throw new ContentParseException("Could not parse thread (thread post num missing and could not be zero)");
-        }
-
-        Topic t = new Topic(pj.getNo(), pj.getOmittedPosts(), pj.getOmittedImages());
-
-        t.addPost(this.makePostFromJson(pj));
-        return t;
     }
 
     public String cleanSimple(String text) {
@@ -266,17 +276,17 @@ public class YotsubaJSON extends WWW {
     }
 
     public String doClean(String text) {
-        if(text == null) return null;
+        if (text == null) return null;
 
         // SOPA spoilers
         //text = text.replaceAll("<span class=\"spoiler\"[^>]*>(.*?)</spoiler>(</span>)?", "$1");
 
-        // Admin-Mod-Dev quotelinks
-        text = text.replaceAll("<span class=\"capcodeReplies\"><span style=\"font-size: smaller;\"><span style=\"font-weight: bold;\">(?:Administrator|Moderator|Developer) Repl(?:y|ies):</span>.*?</span><br></span>", "");
         // Non-public tags
         text = text.replaceAll("\\[(banned|moot)]", "[$1:lit]");
         // Comment too long, also EXIF tag toggle
         text = text.replaceAll("<span class=\"abbr\">.*?</span>", "");
+        // EXIF data
+        text = text.replaceAll("<table class=\"exif\"[^>]*>.*?</table>", "");
         // Banned/Warned text
         text = text.replaceAll("<(?:b|strong) style=\"color:\\s*red;\">(.*?)</(?:b|strong)>", "[banned]$1[/banned]");
         // moot text
@@ -305,5 +315,31 @@ public class YotsubaJSON extends WWW {
         text = text.replaceAll("<wbr>", "");
 
         return this.cleanSimple(text);
+    }
+
+    public String parseExif(String text) {
+        if (text == null) return null;
+
+        Matcher exif = exifPattern.matcher(text);
+
+        if (exif.find()) {
+            String data = exif.group(1);
+            // remove empty rows
+            data = data.replaceAll("<tr><td colspan=\"2\"></td></tr><tr>", "");
+
+            Map<String, String> exifJson = new HashMap<String, String>();
+            Matcher exifData = exifDataPattern.matcher(data);
+
+            while (exifData.find()) {
+                String key = exifData.group(1);
+                String val = exifData.group(2);
+                exifJson.put(key, val);
+            }
+
+            if (exifJson.size() > 0)
+                return GSON.toJson(exifJson);
+        }
+
+        return null;
     }
 }

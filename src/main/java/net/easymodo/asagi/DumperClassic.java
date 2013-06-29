@@ -17,15 +17,15 @@ import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings("UnusedDeclaration")
 public class DumperClassic extends AbstractDumper {
-    public DumperClassic(String boardName, Local topicLocalBoard, Local mediaLocalBoard, Board sourceBoard, boolean fullMedia, int pageLimbo) {
-        super(boardName, topicLocalBoard, mediaLocalBoard, sourceBoard, fullMedia, pageLimbo);
+    public DumperClassic(String boardName, Local topicLocalBoard, Local mediaLocalBoard, Board sourceBoard, boolean fullThumb, boolean fullMedia, int pageLimbo) {
+        super(boardName, topicLocalBoard, mediaLocalBoard, sourceBoard, fullThumb, fullMedia, pageLimbo);
     }
 
     public void initDumper(BoardSettings boardSettings) {
         super.initDumper(boardSettings);
 
         ThreadUtils.initThread(boardName, new TopicRebuilder(boardSettings.getThreadRefreshRate()), "Topic rebuilder", 1);
-        for(PageSettings pageSet : boardSettings.getPageSettings()) {
+        for (PageSettings pageSet : boardSettings.getPageSettings()) {
             Thread pageScanner = new Thread(new PageScanner(pageSet.getDelay(), pageSet.getPages()));
             pageScanner.setName("Page scanner " + pageSet.getPages().get(0) + " - " + boardName);
             pageScanner.setUncaughtExceptionHandler(ThreadUtils.UNCAUGHT_EXCEPTION_HANDLER);
@@ -47,9 +47,9 @@ public class DumperClassic extends AbstractDumper {
         @Override
         @SuppressWarnings("InfiniteLoopStatement")
         public void run() {
-            while(true) {
+            while (true) {
                 long startTime = DateTime.now().getMillis();
-                for(int pageNo : pageNos) {
+                for (int pageNo : pageNos) {
                     String lastMod = pagesLastMods[pageNo];
                     Page page;
 
@@ -57,22 +57,22 @@ public class DumperClassic extends AbstractDumper {
 
                     try {
                         page = sourceBoard.getPage(pageNo, lastMod);
-                    } catch(HttpGetException e) {
-                        if(e.getHttpStatus() == 304)
+                    } catch (HttpGetException e) {
+                        if (e.getHttpStatus() == 304)
                             debug(TALK, (pageNo == 0 ? "front page" : "page " + pageNo)
                                     + ": wasn't modified");
                         else
                             debug(WARN, "page " + pageNo + ": " + e.getMessage());
                         continue;
-                    } catch(ContentGetException e) {
+                    } catch (ContentGetException e) {
                         debug(WARN, "page " + pageNo + ": " + e.getMessage());
                         continue;
-                    } catch(ContentParseException e) {
+                    } catch (ContentParseException e) {
                         debug(WARN, "page " + pageNo + ": " + e.getMessage());
                         continue;
                     }
 
-                    if(page == null) {
+                    if (page == null) {
                         debug(WARN, (pageNo == 0 ? "front page" : "page " + pageNo)
                                 + "had no threads");
                         continue;
@@ -82,17 +82,17 @@ public class DumperClassic extends AbstractDumper {
 
                     debug(INFO, "got page " + pageNo);
 
-                    for(Topic newTopic : page.getThreads()) {
+                    for (Topic newTopic : page.getThreads()) {
                         int num = newTopic.getNum();
 
                         // If we never saw this topic, then we'll put it in the
                         // new topics queue, a TopicFetcher will take care of
                         // it.
                         synchronized(newTopics) {
-                            if(newTopics.contains(num)) continue;
+                            if (newTopics.contains(num)) continue;
                         }
-                        if(!topics.containsKey(num)) {
-                            try { newTopics.put(num); } catch(InterruptedException e) {}
+                        if (!topics.containsKey(num)) {
+                            try { newTopics.put(num); } catch (InterruptedException e) {}
                             continue;
                         }
 
@@ -103,14 +103,14 @@ public class DumperClassic extends AbstractDumper {
                         // Perhaps we had extremely bad luck and a TopicFetcher
                         // just saw this thread 404 and got rid of it before we
                         // could grab it? Oh well.
-                        if(fullTopic == null) continue;
+                        if (fullTopic == null) continue;
 
                         // Try to get the write lock for this topic.
                         fullTopic.lock.writeLock().lock();
 
                         // Oh, forget it. A ThreadFetcher beat us to this one.
                         // (Or another PageScanner)
-                        if(fullTopic.getLastHit() > pageStartTime) {
+                        if (fullTopic.getLastHit() > pageStartTime) {
                             fullTopic.lock.writeLock().unlock();
                             continue;
                         }
@@ -124,7 +124,7 @@ public class DumperClassic extends AbstractDumper {
 
                         // We check for any posts that got deleted
                         // We have the write lock, so TopicFetchers can suck it.
-                        if(findDeleted(fullTopic, newTopic, false)) {
+                        if (findDeleted(fullTopic, newTopic, false)) {
                             // Pages cannot be trusted to not have posts missing.
                             // We need to force a refresh, it can't be helped.
                             // See GH-11. Sigh.
@@ -132,12 +132,12 @@ public class DumperClassic extends AbstractDumper {
                             newPosts++;
                         }
 
-                        for(Iterator<Post> it = newTopic.getPosts().iterator(); it.hasNext();) {
+                        for (Iterator<Post> it = newTopic.getPosts().iterator(); it.hasNext();) {
                             Post newPost = it.next();
 
                             // This post was already in topics map. Next post
-                            if(fullTopic.findPost(newPost.getNum())) {
-                                if(newPost.isOmitted()) it.remove();
+                            if (fullTopic.findPost(newPost.getNum())) {
+                                if (newPost.isOmitted()) it.remove();
                                 oldPosts++;
                                 continue;
                             }
@@ -149,7 +149,7 @@ public class DumperClassic extends AbstractDumper {
 
                             // Comment too long. Click here to view the full text.
                             // This means we have to refresh the full thread
-                            if(newPost.isOmitted()) mustRefresh = true;
+                            if (newPost.isOmitted()) mustRefresh = true;
                         }
 
                         // Update the time we last hit this thread
@@ -158,7 +158,7 @@ public class DumperClassic extends AbstractDumper {
                         fullTopic.lock.writeLock().unlock();
 
                         //  No new posts
-                        if(oldPosts != 0 && newPosts == 0) continue;
+                        if (oldPosts != 0 && newPosts == 0) continue;
 
                         debug(TALK, (pageNo == 0 ? "front page" : "page " + pageNo) + " update");
 
@@ -170,16 +170,16 @@ public class DumperClassic extends AbstractDumper {
                         // And send the thread to the new threads queue if we were
                         // forced to refresh earlier or if the only old post we
                         // saw was the OP, as that means we're missing posts from inside the thread.
-                        if(mustRefresh || oldPosts < 2) {
+                        if (mustRefresh || oldPosts < 2) {
                             debug(TALK, num + ": must refresh");
-                            try { newTopics.put(num); } catch(InterruptedException e) {}
+                            try { newTopics.put(num); } catch (InterruptedException e) {}
                         }
                     }
                 }
 
                 long left = this.wait - (DateTime.now().getMillis() - startTime);
-                if(left > 0) {
-                    try { Thread.sleep(left); } catch(InterruptedException e) { }
+                if (left > 0) {
+                    try { Thread.sleep(left); } catch (InterruptedException e) { }
                 }
             }
         }
@@ -196,28 +196,28 @@ public class DumperClassic extends AbstractDumper {
         @Override
         @SuppressWarnings("InfiniteLoopStatement")
         public void run() {
-            while(true) {
-                for(Topic topic : topics.values()) {
+            while (true) {
+                for (Topic topic : topics.values()) {
                     try {
-                        if(!topic.lock.writeLock().tryLock(1, TimeUnit.SECONDS)) continue;
-                    } catch(InterruptedException e) { continue; }
-                    if(topic.isBusy()) { topic.lock.writeLock().unlock(); continue; }
+                        if (!topic.lock.writeLock().tryLock(1, TimeUnit.SECONDS)) continue;
+                    } catch (InterruptedException e) { continue; }
+                    if (topic.isBusy()) { topic.lock.writeLock().unlock(); continue; }
 
                     long deltaLastHit = DateTime.now().getMillis() - topic.getLastHit();
                     debug(INFO, "deltaLastHit for " + topic.getNum() + ": " + deltaLastHit);
 
-                    if(deltaLastHit <= threadRefreshRate) { topic.lock.writeLock().unlock();  continue; }
+                    if (deltaLastHit <= threadRefreshRate) { topic.lock.writeLock().unlock();  continue; }
 
                     topic.setBusy(true);
                     try {
                         newTopics.put(topic.getNum());
-                    } catch(InterruptedException e) { }
+                    } catch (InterruptedException e) { }
 
                     topic.lock.writeLock().unlock();
                 }
                 try {
                     Thread.sleep(1000);
-                } catch(InterruptedException e) { }
+                } catch (InterruptedException e) { }
             }
         }
     }

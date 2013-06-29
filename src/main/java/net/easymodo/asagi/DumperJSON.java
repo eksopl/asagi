@@ -12,8 +12,8 @@ import java.util.Map;
 
 @SuppressWarnings("UnusedDeclaration")
 public class DumperJSON extends AbstractDumper {
-    public DumperJSON(String boardName, Local topicLocalBoard, Local mediaLocalBoard, Board sourceBoard, boolean fullMedia, int pageLimbo) {
-        super(boardName, topicLocalBoard, mediaLocalBoard, sourceBoard, fullMedia, pageLimbo);
+    public DumperJSON(String boardName, Local topicLocalBoard, Local mediaLocalBoard, Board sourceBoard, boolean fullThumb, boolean fullMedia, int pageLimbo) {
+        super(boardName, topicLocalBoard, mediaLocalBoard, sourceBoard, fullThumb, fullMedia, pageLimbo);
     }
 
     @Override
@@ -33,21 +33,21 @@ public class DumperJSON extends AbstractDumper {
 
         private void sleepRemaining(long startTime) {
             long left = this.wait - (DateTime.now().getMillis() - startTime);
-            if(left > 0) {
-                try { Thread.sleep(left); } catch(InterruptedException e) { }
+            if (left > 0) {
+                try { Thread.sleep(left); } catch (InterruptedException e) { }
             }
         }
 
         @Override
         @SuppressWarnings("InfiniteLoopStatement")
         public void run() {
-            while(true) {
+            while (true) {
                 long startTime = DateTime.now().getMillis();
                 Page threadList;
                 try {
                     threadList = sourceBoard.getAllThreads(lastMod);
-                } catch(HttpGetException e) {
-                    if(e.getHttpStatus() == 304)
+                } catch (HttpGetException e) {
+                    if (e.getHttpStatus() == 304)
                         debug(TALK, ("threads.json: not modified"));
                     else
                         debug(WARN, "threads.json: " + e.getMessage());
@@ -62,22 +62,22 @@ public class DumperJSON extends AbstractDumper {
                 lastMod = threadList.getLastMod();
 
                 Map<Integer,Topic> threadMap = new HashMap<Integer, Topic>();
-                for(Topic topic : threadList.getThreads()) {
+                for (Topic topic : threadList.getThreads()) {
                     threadMap.put(topic.getNum(), topic);
                 }
 
                 // Go over the old threads
-                for(Topic oldTopic : topics.values()) {
+                for (Topic oldTopic : topics.values()) {
                     oldTopic.lock.readLock().lock();
                     int oldTopicNum = oldTopic.getNum();
                     int oldTopicLastMod = oldTopic.getLastModTimestamp();
                     oldTopic.lock.readLock().unlock();
 
                     Topic newTopic = threadMap.remove(oldTopicNum);
-                    if(newTopic != null) {
-                        if(oldTopicLastMod < newTopic.getLastModTimestamp()) {
+                    if (newTopic != null) {
+                        if (oldTopicLastMod < newTopic.getLastModTimestamp()) {
                             debug(TALK, "modified: " + oldTopicNum);
-                            if(!newTopics.contains(newTopic.getNum()))
+                            if (!newTopics.contains(newTopic.getNum()))
                                 newTopics.add(newTopic.getNum());
                         }
 
@@ -87,17 +87,17 @@ public class DumperJSON extends AbstractDumper {
                         oldTopic.lock.writeLock().unlock();
                     } else {
                         // baleeted topic
-                        if(!newTopics.contains(oldTopicNum))
+                        if (!newTopics.contains(oldTopicNum))
                             newTopics.add(oldTopicNum);
                     }
 
                 }
 
                 // These are new!
-                for(Topic topic : threadMap.values()) {
+                for (Topic topic : threadMap.values()) {
                     topic.lock.writeLock().lock();
                     topics.put(topic.getNum(), topic);
-                    if(!newTopics.contains(topic.getNum())) {
+                    if (!newTopics.contains(topic.getNum())) {
                         newTopics.add(topic.getNum());
                     }
                     topic.lock.writeLock().unlock();

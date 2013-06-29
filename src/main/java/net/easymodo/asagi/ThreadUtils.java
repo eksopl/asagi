@@ -9,7 +9,7 @@ public class ThreadUtils {
         public void uncaughtException(Thread t, Throwable e) {
             System.err.print("Exception in thread: \"" + t.getName() + "\" ");
             e.printStackTrace();
-            if(e instanceof OutOfMemoryError) {
+            if (e instanceof OutOfMemoryError) {
                 System.err.println("Terminating due to out of memory error. Raise VM max heap size? (-Xmx)");
             } else {
                 System.err.println("Terminating dumper due to unexpected exception.");
@@ -20,9 +20,9 @@ public class ThreadUtils {
     }
 
     public static void initThread(String boardName, Runnable runnable, String threadName, int numberOfThreads) {
-        for(int i = 0; i < numberOfThreads; i++) {
+        for (int i = 0; i < numberOfThreads; i++) {
             Thread threadToLaunch = new Thread(runnable);
-            if(numberOfThreads > 1)
+            if (numberOfThreads > 1)
                 threadToLaunch.setName(threadName + " #" + i + " - " + boardName);
             else
                 threadToLaunch.setName(threadName + " - " + boardName);

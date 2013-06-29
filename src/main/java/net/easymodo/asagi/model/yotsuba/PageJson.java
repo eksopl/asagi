@@ -12,6 +12,3 @@ public class PageJson {
         this.threads = threads;
     }
 }
-
-
-

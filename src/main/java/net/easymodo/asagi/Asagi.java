@@ -36,8 +36,6 @@ public class Asagi {
         // set everything that isn't set already to their defaults
         bSet.initSettings(defaults);
 
-        bSet.setFullMedia(bSet.getMediaThreads() != 0);
-
         return bSet;
     }
 
@@ -45,6 +43,7 @@ public class Asagi {
         BoardSettings bSet = getBoardSettings(settings, boardName);
 
         int pageLimbo = bSet.getDeletedThreadsThresholdPage();
+        boolean fullThumb = (bSet.getThumbThreads() != 0);
         boolean fullMedia = (bSet.getMediaThreads() != 0);
 
         // Init source board engine through reflection
@@ -79,18 +78,18 @@ public class Asagi {
 
             // For media
             mediaDbObj = boardCnst.newInstance(bSet.getPath(), bSet);
-        } catch(ClassNotFoundException e) {
+        } catch (ClassNotFoundException e) {
             throw new BoardInitException("Could not find board engine for " + boardEngine);
-        } catch(NoSuchMethodException e) {
+        } catch (NoSuchMethodException e) {
             throw new BoardInitException("Error initializing board engine " + boardEngine);
-        } catch(InstantiationException e) {
+        } catch (InstantiationException e) {
             throw new BoardInitException("Error initializing board engine " + boardEngine);
-        } catch(IllegalAccessException e) {
+        } catch (IllegalAccessException e) {
             throw new BoardInitException("Error initializing board engine " + boardEngine);
-        } catch(InvocationTargetException e) {
-            if(e.getCause() instanceof BoardInitException)
+        } catch (InvocationTargetException e) {
+            if (e.getCause() instanceof BoardInitException)
                 throw (BoardInitException)e.getCause();
-            else if(e.getCause() instanceof RuntimeException)
+            else if (e.getCause() instanceof RuntimeException)
                 throw (RuntimeException)e.getCause();
             throw new BoardInitException("Error initializing board engine " + boardEngine);
         }
@@ -99,12 +98,12 @@ public class Asagi {
         DB topicDb = null;
         DB mediaDb = null;
 
-        if(topicDbObj instanceof DB && mediaDbObj instanceof DB) {
+        if (topicDbObj instanceof DB && mediaDbObj instanceof DB) {
             topicDb = (DB) topicDbObj;
             mediaDb = (DB) mediaDbObj;
         }
 
-        if(topicDb == null) {
+        if (topicDb == null) {
             throw new BoardInitException("Wrong engine specified for " + boardEngine);
         }
 
@@ -115,8 +114,8 @@ public class Asagi {
         AbstractDumper dumper;
         try {
             Class<?> dumperClass = Class.forName("net.easymodo.asagi." + dumperEngine);
-            dumper = (AbstractDumper) dumperClass.getConstructor(String.class, Local.class, Local.class, Board.class, boolean.class, int.class)
-                    .newInstance(boardName, topicLocalBoard, mediaLocalBoard, sourceBoard, fullMedia, pageLimbo);
+            dumper = (AbstractDumper) dumperClass.getConstructor(String.class, Local.class, Local.class, Board.class, boolean.class, boolean.class, int.class)
+                    .newInstance(boardName, topicLocalBoard, mediaLocalBoard, sourceBoard, fullThumb, fullMedia, pageLimbo);
         } catch (ClassNotFoundException e) {
             throw new BoardInitException("Error initializing dumper engine " + dumperEngine + ", no such engine?");
         } catch (Exception e) {
@@ -131,8 +130,8 @@ public class Asagi {
         Gson gson = new Gson();
         String settingsFileName = SETTINGS_FILE;
 
-        for(int i = 0; i < args.length; ++i) {
-            if(args[i].equals("--config") && ++i < args.length) {
+        for (int i = 0; i < args.length; ++i) {
+            if (args[i].equals("--config") && ++i < args.length) {
                 settingsFileName = args[i];
             }
         }
@@ -140,18 +139,18 @@ public class Asagi {
         File debugFile = new File(DEBUG_FILE);
         try {
             debugOut = new BufferedWriter(Files.newWriterSupplier(debugFile, Charsets.UTF_8, true).getOutput());
-        } catch(IOException e1) {
+        } catch (IOException e1) {
             System.err.println("WARN: Cannot write to debug file");
         }
 
         BufferedReader settingsReader;
-        if(settingsFileName.equals("-")) {
+        if (settingsFileName.equals("-")) {
             settingsReader = new BufferedReader(new InputStreamReader(System.in, Charsets.UTF_8));
         } else {
             File settingsFile = new File(settingsFileName);
             try {
                 settingsReader = Files.newReader(settingsFile, Charsets.UTF_8);
-            } catch(FileNotFoundException e) {
+            } catch (FileNotFoundException e) {
                 System.err.println("ERROR: Can't find settings file ("+ settingsFile + ")");
                 return;
             }
@@ -159,7 +158,7 @@ public class Asagi {
 
         try {
             settingsJson = CharStreams.toString(settingsReader);
-        } catch(IOException e) {
+        } catch (IOException e) {
             System.err.println("ERROR: Error while reading settings file");
             return;
         }
@@ -167,7 +166,7 @@ public class Asagi {
         OuterSettings outerSettings;
         try {
             outerSettings = gson.fromJson(settingsJson, OuterSettings.class);
-        } catch(JsonSyntaxException e) {
+        } catch (JsonSyntaxException e) {
             System.err.println("ERROR: Settings file is malformed!");
             return;
         }
@@ -176,14 +175,14 @@ public class Asagi {
 
         dumperEngine = fullSettings.getDumperEngine();
         sourceEngine = fullSettings.getSourceEngine();
-        if(dumperEngine == null) dumperEngine = "DumperJSON";
-        if(sourceEngine == null) sourceEngine = "YotsubaJSON";
+        if (dumperEngine == null) dumperEngine = "DumperJSON";
+        if (sourceEngine == null) sourceEngine = "YotsubaJSON";
 
-        for(String boardName : fullSettings.getBoardSettings().keySet()) {
-            if("default".equals(boardName)) continue;
+        for (String boardName : fullSettings.getBoardSettings().keySet()) {
+            if ("default".equals(boardName)) continue;
             try {
                 spawnBoard(boardName, fullSettings);
-            } catch(BoardInitException e) {
+            } catch (BoardInitException e) {
                 System.err.println("ERROR: Error initializing dumper for /" + boardName + "/:");
                 System.err.println("  " + e.getMessage());
             }

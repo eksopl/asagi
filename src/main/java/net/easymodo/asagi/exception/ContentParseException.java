@@ -6,11 +6,11 @@ public class ContentParseException extends Exception {
     public ContentParseException(Throwable e) {
         super(e);
     }
-    
+
     public ContentParseException(String s) {
         super(s);
     }
-    
+
     public ContentParseException(String s, Throwable c) {
         super(s, c);
     }
