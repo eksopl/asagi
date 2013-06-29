@@ -398,7 +398,7 @@ public class Yotsuba extends WWW {
         post.setPreviewOrig(previewOrig);
         post.setPreviewW(tWidth);
         post.setPreviewH(tHeight);
-        post.setExif (exif);
+        post.setExif(exif);
         post.setNum(num);
         post.setThreadNum(threadNum);
         post.setOp(op);

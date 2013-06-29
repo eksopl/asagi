@@ -2,20 +2,14 @@ package net.easymodo.asagi;
 
 import java.io.InputStream;
 import java.lang.reflect.Type;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.*;
 
 import com.google.gson.*;
-
 import net.easymodo.asagi.model.MediaPost;
 import net.easymodo.asagi.model.Page;
 import net.easymodo.asagi.model.Post;
 import net.easymodo.asagi.model.Topic;
 import net.easymodo.asagi.settings.BoardSettings;
-
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 
@@ -116,7 +110,12 @@ public class YotsubaJSON extends WWW {
         String pageText = wgetReply[0];
         String newLastMod = wgetReply[1];
 
-        PageJson pageJson = GSON.fromJson(pageText, PageJson.class);
+        PageJson pageJson;
+        try {
+            pageJson = GSON.fromJson(pageText, PageJson.class);
+        } catch (JsonSyntaxException ex) {
+            throw new ContentGetException("API returned invalid JSON", ex);
+        }
 
         Page p = new Page(pageNum);
         Topic t = null;
@@ -144,7 +143,12 @@ public class YotsubaJSON extends WWW {
 
         Topic t = null;
 
-        TopicJson topicJson = GSON.fromJson(threadText, TopicJson.class);
+        TopicJson topicJson;
+        try {
+            topicJson = GSON.fromJson(threadText, TopicJson.class);
+        } catch (JsonSyntaxException ex) {
+            throw new ContentGetException("API returned invalid JSON", ex);
+        }
 
         for (PostJson pj : topicJson.getPosts()) {
             if (pj.getResto() == 0) {
@@ -174,7 +178,13 @@ public class YotsubaJSON extends WWW {
         Page threadList = new Page(-1);
         threadList.setLastMod(newLastMod);
 
-        TopicListJson.Page[] topicsJson = GSON.fromJson(threadsText, TopicListJson.Page[].class);
+        TopicListJson.Page[] topicsJson;
+        try {
+            topicsJson = GSON.fromJson(threadsText, TopicListJson.Page[].class);
+        } catch (JsonSyntaxException ex) {
+            throw new ContentGetException("API returned invalid JSON", ex);
+        }
+
         for (TopicListJson.Page page : topicsJson) {
             for (TopicListJson.Topic topic : page.getThreads()) {
                 Topic t = new Topic(topic.getNo(), 0, 0);
@@ -252,7 +262,7 @@ public class YotsubaJSON extends WWW {
         p.setCapcode(capcode);
         p.setPosterHash(posterHash);
         p.setPosterCountry(posterCountry);
-        p.setExif (this.cleanSimple(this.parseExif(pj.getCom())));
+        p.setExif(this.cleanSimple(this.parseExif(pj.getCom())));
 
         return p;
     }
@@ -267,8 +277,6 @@ public class YotsubaJSON extends WWW {
         // SOPA spoilers
         //text = text.replaceAll("<span class=\"spoiler\"[^>]*>(.*?)</spoiler>(</span>)?", "$1");
 
-        // Admin-Mod-Dev quotelinks
-        text = text.replaceAll("<span class=\"capcodeReplies\"><span style=\"font-size: smaller;\"><span style=\"font-weight: bold;\">(?:Administrator|Moderator|Developer) Repl(?:y|ies):</span>.*?</span><br></span>", "");
         // Non-public tags
         text = text.replaceAll("\\[(banned|moot)]", "[$1:lit]");
         // Comment too long, also EXIF tag toggle
