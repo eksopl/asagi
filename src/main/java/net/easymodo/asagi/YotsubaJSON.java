@@ -81,7 +81,7 @@ public class YotsubaJSON extends WWW {
         if (h.getPreview() == null)
             return null;
 
-    return this.wget(this.boardLinks.get("previewLink") + "/thumb/" + h.getPreview());
+        return this.wget(this.boardLinks.get("previewLink") + "/thumb/" + h.getPreview());
     }
 
     @Override
@@ -118,7 +118,7 @@ public class YotsubaJSON extends WWW {
         try {
             pageJson = GSON.fromJson(pageText, PageJson.class);
         } catch (JsonSyntaxException ex) {
-            throw new ContentGetException("API returned invalid JSON", ex);
+            throw new ContentGetException("API returned invalid JSON", ex.getCause());
         }
 
         Page p = new Page(pageNum);
@@ -151,7 +151,7 @@ public class YotsubaJSON extends WWW {
         try {
             topicJson = GSON.fromJson(threadText, TopicJson.class);
         } catch (JsonSyntaxException ex) {
-            throw new ContentGetException("API returned invalid JSON", ex);
+            throw new ContentGetException("API returned invalid JSON", ex.getCause());
         }
 
         for (PostJson pj : topicJson.getPosts()) {
@@ -186,7 +186,7 @@ public class YotsubaJSON extends WWW {
         try {
             topicsJson = GSON.fromJson(threadsText, TopicListJson.Page[].class);
         } catch (JsonSyntaxException ex) {
-            throw new ContentGetException("API returned invalid JSON", ex);
+            throw new ContentGetException("API returned invalid JSON", ex.getCause());
         }
 
         for (TopicListJson.Page page : topicsJson) {

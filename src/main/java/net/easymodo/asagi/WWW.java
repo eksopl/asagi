@@ -162,11 +162,16 @@ public abstract class WWW extends Board {
             EntityUtils.consumeQuietly(httpResponse.getEntity());
         }
 
+        // we don't need to process empty content
+        if (pageText == null || pageText.equals("")) {
+            throw new ContentGetException("HTTP response returns empty body");
+        }
+
         return new String[] {pageText, newLastMod};
     }
 
     public String doClean(String text) {
-        if (text == null || text == "") return null;
+        if (text == null || text.equals("")) return null;
 
         // Replaces &#dddd; HTML entities with the proper Unicode character
         Matcher htmlEscapeMatcher = Pattern.compile("&#(\\d+);").matcher(text);
