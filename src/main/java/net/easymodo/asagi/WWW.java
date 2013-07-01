@@ -13,7 +13,10 @@ import org.apache.http.impl.client.DecompressingHttpClient;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
 import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.CoreProtocolPNames;
 import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpProtocolParams;
+import org.apache.http.params.CoreProtocolPNames;
 import org.apache.http.params.HttpParams;
 import org.apache.http.util.EntityUtils;
 
@@ -62,6 +65,7 @@ public abstract class WWW extends Board {
         HttpConnectionParams.setSoTimeout(params, 5000);
         HttpConnectionParams.setConnectionTimeout(params, 5000);
         params.setParameter(ClientPNames.COOKIE_POLICY, CookiePolicy.IGNORE_COOKIES);
+        params.setParameter(CoreProtocolPNames.USER_AGENT, "Asagi/0.3.0");
 
         PoolingClientConnectionManager pccm = new PoolingClientConnectionManager();
         pccm.setDefaultMaxPerRoute(20);
@@ -75,7 +79,7 @@ public abstract class WWW extends Board {
 
     private HttpResponse wget(String link, String referer, String lastMod) throws HttpGetException {
         HttpGet req = new HttpGet(link);
-        req.setHeader("Referer", referer);
+        if(referer != null && !referer.equals("")) req.setHeader("Referer", referer);
         if (lastMod != null) req.setHeader("If-Modified-Since", lastMod);
 
         int statusCode;
