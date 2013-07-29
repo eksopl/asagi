@@ -81,6 +81,7 @@ public abstract class WWW extends Board {
         HttpGet req = new HttpGet(link);
         if(referer != null && !referer.equals("")) req.setHeader("Referer", referer);
         if (lastMod != null) req.setHeader("If-Modified-Since", lastMod);
+        req.setHeader("Accept", "*/*");
 
         int statusCode;
         HttpResponse res = null;
