@@ -12,5 +12,5 @@ public abstract class Board {
     public abstract InputStream getMedia(MediaPost h) throws ContentGetException;
     public abstract Page getPage(int pageNum, String lastMod) throws ContentGetException, ContentParseException;
     public abstract Topic getThread(int threadNum, String lastMod) throws ContentGetException, ContentParseException;
-    public abstract Page getAllThreads(String lastMod) throws ContentGetException;
+    public abstract Page getAllThreads(String lastMod) throws ContentGetException, ContentParseException;
 }

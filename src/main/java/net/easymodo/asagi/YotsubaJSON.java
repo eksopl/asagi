@@ -103,6 +103,10 @@ public class YotsubaJSON extends Yotsuba {
             throw new ContentGetException("API returned invalid JSON", ex.getCause());
         }
 
+        if (topicJson == null) {
+            throw new ContentParseException("topicJSON returned null for " + threadNum);
+        }
+
         for (PostJson pj : topicJson.getPosts()) {
             if (pj.getResto() == 0) {
                 if (t == null) {
@@ -123,7 +127,7 @@ public class YotsubaJSON extends Yotsuba {
         return t;
     }
 
-    public Page getAllThreads(String lastMod) throws ContentGetException {
+    public Page getAllThreads(String lastMod) throws ContentGetException, ContentParseException {
         String[] wgetReply = this.wgetText(this.linkThreads(), lastMod);
         String threadsText = wgetReply[0];
         String newLastMod = wgetReply[1];
@@ -136,6 +140,10 @@ public class YotsubaJSON extends Yotsuba {
             topicsJson = GSON.fromJson(threadsText, TopicListJson.Page[].class);
         } catch (JsonSyntaxException ex) {
             throw new ContentGetException("API returned invalid JSON", ex.getCause());
+        }
+
+        if (topicsJson == null) {
+            throw new ContentParseException("topicsJSON returned null");
         }
 
         for (TopicListJson.Page page : topicsJson) {

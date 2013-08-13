@@ -178,7 +178,7 @@ public class YotsubaHTML extends Yotsuba {
     }
 
     @Override
-    public Page getAllThreads(String lastMod) throws ContentGetException {
+    public Page getAllThreads(String lastMod) throws ContentGetException, ContentParseException {
         throw new UnsupportedOperationException();
     }
 
