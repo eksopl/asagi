@@ -1,6 +1,7 @@
 package net.easymodo.asagi;
 
 import net.easymodo.asagi.exception.ContentGetException;
+import net.easymodo.asagi.exception.ContentParseException;
 import net.easymodo.asagi.exception.HttpGetException;
 import net.easymodo.asagi.model.Page;
 import net.easymodo.asagi.model.Topic;
@@ -55,6 +56,10 @@ public class DumperJSON extends AbstractDumper {
                     continue;
                 } catch (ContentGetException e) {
                     debug(WARN, "Error getting thread list: " + e.getMessage());
+                    sleepRemaining(startTime);
+                    continue;
+                } catch (ContentParseException e) {
+                    debug(WARN, "Error parsing thread list: " + e.getMessage());
                     sleepRemaining(startTime);
                     continue;
                 }
