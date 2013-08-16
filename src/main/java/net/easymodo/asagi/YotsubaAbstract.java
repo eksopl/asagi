@@ -84,7 +84,8 @@ public abstract class YotsubaAbstract extends WWW {
         // Admin-Mod-Dev quotelinks
         text = text.replaceAll("<span class=\"capcodeReplies\"><span style=\"font-size: smaller;\"><span style=\"font-weight: bold;\">(?:Administrator|Moderator|Developer) Repl(?:y|ies):</span>.*?</span><br></span>", "");
         // Non-public tags
-        text = text.replaceAll("\\[(banned|moot)]", "[$1:lit]");
+        text = text.replaceAll("\\[(banned|moot|spoiler|code)]", "[$1:lit]");
+        text = text.replaceAll("\\[/(banned|moot|spoiler|code)]", "[/$1:lit]");
         // Comment too long, also EXIF tag toggle
         text = text.replaceAll("<span class=\"abbr\">.*?</span>", "");
         // EXIF data
@@ -95,25 +96,23 @@ public abstract class YotsubaAbstract extends WWW {
         text = text.replaceAll("<div style=\"padding: 5px;margin-left: \\.5em;border-color: #faa;border: 2px dashed rgba\\(255,0,0,\\.1\\);border-radius: 2px\">(.*?)</div>", "[moot]$1[/moot]");
         // bold text
         text = text.replaceAll("<(?:b|strong)>(.*?)</(?:b|strong)>", "[b]$1[/b]");
+        // code tags
+        text = text.replaceAll("<pre[^>]*>", "[code]");
+        text = text.replaceAll("</pre>", "[/code]");
         // > implying I'm quoting someone
         text = text.replaceAll("<font class=\"unkfunc\">(.*?)</font>", "$1");
         text = text.replaceAll("<span class=\"quote\">(.*?)</span>", "$1");
-        // Dead Quotes
-        text = text.replaceAll("<span class=\"deadlink\">(.*?)</span>", "$1");
-        text = text.replaceAll("<span class=\"quote deadlink\">(.*?)</span>", "$1");
+        text = text.replaceAll("<span class=\"(?:[^\"]*)?deadlink\">(.*?)</span>", "$1");
         // Links
         text = text.replaceAll("<a[^>]*>(.*?)</a>", "$1");
-        // Old Spoilers (start)
+        // old spoilers
         text = text.replaceAll("<span class=\"spoiler\"[^>]*>", "[spoiler]");
-        // Old Spoilers (end)
         text = text.replaceAll("</span>", "[/spoiler]");
-        // Spoilers (start)
+        // new spoilers
         text = text.replaceAll("<s>", "[spoiler]");
-        // Spoilers (end)
         text = text.replaceAll("</s>", "[/spoiler]");
-        // Newlines
+        // new line/wbr
         text = text.replaceAll("<br\\s*/?>", "\n");
-        // WBR
         text = text.replaceAll("<wbr>", "");
 
         return this.cleanSimple(text);
