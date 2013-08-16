@@ -84,8 +84,7 @@ public abstract class YotsubaAbstract extends WWW {
         // Admin-Mod-Dev quotelinks
         text = text.replaceAll("<span class=\"capcodeReplies\"><span style=\"font-size: smaller;\"><span style=\"font-weight: bold;\">(?:Administrator|Moderator|Developer) Repl(?:y|ies):</span>.*?</span><br></span>", "");
         // Non-public tags
-        text = text.replaceAll("\\[(banned|moot|spoiler|code)]", "[$1:lit]");
-        text = text.replaceAll("\\[/(banned|moot|spoiler|code)]", "[/$1:lit]");
+        text = text.replaceAll("\\[(/?(banned|moot|spoiler|code))]", "[$1:lit]");
         // Comment too long, also EXIF tag toggle
         text = text.replaceAll("<span class=\"abbr\">.*?</span>", "");
         // EXIF data
