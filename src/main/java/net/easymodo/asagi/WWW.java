@@ -16,7 +16,6 @@ import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.CoreProtocolPNames;
 import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpProtocolParams;
-import org.apache.http.params.CoreProtocolPNames;
 import org.apache.http.params.HttpParams;
 import org.apache.http.util.EntityUtils;
 
@@ -61,7 +60,7 @@ public abstract class WWW extends Board {
     }
 
     static {
-    	HttpParams params = new BasicHttpParams();
+        HttpParams params = new BasicHttpParams();
         HttpConnectionParams.setSoTimeout(params, 5000);
         HttpConnectionParams.setConnectionTimeout(params, 5000);
         params.setParameter(ClientPNames.COOKIE_POLICY, CookiePolicy.IGNORE_COOKIES);
