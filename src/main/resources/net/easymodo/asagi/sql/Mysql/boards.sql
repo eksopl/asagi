@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS "%%BOARD%%" (
   "comment" text,
   "delpass" tinytext,
   "sticky" bool NOT NULL DEFAULT '0',
+  "locked" bool NOT NULL DEFAULT '0',
   "poster_hash" varchar(8),
   "poster_country" varchar(2),
   "exif" text,
@@ -44,7 +45,7 @@ CREATE TABLE IF NOT EXISTS "%%BOARD%%" (
   INDEX email_index ("email"),
   INDEX poster_ip_index ("poster_ip"),
   INDEX timestamp_index ("timestamp")
-) engine=InnoDB	 CHARSET=%%CHARSET%%;
+) engine=InnoDB CHARSET=%%CHARSET%%;
 
 CREATE TABLE IF NOT EXISTS "%%BOARD%%_deleted" LIKE "%%BOARD%%";
 

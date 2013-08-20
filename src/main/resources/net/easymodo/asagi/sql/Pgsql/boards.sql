@@ -92,6 +92,7 @@ CREATE TABLE %%BOARD%% (
   comment text,
   delpass text,
   sticky boolean DEFAULT false NOT NULL,
+  locked boolean DEFAULT false NOT NULL,
   poster_hash character varying(8),
   poster_country character varying(2),
   exif text,

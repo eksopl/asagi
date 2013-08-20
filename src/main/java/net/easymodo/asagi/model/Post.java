@@ -27,10 +27,10 @@ public class Post {
     private String comment;
     private String delpass;
     private boolean sticky;
+    private boolean closed;
     private String posterHash;
     private String posterCountry;
     private String exif;
-    
     private String link;
     private String type;
     private boolean omitted;
@@ -66,7 +66,7 @@ public class Post {
     public void setThreadNum(int threadNum) {
         this.threadNum = threadNum;
     }
-    
+
     public boolean isOp() {
         return op;
     }
@@ -106,11 +106,11 @@ public class Post {
     public void setPreviewH(int previewH) {
         this.previewH = previewH;
     }
-    
+
     public int getMediaId() {
         return mediaId;
     }
-    
+
     public void setMediaId(int mediaId) {
         this.mediaId = mediaId;
     }
@@ -234,7 +234,15 @@ public class Post {
     public void setSticky(boolean sticky) {
         this.sticky = sticky;
     }
-    
+
+    public boolean isClosed() {
+        return closed;
+    }
+
+    public void setClosed(boolean closed) {
+        this.closed = closed;
+    }
+
     public String getPosterHash() {
         return posterHash;
     }
@@ -242,7 +250,7 @@ public class Post {
     public void setPosterHash(String posterHash) {
         this.posterHash = posterHash;
     }
-    
+
     public String getPosterCountry() {
         return posterCountry;
     }
@@ -250,7 +258,7 @@ public class Post {
     public void setPosterCountry(String posterCountry) {
         this.posterCountry = posterCountry;
     }
-    
+
     public String getExif() {
         return exif;
     }

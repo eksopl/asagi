@@ -31,8 +31,9 @@ public class YotsubaHTML extends YotsubaAbstract {
     private static final Pattern emailPattern;
     private static final Pattern commentPattern;
     private static final Pattern stickyPattern;
-    private static final Pattern omittedPattern;
+    private static final Pattern closedPattern;
 
+    private static final Pattern omittedPattern;
     private static final Pattern omPostsPattern;
     private static final Pattern omImagesPattern;
 
@@ -66,6 +67,7 @@ public class YotsubaHTML extends YotsubaAbstract {
         String datePatString = "<span \\s class=\"dateTime\" \\s data-utc=\"([0-9]+)\">";
         String commentPatString = "<blockquote \\s class=\"postMessage\" [^>]*>(.*?)</blockquote>";
         String stickyPatString = "<img \\s src=\"[^\"]*\" \\s alt=\"Sticky\" \\s title=\"Sticky\" [^>]*>";
+        String closedPatString = "<img \\s src=\"[^\"]*\" \\s alt=\"Closed\" \\s title=\"Closed\" [^>]*>";
 
         String omittedPatString = "<span \\s class=\"abbr\">Comment \\s too \\s long";
         String omPostsPatString = "<span \\s class=\"info\">\\s*<strong>(\\d*) \\s posts \\s omitted";
@@ -77,6 +79,7 @@ public class YotsubaHTML extends YotsubaAbstract {
         datePattern = Pattern.compile(datePatString, Pattern.COMMENTS | Pattern.DOTALL);
         commentPattern = Pattern.compile(commentPatString, Pattern.COMMENTS | Pattern.DOTALL);
         stickyPattern = Pattern.compile(stickyPatString, Pattern.COMMENTS | Pattern.DOTALL);
+        closedPattern = Pattern.compile(closedPatString, Pattern.COMMENTS | Pattern.DOTALL);
 
         omittedPattern = Pattern.compile(omittedPatString, Pattern.COMMENTS | Pattern.DOTALL);
         omPostsPattern = Pattern.compile(omPostsPatString, Pattern.COMMENTS | Pattern.DOTALL);
@@ -114,7 +117,7 @@ public class YotsubaHTML extends YotsubaAbstract {
     public Post newYotsubaPost(String link, String mediaOrig, boolean spoiler,
             String filesize, int width, int height, String filename, int tWidth,
             int tHeight, String md5, int num, String title, String email,
-            String name, String trip, String capcode, long dateUtc, boolean sticky,
+            String name, String trip, String capcode, long dateUtc, boolean sticky, boolean closed,
             String comment, boolean omitted, int threadNum, String posterHash, String posterCountry) throws ContentParseException
     {
         String type = "";
@@ -183,6 +186,7 @@ public class YotsubaHTML extends YotsubaAbstract {
         post.setSpoiler(spoiler);
         post.setDeleted(false);
         post.setSticky(sticky);
+        post.setClosed(closed);
         post.setCapcode(capcode);
         post.setPosterHash(posterHash);
         post.setPosterCountry(posterCountry);
@@ -287,13 +291,17 @@ public class YotsubaHTML extends YotsubaAbstract {
         mat = stickyPattern.matcher(text);
         if(mat.find()) sticky  = true;
 
+        boolean closed = false;
+        mat = closedPattern.matcher(text);
+        if (mat.find()) closed = true;
+
         boolean omitted = false;
         mat = omittedPattern.matcher(text);
         if(mat.find()) omitted  = true;
 
         return this.newYotsubaPost(link, null, spoiler, fileSize, width,
                 height, fileName, tWidth, tHeight, md5b64, num, title, email,
-                name, trip, capcode, dateUtc, sticky, comment, omitted, threadNum, uid, country);
+                name, trip, capcode, dateUtc, sticky, closed, comment, omitted, threadNum, uid, country);
     }
 
     public String linkPage(int pageNum) {
