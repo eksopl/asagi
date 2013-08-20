@@ -91,8 +91,8 @@ public abstract class SQL implements DB {
                     "INSERT INTO \"%s\"" +
                     "  (poster_ip, num, subnum, thread_num, op, timestamp, timestamp_expired, preview_orig, preview_w, preview_h, " +
                     "  media_filename, media_w, media_h, media_size, media_hash, media_orig, spoiler, deleted, " +
-                    "  capcode, email, name, trip, title, comment, delpass, sticky, poster_hash, poster_country, exif) " +
-                    "    SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? " +
+                    "  capcode, email, name, trip, title, comment, delpass, sticky, locked, poster_hash, poster_country, exif) " +
+                    "    SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? " +
                     "    WHERE NOT EXISTS (SELECT 1 FROM \"%s\" WHERE num = ? AND subnum = ?)" +
                     "      AND NOT EXISTS (SELECT 1 FROM \"%s_deleted\" WHERE num = ? AND subnum = ?)",
                     this.table, this.table, this.table);
@@ -100,7 +100,7 @@ public abstract class SQL implements DB {
         this.updateQuery =
                 String.format(
                         "UPDATE \"%s\" SET comment = ?, deleted = ?, timestamp_expired = ?, media_filename = COALESCE(?, media_filename)," +
-                        "  sticky = (? OR sticky) WHERE num = ? AND subnum = ?",
+                        "  sticky = (? OR sticky), locked = (? or locked) WHERE num = ? AND subnum = ?",
                         this.table);
 
         this.updateDeletedQuery = String.format("UPDATE \"%s\" SET deleted = ?, timestamp_expired = ? WHERE num = ? AND subnum = ?",
@@ -214,6 +214,7 @@ public abstract class SQL implements DB {
                 updateStmt.setInt(c++, post.getDateExpired());
                 updateStmt.setString(c++,post.getMediaFilename());
                 updateStmt.setBoolean(c++, post.isSticky());
+                updateStmt.setBoolean(c++, post.isClosed());
                 updateStmt.setInt(c++, post.getNum());
                 updateStmt.setInt(c, post.getSubnum());
                 updateStmt.addBatch();
@@ -245,6 +246,7 @@ public abstract class SQL implements DB {
                 insertStmt.setString(c++, post.getComment());
                 insertStmt.setString(c++, post.getDelpass());
                 insertStmt.setBoolean(c++, post.isSticky());
+                insertStmt.setBoolean(c++, post.isClosed());
                 insertStmt.setString(c++, post.getPosterHash());
                 insertStmt.setString(c++, post.getPosterCountry());
                 insertStmt.setString(c++, post.getExif());

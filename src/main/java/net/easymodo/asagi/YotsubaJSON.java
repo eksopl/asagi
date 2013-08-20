@@ -214,6 +214,7 @@ public class YotsubaJSON extends Yotsuba {
         p.setSpoiler(pj.isSpoiler());
         p.setDeleted(false);
         p.setSticky(pj.isSticky());
+        p.setClosed(pj.isClosed());
         p.setCapcode(capcode);
         p.setPosterHash(posterHash);
         p.setPosterCountry(posterCountry);
