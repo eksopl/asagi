@@ -1,14 +1,12 @@
 # Asagi
 
-Asagi is a reimplementation of Fuuka's dumper side in Java. It allows you to dump and archive posts, images and all relevant data from imageboards into a local database and local image store (at the moment, only 4chan is supported).
-
-To provide a frontend for said data (providing a web interface to use it as an archive is the usual reason to use a program like this to begin with), you'll have to use [fuuka](/eksopl/fuuka) or even [foolfuuka](/FoOlRulez/FoOlFuuka). 
+[Asagi](http://eksopl.github.io/asagi/) is a reimplementation of Fuuka's dumper side in Java. It allows you to dump and archive posts, images and all relevant data from imageboards into a local database and local image store (at the moment, only 4chan is supported).
 
 The first goal was to reach feature parity with Fuuka's dumper. New features and enhancements are to follow next.
 
-<hr>
-Asagi is now mostly ready for public consumption. However, Asagi is storing image files and thumbnails according to a new directory configuration that doesn't save duplicates, so it's only currently compatible with foolfuuka, not vanilla fuuka, because fuuka's database schema is still behind. You can [download release 0.2 here](/eksopl/asagi/downloads) (released Aug 30 2012).
-<hr>
+To provide a frontend for said data (providing a web interface to use it as an archive is the usual reason to use a program like this to begin with), you'll have to use [Fuuka](/eksopl/fuuka) or even [FoolFuuka](/FoolCode/FoolFuuka). Currently, only FoolFuuka is supported, since Asagi's schema and directory structure have diverged slightly from Fuuka's (the biggest change is that it stores image files and thumbnails according to a new directory configuration that doesn't save duplicates).
+
+Asagi has been running successfully in a production environment for up to some years by some sites. The only currently supported frontend (FoolFuuka) usually handles downloading a compiled Asagi binary for you, but you can [download Asagi releases manually](https://github.com/eksopl/asagi/releases/), if you wish.
 
 Its short term goals are to:
 
