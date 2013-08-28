@@ -13,7 +13,7 @@
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
 
-    <title>Asagi by eksopl</title>
+    <title>Asagi Imageboard Dumper</title>
   </head>
 
   <body>
@@ -28,15 +28,15 @@
     <div id="content-wrapper">
       <div class="inner clearfix">
         <section id="main-content">
-          <p>Asagi is a reimplementation of Fuuka's dumper side in Java. It allows you to dump and archive posts, images and all relevant data from imageboards into a local database and local image store (at the moment, only 4chan is supported).</p>
-
-<p>To provide a frontend for said data (providing a web interface to use it as an archive is the usual reason to use a program like this to begin with), you'll have to use <a href="/eksopl/fuuka">fuuka</a> or even <a href="/FoOlRulez/FoOlFuuka">foolfuuka</a>. </p>
-
+          <p>Asagi is a reimplementation of <a href="https://github.com/eksopl/fuuka">Fuuka</a>'s dumper side in Java. It allows you to dump and archive posts, images and all relevant data from imageboards into a local database and local image store (at the moment, only <a href="https://www.4chan.org">4chan</a> is supported).</p>
+          
 <p>The first goal was to reach feature parity with Fuuka's dumper. New features and enhancements are to follow next.</p>
 
-<hr><p>Asagi is now mostly ready for public consumption. However, Asagi is storing image files and thumbnails according to a new directory configuration that doesn't save duplicates, so it's only currently compatible with foolfuuka, not vanilla fuuka, because fuuka's database schema is still behind. You can <a href="/eksopl/asagi/downloads">download release 0.2 here</a> (released Aug 30 2012).</p>
+<p>To provide a frontend for said data (providing a web interface to use it as an archive is the usual reason to use a program like this to begin with), you'll have to use <a href="https://github.com/eksopl/fuuka">Fuuka</a> or even <a href="https://github.com/FoolCode/FoolFuuka">FoolFuuka</a>. Currently, only FoolFuuka is supported, since Asagi's schema and directory structure have diverged slightly from Fuuka's (the biggest change is that it stores image files and thumbnails according to a new directory configuration that doesn't save duplicates).</p>
 
-<hr><p>Its short term goals are to:</p>
+<p>Asagi has been running successfully in a production environment for up to some years by some sites. The only currently supported frontend (FoolFuuka) usually handles downloading a compiled Asagi binary for you, but you can <a href="#download">download Asagi releases</a> below manually from GitHub, if you wish.</p>
+
+<p>Its short term goals are to:</p>
 
 <ul>
 <li>Be efficient</li>
@@ -94,17 +94,13 @@
 <h3>
 <a name="i-have-a-question-not-listed-here" class="anchor" href="#i-have-a-question-not-listed-here"><span class="octicon octicon-link"></span></a>I have a question not listed here</h3>
 
-<p>You can email eksopl at gmail with your question. If it's a bug, please use the <a href="/eksopl/asagi/issues">issue tracker</a> instead.</p>
+<p>You can email eksopl at gmail with your question. If it's a bug, please use the <a href="https://github.com/eksopl/asagi/issues">issue tracker</a> instead.</p>
         </section>
 
         <aside id="sidebar">
-          <a href="https://github.com/eksopl/asagi/zipball/master" class="button">
+          <a href="https://github.com/eksopl/asagi/releases/" class="button">
             <small>Download</small>
-            .zip file
-          </a>
-          <a href="https://github.com/eksopl/asagi/tarball/master" class="button">
-            <small>Download</small>
-            .tar.gz file
+             latest release
           </a>
 
           <p class="repo-owner"><a href="https://github.com/eksopl/asagi"></a> is maintained by <a href="https://github.com/eksopl">eksopl</a>.</p>
