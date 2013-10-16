@@ -93,6 +93,8 @@ public abstract class YotsubaAbstract extends WWW {
         text = text.replaceAll("<(?:b|strong) style=\"color:\\s*red;\">(.*?)</(?:b|strong)>", "[banned]$1[/banned]");
         // moot text
         text = text.replaceAll("<div style=\"padding: 5px;margin-left: \\.5em;border-color: #faa;border: 2px dashed rgba\\(255,0,0,\\.1\\);border-radius: 2px\">(.*?)</div>", "[moot]$1[/moot]");
+        // fortune text
+        text = text.replaceAll("<span class=\"fortune\" style=\"color:(.*?)\"><br><br><b>(.*?)</b></span>", "\n\n[fortune color=\"$1\"]$2[/fortune]");
         // bold text
         text = text.replaceAll("<(?:b|strong)>(.*?)</(?:b|strong)>", "[b]$1[/b]");
         // code tags
