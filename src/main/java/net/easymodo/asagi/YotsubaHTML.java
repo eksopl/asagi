@@ -99,9 +99,9 @@ public class YotsubaHTML extends Yotsuba {
     public static Map<String,String> getBoardLinks(String boardName) {
         Map<String,String> boardInfo = new HashMap<String,String>();
         boardInfo.put("link", "http://boards.4chan.org/" + boardName);
-        boardInfo.put("imgLink", "http://images.4chan.org/" + boardName);
-        boardInfo.put("previewLink", "http://0.thumbs.4chan.org/" + boardName);
         boardInfo.put("html", "http://boards.4chan.org/" + boardName + "/");
+        boardInfo.put("imageLink", "http://i.4cdn.org/" + boardName);
+        boardInfo.put("thumbLink", "http://0.t.4cdn.org/" + boardName);
         return Collections.unmodifiableMap(boardInfo);
     }
 
@@ -354,7 +354,7 @@ public class YotsubaHTML extends Yotsuba {
             throw new ContentParseException("Could not create post " + num , e);
         }
 
-        String exif = this.cleanSimple(this.parseExif(comment));
+        String exif = this.cleanSimple(this.parseMeta(comment));
 
         Post post = new Post();
         post.setLink(link);

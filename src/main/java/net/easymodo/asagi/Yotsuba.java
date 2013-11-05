@@ -43,13 +43,17 @@ public abstract class Yotsuba extends WWW {
             }
         }
     }
+
+    protected static final Pattern drawPattern;
     protected static final Pattern exifPattern;
     protected static final Pattern exifDataPattern;
 
     static {
+        String drawPatString = "<small><b>Oekaki \\s Post</b> \\s \\(Time: \\s (.*?), \\s Painter: \\s (.*?)(?:, \\s Source: \\s (.*?))?(?:, \\s Animation: \\s (.*?))?\\)</small>";
         String exifPatString = "<table \\s class=\"exif\"[^>]*>(.*)</table>";
         String exifDataPatString = "<tr><td>(.*?)</td><td>(.*?)</td></tr>";
 
+        drawPattern = Pattern.compile(drawPatString, Pattern.COMMENTS | Pattern.DOTALL);
         exifPattern = Pattern.compile(exifPatString, Pattern.COMMENTS | Pattern.DOTALL);
         exifDataPattern = Pattern.compile(exifDataPatString, Pattern.COMMENTS | Pattern.DOTALL);
     }
@@ -61,7 +65,7 @@ public abstract class Yotsuba extends WWW {
         if (h.getPreview() == null)
             return null;
 
-        return this.wget(this.boardLinks.get("previewLink") + "/thumb/" + h.getPreview());
+        return this.wget(this.boardLinks.get("thumbLink") + "/thumb/" + h.getPreview());
     }
 
     @Override
@@ -69,7 +73,7 @@ public abstract class Yotsuba extends WWW {
         if (h.getMedia() == null)
             return null;
 
-        return this.wget(this.boardLinks.get("imgLink") + "/src/" + h.getMedia());
+        return this.wget(this.boardLinks.get("imageLink") + "/src/" + h.getMedia());
     }
 
     public int parseDate(int dateUtc) {
@@ -100,6 +104,8 @@ public abstract class Yotsuba extends WWW {
         text = text.replaceAll("<span class=\"abbr\">.*?</span>", "");
         // EXIF data
         text = text.replaceAll("<table class=\"exif\"[^>]*>.*?</table>", "");
+        // DRAW data
+        text = text.replaceAll("<br><br><small><b>Oekaki Post</b>.*?</small>", "");
         // Banned/Warned text
         text = text.replaceAll("<(?:b|strong) style=\"color:\\s*red;\">(.*?)</(?:b|strong)>", "[banned]$1[/banned]");
         // moot text
@@ -130,11 +136,10 @@ public abstract class Yotsuba extends WWW {
         return this.cleanSimple(text);
     }
 
-    public String parseExif(String text) {
+    public String parseMeta(String text) {
         if (text == null) return null;
 
         Matcher exif = exifPattern.matcher(text);
-
         if (exif.find()) {
             String data = exif.group(1);
             // remove empty rows
@@ -151,6 +156,16 @@ public abstract class Yotsuba extends WWW {
 
             if (exifJson.size() > 0)
                 return GSON.toJson(exifJson);
+        }
+
+        Matcher draw = drawPattern.matcher(text);
+        if (draw.find()) {
+            Map<String, String> drawJson = new HashMap<String, String>();
+            drawJson.put("Time", draw.group(1));
+            drawJson.put("Painter", draw.group(2));
+            drawJson.put("Source", draw.group(3) != null ? this.doClean(draw.group(3)) : null);
+
+            return GSON.toJson(drawJson);
         }
 
         return null;
