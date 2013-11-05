@@ -29,10 +29,10 @@ public class YotsubaJSON extends YotsubaAbstract {
 
     private static Map<String,String> getBoardLinks(String boardName) {
         Map<String,String> boardInfo = new HashMap<String,String>();
-        boardInfo.put("link", "http://api.4chan.org/" + boardName);
+        boardInfo.put("link", "http://a.4cdn.org/" + boardName);
         boardInfo.put("html", "http://boards.4chan.org/" + boardName + "/");
-        boardInfo.put("imgLink", "http://images.4chan.org/" + boardName);
-        boardInfo.put("previewLink", "http://0.thumbs.4chan.org/" + boardName);
+        boardInfo.put("imageLink", "http://i.4cdn.org/" + boardName);
+        boardInfo.put("thumbLink", "http://1.t.4cdn.org/" + boardName);
         return Collections.unmodifiableMap(boardInfo);
     }
 
@@ -201,7 +201,7 @@ public class YotsubaJSON extends YotsubaAbstract {
         p.setCapcode(capcode);
         p.setPosterHash(posterHash);
         p.setPosterCountry(posterCountry);
-        p.setExif(this.cleanSimple(this.parseExif(pj.getCom())));
+        p.setExif(this.cleanSimple(this.parseMeta(pj.getCom())));
 
         return p;
     }
