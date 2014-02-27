@@ -119,6 +119,7 @@ public abstract class Yotsuba extends WWW {
         text = text.replaceAll("</pre>", "[/code]");
         // math tags
         text = text.replaceAll("<span class=\"math\">(.*?)</span>", "[math]$1[/math]");
+        text = text.replaceAll("<div class=\"math\">(.*?)</div>", "[eqn]$1[/eqn]");
         // > implying I'm quoting someone
         text = text.replaceAll("<font class=\"unkfunc\">(.*?)</font>", "$1");
         text = text.replaceAll("<span class=\"quote\">(.*?)</span>", "$1");
