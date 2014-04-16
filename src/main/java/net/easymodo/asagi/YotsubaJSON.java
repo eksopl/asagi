@@ -42,7 +42,7 @@ public class YotsubaJSON extends YotsubaAbstract {
 
     private String linkThread(int thread) {
         if(thread != 0) {
-            return this.boardLinks.get("link") + "/res/" + thread + ".json";
+            return this.boardLinks.get("link") + "/thread/" + thread + ".json";
         } else {
             return this.linkPage(0);
         }

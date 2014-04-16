@@ -314,7 +314,7 @@ public class YotsubaHTML extends YotsubaAbstract {
 
     public String linkThread(int thread) {
         if(thread != 0) {
-            return this.boardLinks.get("link") + "/res/" + thread;
+            return this.boardLinks.get("link") + "/thread/" + thread;
         } else {
             return this.linkPage(0);
         }
