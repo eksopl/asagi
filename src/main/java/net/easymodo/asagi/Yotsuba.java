@@ -65,7 +65,7 @@ public abstract class Yotsuba extends WWW {
         if (h.getPreview() == null)
             return null;
 
-        return this.wget(this.boardLinks.get("thumbLink") + "/thumb/" + h.getPreview());
+        return this.wget(this.boardLinks.get("thumbLink") + "/" + h.getPreview());
     }
 
     @Override
@@ -73,7 +73,7 @@ public abstract class Yotsuba extends WWW {
         if (h.getMedia() == null)
             return null;
 
-        return this.wget(this.boardLinks.get("imageLink") + "/src/" + h.getMedia());
+        return this.wget(this.boardLinks.get("imageLink") + "/" + h.getMedia());
     }
 
     public int parseDate(int dateUtc) {
