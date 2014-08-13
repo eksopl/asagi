@@ -194,6 +194,10 @@ public class YotsubaJSON extends Yotsuba {
         String posterCountry = pj.getCountry();
         if (posterCountry != null && (posterCountry.equals("XX") || posterCountry.equals("A1"))) posterCountry = null;
 
+        // locked and archived logic
+        boolean locked = pj.isClosed();
+        if (pj.isArchived() && pj.isClosed()) locked = false;
+
         p.setType(pj.getExt());
         p.setMediaHash(pj.getMd5());
         p.setMediaSize(pj.getFsize());
@@ -214,7 +218,7 @@ public class YotsubaJSON extends Yotsuba {
         p.setSpoiler(pj.isSpoiler());
         p.setDeleted(false);
         p.setSticky(pj.isSticky());
-        p.setClosed(pj.isClosed());
+        p.setClosed(locked);
         p.setCapcode(capcode);
         p.setPosterHash(posterHash);
         p.setPosterCountry(posterCountry);
