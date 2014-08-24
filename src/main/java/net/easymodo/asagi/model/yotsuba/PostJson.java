@@ -6,6 +6,7 @@ public class PostJson {
     private int resto;
     private boolean sticky;
     private boolean closed;
+    private boolean archived;
     private String now;
     private int time;
     private String name;
@@ -63,6 +64,14 @@ public class PostJson {
 
     public void setClosed(boolean closed) {
         this.closed = closed;
+    }
+
+    public boolean isArchived() {
+        return archived;
+    }
+
+    public void setArchived(boolean archived) {
+        this.archived = archived;
     }
 
     public String getNow() {
