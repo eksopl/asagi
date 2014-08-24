@@ -13,8 +13,6 @@ import net.easymodo.asagi.model.yotsuba.TopicJson;
 import net.easymodo.asagi.model.yotsuba.TopicListJson;
 import net.easymodo.asagi.settings.BoardSettings;
 import org.apache.http.annotation.ThreadSafe;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.InputStream;
 import java.lang.reflect.Type;
@@ -277,8 +275,6 @@ public class YotsubaJSON extends WWW {
         // SOPA spoilers
         //text = text.replaceAll("<span class=\"spoiler\"[^>]*>(.*?)</spoiler>(</span>)?", "$1");
 
-        // Admin-Mod-Dev quotelinks
-        text = text.replaceAll("<span class=\"capcodeReplies\"><span style=\"font-size: smaller;\"><span style=\"font-weight: bold;\">(?:Administrator|Moderator|Developer) Repl(?:y|ies):</span>.*?</span><br></span>", "");
         // Non-public tags
         text = text.replaceAll("\\[(banned|moot)]", "[$1:lit]");
         // Comment too long, also EXIF tag toggle
