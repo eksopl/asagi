@@ -71,9 +71,6 @@ public class YotsubaHTML extends YotsubaAbstract {
         String omPostsPatString = "<span \\s class=\"info\">\\s*<strong>(\\d*) \\s posts \\s omitted";
         String omImagesPatString = "<em>\\((\\d*) \\s have \\s images\\)</em>";
 
-        String exifPatString = "<table \\s class=\"exif\"[^>]*>(.*)</table>";
-        String exifDataPatString = "<tr><td>(.*?)</td><td>(.*?)</td></tr>";
-
         numPattern = Pattern.compile(numPatString, Pattern.COMMENTS | Pattern.DOTALL);
         titlePattern = Pattern.compile(titlePatString, Pattern.COMMENTS | Pattern.DOTALL);
         emailPattern = Pattern.compile(emailPatString, Pattern.COMMENTS | Pattern.DOTALL);
