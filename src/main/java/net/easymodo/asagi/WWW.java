@@ -59,7 +59,7 @@ public abstract class WWW extends Board {
     }
 
     static {
-    	HttpParams params = new BasicHttpParams();
+        HttpParams params = new BasicHttpParams();
         HttpConnectionParams.setSoTimeout(params, 5000);
         HttpConnectionParams.setConnectionTimeout(params, 5000);
         params.setParameter(ClientPNames.COOKIE_POLICY, CookiePolicy.IGNORE_COOKIES);
