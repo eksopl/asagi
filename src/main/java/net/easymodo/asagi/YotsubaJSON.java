@@ -312,9 +312,6 @@ public class YotsubaJSON extends WWW {
         // WBR
         text = text.replaceAll("<wbr>", "");
 
-        // empty after EXIF stripped
-        if(text == "") return null;
-
         return this.cleanSimple(text);
     }
 
@@ -325,6 +322,7 @@ public class YotsubaJSON extends WWW {
 
         if(exif.find()) {
             String data = exif.group(1);
+            // remove empty rows
             data = data.replaceAll("<tr><td colspan=\"2\"></td></tr><tr>", "");
 
             try {
@@ -341,7 +339,7 @@ public class YotsubaJSON extends WWW {
                 if(exifJson.length() > 0)
                     return exifJson.toString();
             } catch(JSONException e) {
-                // nothing
+                // nothing, just return null
             }
         }
 

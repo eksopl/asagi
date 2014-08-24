@@ -168,7 +168,7 @@ public abstract class WWW extends Board {
     }
 
     public String doClean(String text) {
-        if(text == null) return null;
+        if(text == null || text.isEmpty()) return null;
 
         // Replaces &#dddd; HTML entities with the proper Unicode character
         Matcher htmlEscapeMatcher = Pattern.compile("&#(\\d+);").matcher(text);
