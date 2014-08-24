@@ -102,7 +102,7 @@ public abstract class WWW extends Board {
                     } else {
                         try {
                             Thread.sleep(System.currentTimeMillis() - timer);
-                        } catch (InterruptedException e) {
+                        } catch(InterruptedException e) {
                             // w
                         }
                     }
@@ -114,7 +114,7 @@ public abstract class WWW extends Board {
         } catch(IOException e) {
             // Automatically released in case of IOException
             throw new HttpGetException(e);
-        } catch (RuntimeException e) {
+        } catch(RuntimeException e) {
             req.abort();
             throw new HttpGetException(e);
         }
@@ -138,7 +138,7 @@ public abstract class WWW extends Board {
     public InputStream wget(String link) throws HttpGetException {
         try {
             return this.wget(link, "").getEntity().getContent();
-        } catch (IOException e) {
+        } catch(IOException e) {
             throw new HttpGetException(e);
         }
     }

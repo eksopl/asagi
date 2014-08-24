@@ -190,7 +190,7 @@ public class BoardSettings {
     public void initSettings(BoardSettings defaults) {
         try {
             new BeanUtilsNoOverwrite().copyProperties(this, defaults);
-        } catch (Exception e) {
+        } catch(Exception e) {
             throw new AssertionError("Error initing settings in BoardSettings");
         }
     }
@@ -199,7 +199,7 @@ public class BoardSettings {
         try {
             if(BeanUtils.getProperty(this, key) == null)
                 BeanUtils.setProperty(this, key, def);
-        } catch (Exception e) {
+        } catch(Exception e) {
             throw new AssertionError("Error initing settings in BoardSettings");
         }
     }

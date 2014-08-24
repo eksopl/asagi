@@ -74,7 +74,7 @@ public abstract class AbstractDumper {
         for(String arg : args)
             output = output.concat(arg);
 
-        if (level <= debugLevel) {
+        if(level <= debugLevel) {
             System.out.println(preOutput + output);
         }
         if(debugOut != null && level == ERROR) {
@@ -217,8 +217,8 @@ public abstract class AbstractDumper {
                         MediaPost mediaPost = new MediaPost(post.getNum(), post.getThreadNum(), post.isOp(),
                                 post.getPreviewOrig(), post.getMediaOrig(), post.getMediaHash());
 
-                        if (post.getPreviewOrig() != null && fullThumb) {
-                            if (!mediaPreviewUpdates.contains(mediaPost))
+                        if(post.getPreviewOrig() != null && fullThumb) {
+                            if(!mediaPreviewUpdates.contains(mediaPost))
                                 mediaPreviewUpdates.put(mediaPost);
                         }
                         if(post.getMediaOrig() != null && fullMedia) {

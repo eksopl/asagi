@@ -54,11 +54,11 @@ public class DumperJSON extends AbstractDumper {
                         debug(WARN, "threads.json: " + e.getMessage());
                     sleepRemaining(startTime);
                     continue;
-                } catch (ContentGetException e) {
+                } catch(ContentGetException e) {
                     debug(WARN, "Error getting thread list: " + e.getMessage());
                     sleepRemaining(startTime);
                     continue;
-                } catch (ContentParseException e) {
+                } catch(ContentParseException e) {
                     debug(WARN, "Error parsing thread list: " + e.getMessage());
                     sleepRemaining(startTime);
                     continue;

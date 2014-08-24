@@ -61,20 +61,20 @@ public class YotsubaJSON extends YotsubaAbstract {
         PageJson pageJson;
         try {
             pageJson = GSON.fromJson(pageText, PageJson.class);
-        } catch (JsonSyntaxException ex) {
+        } catch(JsonSyntaxException ex) {
             throw new ContentGetException("API returned invalid JSON", ex);
         }
 
         Page p = new Page(pageNum);
         Topic t = null;
 
-        for (TopicJson tj : pageJson.getThreads()) {
-            for (PostJson pj : tj.getPosts()) {
-                if (pj.getResto() == 0) {
+        for(TopicJson tj : pageJson.getThreads()) {
+            for(PostJson pj : tj.getPosts()) {
+                if(pj.getResto() == 0) {
                     t = this.makeThreadFromJson(pj);
                     p.addThread(t);
                 } else {
-                    if (t != null) t.addPost(this.makePostFromJson(pj));
+                    if(t != null) t.addPost(this.makePostFromJson(pj));
                 }
             }
         }
@@ -94,24 +94,24 @@ public class YotsubaJSON extends YotsubaAbstract {
         TopicJson topicJson;
         try {
             topicJson = GSON.fromJson(threadText, TopicJson.class);
-        } catch (JsonSyntaxException ex) {
+        } catch(JsonSyntaxException ex) {
             throw new ContentGetException("API returned invalid JSON", ex);
         }
 
-        if (topicJson == null) {
-            throw new ContentParseException("topicJSON returned null for " + threadNum);
+        if(topicJson == null) {
+            throw new ContentParseException("API returned empty JSON in " + threadNum);
         }
 
-        for (PostJson pj : topicJson.getPosts()) {
-            if (pj.getResto() == 0) {
-                if (t == null) {
+        for(PostJson pj : topicJson.getPosts()) {
+            if(pj.getResto() == 0) {
+                if(t == null) {
                     t = this.makeThreadFromJson(pj);
                     t.setLastMod(newLastMod);
                 } else {
                     throw new ContentParseException("Two OP posts in thread in " + threadNum);
                 }
             } else {
-                if (t != null) {
+                if(t != null) {
                     t.addPost(this.makePostFromJson(pj));
                 } else {
                     throw new ContentParseException("Thread without OP post in " + threadNum);
@@ -133,16 +133,16 @@ public class YotsubaJSON extends YotsubaAbstract {
         TopicListJson.Page[] topicsJson;
         try {
             topicsJson = GSON.fromJson(threadsText, TopicListJson.Page[].class);
-        } catch (JsonSyntaxException ex) {
+        } catch(JsonSyntaxException ex) {
             throw new ContentGetException("API returned invalid JSON", ex);
         }
 
-        if (topicsJson == null) {
-            throw new ContentParseException("topicsJSON returned null");
+        if(topicsJson == null) {
+            throw new ContentParseException("API returned empty JSON in threads.json");
         }
 
-        for (TopicListJson.Page page : topicsJson) {
-            for (TopicListJson.Topic topic : page.getThreads()) {
+        for(TopicListJson.Page page : topicsJson) {
+            for(TopicListJson.Topic topic : page.getThreads()) {
                 Topic t = new Topic(topic.getNo(), 0, 0);
                 t.setLastModTimestamp(topic.getLastModified());
                 t.setLastPage(page.getPage());

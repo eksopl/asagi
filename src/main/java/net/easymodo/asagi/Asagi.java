@@ -51,9 +51,9 @@ public class Asagi {
         try {
             Class<?> sourceBoardClass = Class.forName("net.easymodo.asagi." + sourceEngine);
             sourceBoard = (Board) sourceBoardClass.getConstructor(String.class, BoardSettings.class).newInstance(boardName, bSet);
-        } catch (ClassNotFoundException e) {
+        } catch(ClassNotFoundException e) {
             throw new BoardInitException("Error initializing board engine " + sourceEngine + ", no such engine?");
-        } catch (Exception e) {
+        } catch(Exception e) {
             throw new BoardInitException("Error initializing board engine " + sourceEngine);
         }
 
@@ -116,9 +116,9 @@ public class Asagi {
             Class<?> dumperClass = Class.forName("net.easymodo.asagi." + dumperEngine);
             dumper = (AbstractDumper) dumperClass.getConstructor(String.class, Local.class, Local.class, Board.class, boolean.class, boolean.class, int.class)
                     .newInstance(boardName, topicLocalBoard, mediaLocalBoard, sourceBoard, fullThumb, fullMedia, pageLimbo);
-        } catch (ClassNotFoundException e) {
+        } catch(ClassNotFoundException e) {
             throw new BoardInitException("Error initializing dumper engine " + dumperEngine + ", no such engine?");
-        } catch (Exception e) {
+        } catch(Exception e) {
             throw new BoardInitException("Error initializing dumper engine " + dumperEngine);
         }
         dumper.initDumper(bSet);
