@@ -80,7 +80,7 @@ public abstract class SQL implements DB {
                     "  (poster_ip, num, subnum, thread_num, op, timestamp, preview_orig, preview_w, preview_h, " +
                     "  media_filename, media_w, media_h, media_size, media_hash, media_orig, spoiler, deleted, " +
                     "  capcode, email, name, trip, title, comment, delpass, sticky, locked, poster_hash, poster_country, exif) " +
-                    "    SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? " +
+                    "    SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? " +
                     "    WHERE NOT EXISTS (SELECT 1 FROM \"%s\" WHERE num = ? AND subnum = ?)" +
                     "      AND NOT EXISTS (SELECT 1 FROM \"%s_deleted\" WHERE num = ? AND subnum = ?)",
                     this.table, this.table, this.table);
