@@ -164,6 +164,11 @@ public abstract class WWW extends Board {
             EntityUtils.consumeQuietly(httpResponse.getEntity());
         }
 
+        // we don't need to process empty content
+        if(pageText == null || pageText.equals("")) {
+            throw new ContentGetException("HTTP response returned empty body");
+        }
+
         return new String[] {pageText, newLastMod};
     }
 

@@ -81,8 +81,7 @@ public class YotsubaJSON extends WWW {
         if(h.getPreview() == null)
             return null;
 
-    return this.wget(this.boardLinks.get("previewLink") + "/thumb/"
-                    + h.getPreview());
+        return this.wget(this.boardLinks.get("previewLink") + "/thumb/" + h.getPreview());
     }
 
     @Override
