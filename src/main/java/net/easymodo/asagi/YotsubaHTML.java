@@ -2,11 +2,8 @@ package net.easymodo.asagi;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import net.easymodo.asagi.exception.ContentGetException;
 import net.easymodo.asagi.exception.ContentParseException;
-import net.easymodo.asagi.model.MediaPost;
 import net.easymodo.asagi.model.Page;
 import net.easymodo.asagi.model.Post;
 import net.easymodo.asagi.model.Topic;
@@ -14,7 +11,6 @@ import net.easymodo.asagi.settings.BoardSettings;
 import org.apache.http.annotation.ThreadSafe;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -23,9 +19,7 @@ import java.util.regex.Pattern;
 
 
 @ThreadSafe
-public class Yotsuba extends WWW {
-    private static final Gson GSON = new GsonBuilder().create();
-
+public class YotsubaHTML extends YotsubaAbstract {
     private static final Map<String, Integer> sizeMultipliers;
     private static final Pattern postParsePattern1;
     private static final Pattern postParsePattern2;
@@ -41,9 +35,6 @@ public class Yotsuba extends WWW {
 
     private static final Pattern omPostsPattern;
     private static final Pattern omImagesPattern;
-
-    private static final Pattern exifPattern;
-    private static final Pattern exifDataPattern;
 
     static {
         Map<String, Integer> sizeMuls = new HashMap<String,Integer>();
@@ -93,105 +84,19 @@ public class Yotsuba extends WWW {
         omittedPattern = Pattern.compile(omittedPatString, Pattern.COMMENTS | Pattern.DOTALL);
         omPostsPattern = Pattern.compile(omPostsPatString, Pattern.COMMENTS | Pattern.DOTALL);
         omImagesPattern = Pattern.compile(omImagesPatString, Pattern.COMMENTS | Pattern.DOTALL);
-
-        exifPattern = Pattern.compile(exifPatString, Pattern.COMMENTS | Pattern.DOTALL);
-        exifDataPattern = Pattern.compile(exifDataPatString, Pattern.COMMENTS | Pattern.DOTALL);
     }
 
-    private final Map<String,String> boardLinks;
-
-    public Yotsuba(String boardName, BoardSettings settings) {
-        boardLinks = Yotsuba.getBoardLinks(boardName);
+    public YotsubaHTML(String boardName, BoardSettings settings) {
+        super(YotsubaHTML.getBoardLinks(boardName));
     }
 
     private static Map<String,String> getBoardLinks(String boardName) {
         Map<String,String> boardInfo = new HashMap<String,String>();
         boardInfo.put("link", "http://boards.4chan.org/" + boardName);
+        boardInfo.put("html", "http://boards.4chan.org/" + boardName + "/");
         boardInfo.put("imgLink", "http://images.4chan.org/" + boardName);
         boardInfo.put("previewLink", "http://0.thumbs.4chan.org/" + boardName);
-        boardInfo.put("html", "http://boards.4chan.org/" + boardName + "/");
         return Collections.unmodifiableMap(boardInfo);
-    }
-
-    public String cleanSimple(String text) {
-        return super.doClean(text);
-    }
-
-    public String cleanLink(String text) {
-        return super.doCleanLink(super.doClean(text));
-    }
-
-    public String doClean(String text) {
-        if(text == null) return null;
-
-        // SOPA spoilers
-        //text = text.replaceAll("<span class=\"spoiler\"[^>]*>(.*?)</spoiler>(</span>)?", "$1");
-
-        // Admin-Mod-Dev quotelinks
-        text = text.replaceAll("<span class=\"capcodeReplies\"><span style=\"font-size: smaller;\"><span style=\"font-weight: bold;\">(?:Administrator|Moderator|Developer) Repl(?:y|ies):</span>.*?</span><br></span>", "");
-        // Non-public tags
-        text = text.replaceAll("\\[(banned|moot)]", "[$1:lit]");
-        // Comment too long, also EXIF tag toggle
-        text = text.replaceAll("<span class=\"abbr\">.*?</span>", "");
-        // EXIF data
-        text = text.replaceAll("<table class=\"exif\"[^>]*>.*?</table>", "");
-        // Banned/Warned text
-        text = text.replaceAll("<(?:b|strong) style=\"color:\\s*red;\">(.*?)</(?:b|strong)>", "[banned]$1[/banned]");
-        // moot text
-        text = text.replaceAll("<div style=\"padding: 5px;margin-left: \\.5em;border-color: #faa;border: 2px dashed rgba\\(255,0,0,\\.1\\);border-radius: 2px\">(.*?)</div>", "[moot]$1[/moot]");
-        // bold text
-        text = text.replaceAll("<(?:b|strong)>(.*?)</(?:b|strong)>", "[b]$1[/b]");
-        // > implying I'm quoting someone
-        text = text.replaceAll("<font class=\"unkfunc\">(.*?)</font>", "$1");
-        text = text.replaceAll("<span class=\"quote\">(.*?)</span>", "$1");
-        // Dead Quotes
-        text = text.replaceAll("<span class=\"deadlink\">(.*?)</span>", "$1");
-        text = text.replaceAll("<span class=\"quote deadlink\">(.*?)</span>", "$1");
-        // Links
-        text = text.replaceAll("<a[^>]*>(.*?)</a>", "$1");
-        // Old Spoilers (start)
-        text = text.replaceAll("<span class=\"spoiler\"[^>]*>", "[spoiler]");
-        // Old Spoilers (end)
-        text = text.replaceAll("</span>", "[/spoiler]");
-        // Spoilers (start)
-        text = text.replaceAll("<s>", "[spoiler]");
-        // Spoilers (end)
-        text = text.replaceAll("</s>", "[/spoiler]");
-        // Newlines
-        text = text.replaceAll("<br\\s*/?>", "\n");
-        // WBR
-        text = text.replaceAll("<wbr>", "");
-
-        // empty after EXIF stripped
-        if(text == "") return null;
-
-        return this.cleanSimple(text);
-    }
-
-    public String parseExif(String text) {
-        if(text == null) return null;
-
-        Matcher exif = exifPattern.matcher(text);
-
-        if(exif.find()) {
-            String data = exif.group(1);
-            // remove empty rows
-            data = data.replaceAll("<tr><td colspan=\"2\"></td></tr><tr>", "");
-
-            Map<String, String> exifJson = new HashMap<String, String>();
-            Matcher exifData = exifDataPattern.matcher(data);
-
-            while (exifData.find()) {
-                String key = exifData.group(1);
-                String val = exifData.group(2);
-                exifJson.put(key, val);
-            }
-
-            if (exifJson.size() > 0)
-                return GSON.toJson(exifJson);
-        }
-
-        return null;
     }
 
     public int parseFilesize(String text) {
@@ -287,22 +192,6 @@ public class Yotsuba extends WWW {
         post.setOmitted(omitted);
 
         return post;
-    }
-
-    @Override
-    public InputStream getMediaPreview(MediaPost h) throws ContentGetException {
-        if(h.getPreview() == null)
-            return null;
-
-        return this.wget(this.boardLinks.get("previewLink") + "/thumb/" + h.getPreview());
-    }
-
-    @Override
-    public InputStream getMedia(MediaPost h) throws ContentGetException {
-        if(h.getMedia() == null)
-            return null;
-
-        return this.wget(this.boardLinks.get("imgLink") + "/src/" + h.getMedia());
     }
 
     public Topic parseThread(String text) throws ContentParseException {
