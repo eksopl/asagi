@@ -70,7 +70,7 @@ public class DumperJSON extends AbstractDumper {
                 for(Topic oldTopic : topics.values()) {
                     oldTopic.lock.readLock().lock();
                     int oldTopicNum = oldTopic.getNum();
-                    int oldTopicLastMod = oldTopic.getLastModTimestamp();
+                    long oldTopicLastMod = oldTopic.getLastModTimestamp();
                     oldTopic.lock.readLock().unlock();
 
                     Topic newTopic = threadMap.remove(oldTopicNum);

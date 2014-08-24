@@ -1,29 +1,20 @@
 package net.easymodo.asagi;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import net.easymodo.asagi.model.DeletePost;
-import net.easymodo.asagi.model.Media;
-import net.easymodo.asagi.model.MediaPost;
-import net.easymodo.asagi.model.Page;
-import net.easymodo.asagi.model.Topic;
-import org.apache.http.annotation.ThreadSafe;
-
 import com.google.common.io.ByteStreams;
 import com.sun.jna.Native;
 import com.sun.jna.Platform;
-
+import net.easymodo.asagi.exception.ContentGetException;
+import net.easymodo.asagi.exception.ContentStoreException;
+import net.easymodo.asagi.exception.DBConnectionException;
+import net.easymodo.asagi.model.*;
+import net.easymodo.asagi.posix.Group;
+import net.easymodo.asagi.posix.Posix;
 import net.easymodo.asagi.settings.BoardSettings;
-import net.easymodo.asagi.exception.*;
-import net.easymodo.asagi.posix.*;
+import org.apache.http.annotation.ThreadSafe;
+
+import java.io.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @ThreadSafe
 public class Local extends Board {
@@ -188,7 +179,7 @@ public class Local extends Board {
         this.db.insert(topic);
     }
 
-    public void markDeleted(DeletePost post) throws ContentStoreException {
+    public void markDeleted(DeletedPost post) throws ContentStoreException {
         try{
             this.db.markDeleted(post);
         } catch(DBConnectionException e) {

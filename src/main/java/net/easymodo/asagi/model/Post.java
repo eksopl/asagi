@@ -6,8 +6,7 @@ public class Post {
     private int subnum;
     private int threadNum;
     private boolean op;
-    private int date;
-    private int dateExpired;
+    private long date;
     private String previewOrig;
     private int previewW;
     private int previewH;
@@ -76,20 +75,12 @@ public class Post {
         this.op = op;
     }
 
-    public int getDate() {
+    public long getDate() {
         return date;
     }
 
-    public void setDate(int date) {
+    public void setDate(long date) {
         this.date = date;
-    }
-    
-    public int getDateExpired() {
-        return dateExpired;
-    }
-
-    public void setDateExpired(int dateExpired) {
-        this.dateExpired = dateExpired;
     }
 
     public String getPreviewOrig() {

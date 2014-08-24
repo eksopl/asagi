@@ -1,29 +1,17 @@
 package net.easymodo.asagi;
 
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.SQLRecoverableException;
-import java.sql.Statement;
-
-import net.easymodo.asagi.model.DeletePost;
-import net.easymodo.asagi.model.Media;
-import net.easymodo.asagi.model.MediaPost;
-import net.easymodo.asagi.model.Post;
-import net.easymodo.asagi.model.Topic;
-import org.apache.http.annotation.ThreadSafe;
-
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
-
 import net.easymodo.asagi.exception.BoardInitException;
 import net.easymodo.asagi.exception.ContentGetException;
 import net.easymodo.asagi.exception.ContentStoreException;
 import net.easymodo.asagi.exception.DBConnectionException;
+import net.easymodo.asagi.model.*;
 import net.easymodo.asagi.settings.BoardSettings;
+import org.apache.http.annotation.ThreadSafe;
+
+import java.io.IOException;
+import java.sql.*;
 
 @ThreadSafe
 public abstract class SQL implements DB {
@@ -89,15 +77,15 @@ public abstract class SQL implements DB {
         if(this.insertQuery == null) {
             this.insertQuery = String.format(
                     "INSERT INTO \"%s\"" +
-                    " (poster_ip, num, subnum, thread_num, op, timestamp, timestamp_expired, preview_orig, preview_w, preview_h, media_filename, " +
+                    " (poster_ip, num, subnum, thread_num, op, timestamp, preview_orig, preview_w, preview_h, media_filename, " +
                     " media_w, media_h, media_size, media_hash, media_orig, spoiler, deleted, " +
                     " capcode, email, name, trip, title, comment, delpass, sticky, poster_hash, poster_country, exif) " +
-                    "  SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? " +
+                    "  SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? " +
                     "  WHERE NOT EXISTS (SELECT 1 FROM \"%s\" WHERE num=? and subnum=?)",
                     this.table, this.table);
         }
         this.updateQuery =
-                String.format("UPDATE \"%s\" SET comment = ?, deleted = ?, timestamp_expired = ?, media_filename = COALESCE(?, media_filename)," +
+                String.format("UPDATE \"%s\" SET comment = ?, deleted = ?, media_filename = COALESCE(?, media_filename)," +
                         "  sticky = (? OR sticky) WHERE num = ? and subnum = ?",
                         this.table);
 
@@ -209,7 +197,6 @@ public abstract class SQL implements DB {
                 int c = 1;
                 updateStmt.setString(c++, post.getComment());
                 updateStmt.setBoolean(c++, post.isDeleted());
-                updateStmt.setInt(c++, post.getDateExpired());
                 updateStmt.setString(c++,post.getMediaFilename());
                 updateStmt.setBoolean(c++, post.isSticky());
                 updateStmt.setInt(c++, post.getNum());
@@ -222,8 +209,7 @@ public abstract class SQL implements DB {
                 insertStmt.setInt(c++, post.getSubnum());
                 insertStmt.setInt(c++, post.getThreadNum());
                 insertStmt.setBoolean(c++, post.isOp());
-                insertStmt.setInt(c++, post.getDate());
-                insertStmt.setInt(c++, post.getDateExpired());
+                insertStmt.setInt(c++, (int) post.getDate());
                 insertStmt.setString(c++, post.getPreviewOrig());
                 insertStmt.setInt(c++, post.getPreviewW());
                 insertStmt.setInt(c++, post.getPreviewH());
@@ -271,10 +257,10 @@ public abstract class SQL implements DB {
         }}
     }
 
-    public synchronized void markDeleted(DeletePost post) throws ContentStoreException, DBConnectionException {
+    public synchronized void markDeleted(DeletedPost post) throws ContentStoreException, DBConnectionException {
         while(true) { try {
             updateDeletedStmt.setBoolean(1, true);
-            updateDeletedStmt.setInt(2, post.getDate());
+            updateDeletedStmt.setInt(2, (int) DateUtils.adjustTimestampEpoch(post.getDate(),DateUtils.NYC_TIMEZONE));
             updateDeletedStmt.setInt(3, post.getNum());
             updateDeletedStmt.setInt(4, 0);
             updateDeletedStmt.execute();

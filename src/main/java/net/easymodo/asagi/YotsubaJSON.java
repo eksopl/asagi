@@ -1,23 +1,24 @@
 package net.easymodo.asagi;
 
-import java.io.InputStream;
-import java.lang.reflect.Type;
-import java.util.*;
-
 import com.google.gson.*;
+import net.easymodo.asagi.exception.ContentGetException;
+import net.easymodo.asagi.exception.ContentParseException;
 import net.easymodo.asagi.model.MediaPost;
 import net.easymodo.asagi.model.Page;
 import net.easymodo.asagi.model.Post;
 import net.easymodo.asagi.model.Topic;
+import net.easymodo.asagi.model.yotsuba.PageJson;
+import net.easymodo.asagi.model.yotsuba.PostJson;
+import net.easymodo.asagi.model.yotsuba.TopicJson;
+import net.easymodo.asagi.model.yotsuba.TopicListJson;
 import net.easymodo.asagi.settings.BoardSettings;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-
 import org.apache.http.annotation.ThreadSafe;
 
-import net.easymodo.asagi.exception.ContentGetException;
-import net.easymodo.asagi.exception.ContentParseException;
-import net.easymodo.asagi.model.yotsuba.*;
+import java.io.InputStream;
+import java.lang.reflect.Type;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 @ThreadSafe
 public class YotsubaJSON extends WWW {
@@ -179,19 +180,13 @@ public class YotsubaJSON extends WWW {
         for (TopicListJson.Page page : topicsJson) {
             for (TopicListJson.Topic topic : page.getThreads()) {
                 Topic t = new Topic(topic.getNo(), 0, 0);
-                t.setLastModTimestamp(topic.getLastModified() > Integer.MAX_VALUE ? 0 : (int) topic.getLastModified());
+                t.setLastModTimestamp(topic.getLastModified());
                 t.setLastPage(page.getPage());
                 threadList.addThread(t);
             }
         }
 
         return threadList;
-    }
-
-    public int parseDate(int dateUtc) {
-        DateTime dtDate = new DateTime(dateUtc * 1000L);
-        DateTime dtEst = dtDate.withZone(DateTimeZone.forID("America/New_York"));
-        return (int) (dtEst.withZoneRetainFields(DateTimeZone.UTC).getMillis() / 1000);
     }
 
     private Post makePostFromJson(PostJson pj) throws ContentParseException {
@@ -234,8 +229,7 @@ public class YotsubaJSON extends WWW {
         p.setEmail(pj.getEmail());
         p.setName(this.cleanSimple(pj.getName()));
         p.setTrip(pj.getTrip());
-        p.setDate(this.parseDate(pj.getTime()));
-        p.setDateExpired(0);
+        p.setDate(DateUtils.adjustTimestampEpoch(pj.getTime(), DateUtils.NYC_TIMEZONE));
         p.setComment(this.doClean(pj.getCom()));
         p.setSpoiler(pj.isSpoiler());
         p.setDeleted(false);

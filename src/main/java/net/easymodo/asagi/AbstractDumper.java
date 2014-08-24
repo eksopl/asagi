@@ -1,7 +1,7 @@
 package net.easymodo.asagi;
 
 import net.easymodo.asagi.exception.*;
-import net.easymodo.asagi.model.DeletePost;
+import net.easymodo.asagi.model.DeletedPost;
 import net.easymodo.asagi.model.MediaPost;
 import net.easymodo.asagi.model.Post;
 import net.easymodo.asagi.model.Topic;
@@ -28,7 +28,7 @@ public abstract class AbstractDumper {
     private final Local mediaLocalBoard;
     private final BlockingQueue<MediaPost> mediaPreviewUpdates;
     private final BlockingQueue<MediaPost> mediaUpdates;
-    private final BlockingQueue<DeletePost> deletedPosts;
+    private final BlockingQueue<DeletedPost> deletedPosts;
 
     protected final BlockingQueue<Topic> topicUpdates;
     protected final Board sourceBoard;
@@ -50,7 +50,7 @@ public abstract class AbstractDumper {
         this.mediaPreviewUpdates = new LinkedBlockingQueue<MediaPost>();
         this.mediaUpdates = new LinkedBlockingQueue<MediaPost>();
         this.topicUpdates = new LinkedBlockingQueue<Topic>();
-        this.deletedPosts = new LinkedBlockingQueue<DeletePost>();
+        this.deletedPosts = new LinkedBlockingQueue<DeletedPost>();
         this.newTopics = new LinkedBlockingQueue<Integer>();
         this.fullMedia = fullMedia;
         this.debugLevel = TALK;
@@ -117,7 +117,7 @@ public abstract class AbstractDumper {
                 changed = true;
                 oldTopic.getAllPosts().remove(num);
 
-                DeletePost post = new DeletePost(num, System.currentTimeMillis());
+                DeletedPost post = new DeletedPost(num, System.currentTimeMillis() / 1000);
                 deletedPosts.add(post);
 
                 debug(TALK, num + " (post): deleted");
@@ -236,7 +236,7 @@ public abstract class AbstractDumper {
         @SuppressWarnings("InfiniteLoopStatement")
         public void run() {
             while(true) {
-                DeletePost deletedPost;
+                DeletedPost deletedPost;
 
                 try {
                     deletedPost = deletedPosts.take();
@@ -304,7 +304,7 @@ public abstract class AbstractDumper {
                                if(oldTopic.getAllPosts().size() > 1) {
                                    int op = oldTopic.getAllPosts().iterator().next();
                                    try {
-                                       DeletePost post = new DeletePost(op, System.currentTimeMillis());
+                                       DeletedPost post = new DeletedPost(op, System.currentTimeMillis() / 1000);
                                        deletedPosts.put(post);
                                    } catch(InterruptedException e1) { }
                                }

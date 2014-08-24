@@ -11,7 +11,7 @@ public class Topic {
     private int omPosts;
     private int omImages;
     private String lastMod;
-    private int lastModTimestamp;
+    private long lastModTimestamp;
     private LinkedHashSet<Integer> allPosts;
     private List<Post> posts;
     private int lastPage;
@@ -90,11 +90,11 @@ public class Topic {
         return lastMod;
     }
 
-    public int getLastModTimestamp() {
+    public long getLastModTimestamp() {
         return lastModTimestamp;
     }
 
-    public void setLastModTimestamp(int lastModTimestamp) {
+    public void setLastModTimestamp(long lastModTimestamp) {
         this.lastModTimestamp = lastModTimestamp;
     }
     

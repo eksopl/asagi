@@ -1,13 +1,9 @@
 package net.easymodo.asagi;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
+import com.google.common.base.Charsets;
+import com.google.common.io.Resources;
+import net.easymodo.asagi.exception.ContentGetException;
+import net.easymodo.asagi.exception.ContentParseException;
 import net.easymodo.asagi.model.MediaPost;
 import net.easymodo.asagi.model.Page;
 import net.easymodo.asagi.model.Post;
@@ -15,13 +11,13 @@ import net.easymodo.asagi.model.Topic;
 import net.easymodo.asagi.settings.BoardSettings;
 import org.apache.http.annotation.ThreadSafe;
 
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
-
-import com.google.common.base.Charsets;
-import com.google.common.io.Resources;
-
-import net.easymodo.asagi.exception.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @ThreadSafe
 public class Yotsuba extends WWW {
@@ -153,12 +149,6 @@ public class Yotsuba extends WWW {
         return this.cleanSimple(text);
     }
 
-    public int parseDate(int dateUtc) {
-        DateTime dtDate = new DateTime(dateUtc * 1000L);
-        DateTime dtEst = dtDate.withZone(DateTimeZone.forID("America/New_York"));
-        return (int) (dtEst.withZoneRetainFields(DateTimeZone.UTC).getMillis() / 1000);
-    }
-
     public int parseFilesize(String text) {
         if(text == null) return 0;
 
@@ -177,7 +167,7 @@ public class Yotsuba extends WWW {
     public Post newYotsubaPost(String link, String mediaOrig, boolean spoiler,
             String filesize, int width, int height, String filename, int tWidth,
             int tHeight, String md5, int num, String title, String email,
-            String name, String trip, String capcode, int dateUtc, boolean sticky,
+            String name, String trip, String capcode, long dateUtc, boolean sticky,
             String comment, boolean omitted, int threadNum, String posterHash, String posterCountry) throws ContentParseException
     {
         String type = "";
@@ -213,10 +203,10 @@ public class Yotsuba extends WWW {
             tHeight = 0;
         }
 
-        int timeStamp;
+        long timeStamp;
         int mediaSize;
         try {
-            timeStamp = this.parseDate(dateUtc);
+            timeStamp = DateUtils.adjustTimestampEpoch(dateUtc, DateUtils.NYC_TIMEZONE);
             mediaSize = this.parseFilesize(filesize);
         } catch(IllegalArgumentException e) {
             throw new ContentParseException("Could not create post " + num , e);
@@ -243,7 +233,6 @@ public class Yotsuba extends WWW {
         post.setName(this.cleanSimple(name));
         post.setTrip(trip);
         post.setDate(timeStamp);
-        post.setDateExpired(0);
         post.setComment(this.doClean(comment));
         post.setSpoiler(spoiler);
         post.setDeleted(false);
@@ -334,7 +323,7 @@ public class Yotsuba extends WWW {
          if(!mat.find()) {
              throw new ContentParseException("Could not parse thread (post timestamp regex failed)");
          }
-         int dateUtc = Integer.parseInt(mat.group(1));
+         long dateUtc = Long.parseLong(mat.group(1));
 
          mat = postParsePattern2.matcher(text);
          String link = null;
