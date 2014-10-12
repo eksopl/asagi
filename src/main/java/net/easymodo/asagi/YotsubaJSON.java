@@ -11,6 +11,7 @@ import net.easymodo.asagi.model.yotsuba.PostJson;
 import net.easymodo.asagi.model.yotsuba.TopicJson;
 import net.easymodo.asagi.model.yotsuba.TopicListJson;
 import net.easymodo.asagi.settings.BoardSettings;
+import net.easymodo.asagi.settings.SiteSettings;
 import org.apache.http.annotation.ThreadSafe;
 
 import java.util.Collections;
@@ -20,19 +21,19 @@ import java.util.Map;
 @ThreadSafe
 public class YotsubaJSON extends YotsubaAbstract {
 
-    public YotsubaJSON(String boardName, BoardSettings settings) {
-        super(YotsubaJSON.getBoardLinks(boardName));
-        this.throttleAPI = settings.getThrottleAPI();
-        this.throttleURL = settings.getThrottleURL();
-        this.throttleMillisec = settings.getThrottleMillisec();
+    public YotsubaJSON(String boardName, SiteSettings siteSettings, BoardSettings boardSettings) {
+        super(YotsubaJSON.getBoardLinks(boardName, siteSettings));
+        this.adjustTimestamp = boardSettings.getAdjustTimestamp();
+        this.throttleAPI = boardSettings.getThrottleAPI();
+        this.throttleURL = boardSettings.getThrottleURL();
+        this.throttleMillisec = boardSettings.getThrottleMillisec();
     }
 
-    private static Map<String,String> getBoardLinks(String boardName) {
+    private static Map<String,String> getBoardLinks(String boardName, SiteSettings siteSettings) {
         Map<String,String> boardInfo = new HashMap<String,String>();
-        boardInfo.put("link", "http://a.4cdn.org/" + boardName);
-        boardInfo.put("html", "http://boards.4chan.org/" + boardName + "/");
-        boardInfo.put("imageLink", "http://i.4cdn.org/" + boardName);
-        boardInfo.put("thumbLink", "http://1.t.4cdn.org/" + boardName);
+        boardInfo.put("link", siteSettings.getLink() + "/" + boardName);
+        boardInfo.put("imageLink", siteSettings.getImageLink() + "/" + boardName);
+        boardInfo.put("thumbLink", siteSettings.getThumbLink() + "/" + boardName);
         return Collections.unmodifiableMap(boardInfo);
     }
 
@@ -192,7 +193,7 @@ public class YotsubaJSON extends YotsubaAbstract {
         p.setEmail(pj.getEmail());
         p.setName(this.cleanSimple(pj.getName()));
         p.setTrip(pj.getTrip());
-        p.setDate(DateUtils.adjustTimestampEpoch(pj.getTime(), DateUtils.NYC_TIMEZONE));
+        p.setDate(this.adjustTimestamp ? DateUtils.adjustTimestampEpoch(pj.getTime(), DateUtils.NYC_TIMEZONE) : pj.getTime());
         p.setComment(this.doClean(pj.getCom()));
         p.setSpoiler(pj.isSpoiler());
         p.setDeleted(false);

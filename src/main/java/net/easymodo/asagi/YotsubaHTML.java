@@ -8,6 +8,7 @@ import net.easymodo.asagi.model.Page;
 import net.easymodo.asagi.model.Post;
 import net.easymodo.asagi.model.Topic;
 import net.easymodo.asagi.settings.BoardSettings;
+import net.easymodo.asagi.settings.SiteSettings;
 import org.apache.http.annotation.ThreadSafe;
 
 import java.io.IOException;
@@ -86,16 +87,16 @@ public class YotsubaHTML extends YotsubaAbstract {
         omImagesPattern = Pattern.compile(omImagesPatString, Pattern.COMMENTS | Pattern.DOTALL);
     }
 
-    public YotsubaHTML(String boardName, BoardSettings settings) {
-        super(YotsubaHTML.getBoardLinks(boardName));
+    public YotsubaHTML(String boardName, SiteSettings siteSettings, BoardSettings boardSettings) {
+        super(YotsubaHTML.getBoardLinks(boardName, siteSettings));
+        this.adjustTimestamp = boardSettings.getAdjustTimestamp();
     }
 
-    private static Map<String,String> getBoardLinks(String boardName) {
+    private static Map<String,String> getBoardLinks(String boardName, SiteSettings siteSettings) {
         Map<String,String> boardInfo = new HashMap<String,String>();
-        boardInfo.put("link", "http://boards.4chan.org/" + boardName);
-        boardInfo.put("html", "http://boards.4chan.org/" + boardName + "/");
-        boardInfo.put("imageLink", "http://i.4cdn.org/" + boardName);
-        boardInfo.put("thumbLink", "http://0.t.4cdn.org/" + boardName);
+        boardInfo.put("link", siteSettings.getLink() + "/" + boardName);
+        boardInfo.put("imageLink", siteSettings.getImageLink() + "/" + boardName);
+        boardInfo.put("thumbLink", siteSettings.getThumbLink() + "/" + boardName);
         return Collections.unmodifiableMap(boardInfo);
     }
 
@@ -153,7 +154,7 @@ public class YotsubaHTML extends YotsubaAbstract {
         long timeStamp;
         int mediaSize;
         try {
-            timeStamp = DateUtils.adjustTimestampEpoch(dateUtc, DateUtils.NYC_TIMEZONE);
+            timeStamp = this.adjustTimestamp ? DateUtils.adjustTimestampEpoch(dateUtc, DateUtils.NYC_TIMEZONE) : dateUtc;
             mediaSize = this.parseFilesize(filesize);
         } catch(IllegalArgumentException e) {
             throw new ContentParseException("Could not create post " + num , e);
