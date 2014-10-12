@@ -63,7 +63,7 @@ public abstract class WWW extends Board {
         HttpConnectionParams.setSoTimeout(params, 5000);
         HttpConnectionParams.setConnectionTimeout(params, 5000);
         params.setParameter(ClientPNames.COOKIE_POLICY, CookiePolicy.IGNORE_COOKIES);
-        params.setParameter(CoreProtocolPNames.USER_AGENT, "Asagi/0.3.0");
+        params.setParameter(CoreProtocolPNames.USER_AGENT, "Asagi/0.4.0");
 
         PoolingClientConnectionManager pccm = new PoolingClientConnectionManager();
         pccm.setDefaultMaxPerRoute(20);
@@ -122,7 +122,7 @@ public abstract class WWW extends Board {
         if(statusCode != 200) {
             // Needed to consume the rest of the response and release the connection
             EntityUtils.consumeQuietly(res.getEntity());
-            throw new HttpGetException(res.getStatusLine().getReasonPhrase(), statusCode);
+            throw new HttpGetException(res.getStatusLine().getReasonPhrase(), statusCode, link);
         }
 
         return res;
