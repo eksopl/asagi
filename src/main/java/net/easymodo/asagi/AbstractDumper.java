@@ -226,6 +226,11 @@ public abstract class AbstractDumper {
                                 mediaUpdates.put(mediaPost);
                         }
                     } catch(InterruptedException e) { }
+
+                    if(post.isArchived()) {
+                        debug(TALK, newTopic.getNum() + ": archived");
+                        topics.remove(newTopic.getNum());
+                    }
                 }
                 newTopic.purgePosts();
                 newTopic.lock.writeLock().unlock();

@@ -198,6 +198,7 @@ public class YotsubaJSON extends YotsubaAbstract {
         p.setDeleted(false);
         p.setSticky(pj.isSticky());
         p.setClosed(pj.isClosed() && !pj.isArchived());
+        p.setArchived(pj.isArchived());
         p.setCapcode(capcode);
         p.setPosterHash(posterHash);
         p.setPosterCountry(posterCountry);
