@@ -2,6 +2,12 @@
   "dumperEngine": "DumperJSON",
   "sourceEngine": "YotsubaJSON",
 
+  "siteSettings": {
+    "link": "http://a.4cdn.org",
+    "imageLink": "http://i.4cdn.org",
+    "thumbLink": "http://1.t.4cdn.org"
+  },
+
   "boardSettings": {
     "default": {
       "engine": "Mysql",
@@ -11,6 +17,7 @@
       "password": "1234",
       "charset": "utf8mb4",
       "path": "/Users/eksi/asagi/",
+      "adjustTimestamp": false,
       "useOldDirectoryStructure": false,
       "webserverGroup": "_www",
       "thumbThreads": 5,

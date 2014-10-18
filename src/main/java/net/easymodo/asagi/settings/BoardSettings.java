@@ -14,6 +14,7 @@ public class BoardSettings {
     private String charset;
     private String table;
     private String path;
+    private Boolean adjustTimestamp;
     private Boolean useOldDirectoryStructure;
     private Integer deletedThreadsThresholdPage;
     private String webserverGroup;
@@ -26,7 +27,7 @@ public class BoardSettings {
     private String throttleURL;
     private Long throttleMillisec;
     private List<PageSettings> pageSettings;
-    
+
     public String getEngine() {
         return engine;
     }
@@ -89,6 +90,14 @@ public class BoardSettings {
 
     public void setPath(String path) {
         this.path = path;
+    }
+
+    public Boolean getAdjustTimestamp() {
+        return adjustTimestamp;
+    }
+
+    public void setAdjustTimestamp(Boolean adjustTimestamp) {
+        this.adjustTimestamp = adjustTimestamp;
     }
 
     public Boolean getUseOldDirectoryStructure() {

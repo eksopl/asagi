@@ -6,8 +6,16 @@ import java.util.Map;
 public class Settings {
     private String dumperEngine;
     private String sourceEngine;
+    private SiteSettings siteSettings;
     private Map<String, BoardSettings> boardSettings;
 
+    public SiteSettings getSiteSettings() {
+        return siteSettings;
+    }
+
+    public void setSiteSettings(SiteSettings siteSettings) {
+        this.siteSettings = siteSettings;
+    }
 
     public Map<String, BoardSettings> getBoardSettings() {
         return boardSettings;

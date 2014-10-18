@@ -9,6 +9,7 @@ import net.easymodo.asagi.exception.BoardInitException;
 import net.easymodo.asagi.settings.BoardSettings;
 import net.easymodo.asagi.settings.OuterSettings;
 import net.easymodo.asagi.settings.Settings;
+import net.easymodo.asagi.settings.SiteSettings;
 
 import java.io.*;
 import java.lang.reflect.Constructor;
@@ -41,6 +42,7 @@ public class Asagi {
 
     private static void spawnBoard(String boardName, Settings settings) throws BoardInitException {
         BoardSettings bSet = getBoardSettings(settings, boardName);
+        SiteSettings sSet = settings.getSiteSettings();
 
         int pageLimbo = bSet.getDeletedThreadsThresholdPage();
         boolean fullThumb = (bSet.getThumbThreads() != 0);
@@ -50,7 +52,7 @@ public class Asagi {
         Board sourceBoard;
         try {
             Class<?> sourceBoardClass = Class.forName("net.easymodo.asagi." + sourceEngine);
-            sourceBoard = (Board) sourceBoardClass.getConstructor(String.class, BoardSettings.class).newInstance(boardName, bSet);
+            sourceBoard = (Board) sourceBoardClass.getConstructor(String.class, SiteSettings.class, BoardSettings.class).newInstance(boardName, sSet, bSet);
         } catch(ClassNotFoundException e) {
             throw new BoardInitException("Error initializing board engine " + sourceEngine + ", no such engine?");
         } catch(Exception e) {

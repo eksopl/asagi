@@ -55,6 +55,8 @@ public abstract class YotsubaAbstract extends WWW {
         this.boardLinks = boardLinks;
     }
 
+    protected boolean adjustTimestamp = true;
+
     @Override
     public InputStream getMediaPreview(MediaPost h) throws ContentGetException {
         if(h.getPreview() == null)
